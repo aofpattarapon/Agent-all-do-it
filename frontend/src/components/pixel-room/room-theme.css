@@ -1,0 +1,486 @@
+/* ===== Pixel-dream-room theme — scoped under .pdr-root so it can't leak ===== */
+@import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap");
+
+.pdr-root {
+  /* wood / frame */
+  --pdr-wood-darkest: #2e1c0f;
+  --pdr-wood-dark: #4a2d18;
+  --pdr-wood: #6e4326;
+  --pdr-frame: #b9763e;
+  --pdr-frame-light: #e0a766;
+  /* parchment */
+  --pdr-parch: #f3e2b4;
+  --pdr-parch-2: #e7cd92;
+  --pdr-parch-3: #d8b772;
+  --pdr-parch-line: #c6a25e;
+  --pdr-ink: #43301c;
+  --pdr-ink-soft: #6b5235;
+  /* greens */
+  --pdr-green: #4f8a4e;
+  --pdr-green-dark: #356b3a;
+  /* screen */
+  --pdr-screen-bg: #0e2118;
+  --pdr-screen: #6fe08c;
+  /* status / accents */
+  --pdr-gold: #e7b53c;
+  --pdr-blue: #63b3ed;
+  --pdr-up: #57c06a;
+  --pdr-red: #d9544d;
+  --pdr-idle: #4a5568;
+
+  --pdr-px: 4px;
+}
+
+.pdr-root,
+.pdr-root * {
+  box-sizing: border-box;
+}
+
+/* retro inset frame */
+.pdr-frame {
+  position: relative;
+  background: var(--pdr-parch);
+  border: var(--pdr-px) solid var(--pdr-wood-darkest);
+  box-shadow:
+    inset 0 0 0 var(--pdr-px) var(--pdr-frame-light),
+    inset 0 0 0 calc(var(--pdr-px) * 2) var(--pdr-wood),
+    inset 0 0 0 calc(var(--pdr-px) * 3) var(--pdr-parch),
+    0 6px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* ── Stage / room ── */
+.pdr-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: hidden;
+}
+.pdr-room {
+  position: relative;
+  height: 100%;
+  aspect-ratio: 1536 / 1024;
+  max-width: 100%;
+  image-rendering: pixelated;
+  border: var(--pdr-px) solid var(--pdr-wood-darkest);
+  box-shadow:
+    0 0 0 4px var(--pdr-frame),
+    0 0 0 8px var(--pdr-wood-darkest),
+    0 10px 0 rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+/* ── CSS-drawn room background (replaces room.png) ── */
+.pdr-room-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  /* Checkerboard tile floor — like OpenClaw */
+  background:
+    repeating-conic-gradient(
+      #c4905c 0% 25%,
+      #b07840 0% 50%
+    ) 0 0 / 48px 48px;
+}
+
+/* Ticker scroll animation */
+@keyframes ticker-scroll {
+  0%   { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* Wall — dark trading floor navy/green with scrolling ticker */
+.pdr-room-wall {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
+  z-index: 1;
+  overflow: hidden;
+  /* Keep existing navy/dark color but add subtle panel lines */
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 119px,
+      rgba(255, 255, 255, 0.04) 119px,
+      rgba(255, 255, 255, 0.04) 120px
+    ),
+    linear-gradient(180deg, #0d1f3a 0%, #122848 100%);
+  /* Subtle top trim */
+  border-top: 4px solid #8B6914;
+}
+
+/* Scrolling market ticker strip along wall bottom */
+.pdr-room-wall::after {
+  content: "AAPL +1.2%  \00a0  MSFT -0.8%  \00a0  GOOGL +0.3%  \00a0  AMZN -1.1%  \00a0  TSLA +2.1%  \00a0  BTC +3.4%  \00a0  ETH +1.8%  \00a0  SPY +0.5%  \00a0  QQQ -0.2%  \00a0";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: max-content;
+  font-family: "VT323", monospace;
+  font-size: 13px;
+  color: #4ade80;
+  white-space: nowrap;
+  padding: 2px 0;
+  background: rgba(0, 0, 0, 0.35);
+  animation: ticker-scroll 20s linear infinite;
+  pointer-events: none;
+}
+
+/* Baseboard dividing wall from floor */
+.pdr-room-baseboard {
+  position: absolute;
+  top: 30%;
+  left: 0;
+  right: 0;
+  height: 14px;
+  z-index: 2;
+  background: linear-gradient(180deg, #5c3a1e 0%, #3d2410 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Vignette / edge shadow overlay */
+.pdr-room-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    transparent 40%,
+    rgba(0, 0, 0, 0.22) 75%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+
+/* ── Furniture overlays ── */
+.pdr-furniture {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+  font-size: 2rem;
+  line-height: 1;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
+  transform: translate(-50%, -50%);
+}
+.pdr-plant {
+  font-size: 3rem;
+}
+.pdr-screen {
+  font-size: 2.2rem;
+}
+.pdr-table {
+  font-size: 2.4rem;
+}
+
+/* Market data board — positioned in wall area (set in JSX via absolute) */
+.pdr-market-board {
+  position: absolute;
+  left: 5%;
+  top: 5%;
+  width: 120px;
+  background: #0a1628;
+  border: 2px solid #1e3a5f;
+  padding: 6px 8px;
+  border-radius: 2px;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.2), 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* evening warm tint over the room */
+.pdr-room.pdr-day-tint::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, rgba(255, 180, 80, 0.12), rgba(40, 20, 60, 0.42) 80%);
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* station hotspot marker */
+.pdr-station {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  pointer-events: none;
+}
+.pdr-station .pdr-station-ring {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--pdr-gold);
+  background: rgba(231, 181, 60, 0.14);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4), inset 0 0 8px rgba(231, 181, 60, 0.4);
+  animation: pdr-pulse 1.8s ease-in-out infinite;
+}
+
+/* ── Agent ── */
+.pdr-agent {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 8;
+  pointer-events: none;
+  will-change: left, top;
+}
+.pdr-sprite {
+  position: relative;
+}
+.pdr-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 7px;
+  background: rgba(0, 0, 0, 0.32);
+  border-radius: 50%;
+}
+.pdr-bobber {
+  position: relative;
+}
+.pdr-bobber.pdr-walking {
+  animation: pdr-bob 0.35s steps(2) infinite;
+}
+
+/* two stacked frames; cross-toggled so legs swap (stand <-> step) */
+.pdr-walkframes {
+  position: relative;
+}
+.pdr-walkframes .pdr-frame-b {
+  position: absolute;
+  inset: 0;
+}
+.pdr-walkframes .pdr-frame-a {
+  animation: pdr-frame-a 0.4s steps(1) infinite;
+}
+.pdr-walkframes .pdr-frame-b {
+  animation: pdr-frame-b 0.4s steps(1) infinite;
+}
+@keyframes pdr-frame-a {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes pdr-frame-b {
+  0%,
+  49% {
+    opacity: 0;
+  }
+  50%,
+  100% {
+    opacity: 1;
+  }
+}
+.pdr-ring {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 14px;
+  border: 3px solid var(--pdr-blue);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(99, 179, 237, 0.7);
+  animation: pdr-pulse 1.2s ease-in-out infinite;
+}
+/* small status label floating above the head */
+.pdr-status {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: "VT323", monospace;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 1px 5px;
+  background: rgba(10, 10, 20, 0.85);
+  border: 1px solid;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.pdr-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.pdr-nametag {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  font-family: "VT323", monospace;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--pdr-ink);
+  background: rgba(245, 231, 191, 0.94);
+  border: 2px solid var(--pdr-wood-dark);
+  padding: 1px 5px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+.pdr-bubble {
+  position: absolute;
+  bottom: 112%;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 200px;
+  font-family: "VT323", monospace;
+  font-size: 15px;
+  line-height: 1.1;
+  text-align: center;
+  color: var(--pdr-ink);
+  background: var(--pdr-parch);
+  border: 3px solid var(--pdr-wood-dark);
+  padding: 4px 9px;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+  animation: pdr-pop 0.2s ease-out;
+}
+.pdr-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--pdr-wood-dark);
+}
+
+/* ── The Team overlay ── */
+.pdr-team {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 9;
+  padding: 12px 14px;
+  max-width: 260px;
+}
+.pdr-team-label {
+  font-family: "Pixelify Sans", sans-serif;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--pdr-ink-soft);
+  margin-bottom: 8px;
+}
+.pdr-team-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.pdr-teammate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.pdr-tm-face {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  background: var(--pdr-screen-bg);
+  border: 3px solid var(--pdr-wood-dark);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+.pdr-tm-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  background: var(--pdr-idle);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.pdr-tm-dot.pdr-on {
+  background: var(--pdr-blue);
+  animation: pdr-blink 1.2s steps(2) infinite;
+}
+.pdr-tm-dot.pdr-done {
+  background: var(--pdr-up);
+}
+.pdr-tm-dot.pdr-error {
+  background: var(--pdr-red);
+}
+.pdr-tm-name {
+  font-family: "VT323", monospace;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--pdr-parch);
+  max-width: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── keyframes ── */
+@keyframes pdr-bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes pdr-pop {
+  from {
+    transform: translateX(-50%) scale(0.6);
+    opacity: 0;
+  }
+}
+@keyframes pdr-pulse {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(0.85);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateX(-50%) scale(1.05);
+    opacity: 1;
+  }
+}
+.pdr-station .pdr-station-ring {
+  /* ring marker is centered by parent translate, animate scale only */
+  animation: pdr-pulse-plain 1.8s ease-in-out infinite;
+}
+@keyframes pdr-pulse-plain {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+@keyframes pdr-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes pdr-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.pdr-status.pdr-status-busy {
+  animation: pdr-pulse-status 1.5s ease-in-out infinite;
+}
+@keyframes pdr-pulse-status {
+  0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+  50%       { opacity: 0.8; transform: translateX(-50%) scale(1.05); }
+}

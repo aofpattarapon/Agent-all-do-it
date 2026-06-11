@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""Kimi CLI wrapper — calls Moonshot AI API using a locally stored key.
+
+Setup (one time):
+    mkdir -p ~/.config/kimi
+    echo "sk-your-moonshot-key" > ~/.config/kimi/api_key
+
+Usage:
+    kimi chat "<prompt>" [--model <model>]
+"""
+import json
+import os
+import sys
+import urllib.request
+import urllib.error
+
+MOONSHOT_API_URL = "https://api.moonshot.cn/v1/chat/completions"
+DEFAULT_MODEL = "moonshot-v1-8k"
+
+
+def _get_api_key() -> str:
+    key = os.environ.get("MOONSHOT_API_KEY", "").strip()
+    if key:
+        return key
+    config_path = os.path.expanduser("~/.config/kimi/api_key")
+    if os.path.exists(config_path):
+        with open(config_path) as f:
+            key = f.read().strip()
+        if key:
+            return key
+    print(
+        "kimi: API key not found.\n"
+        "Run once to configure:\n"
+        "  mkdir -p ~/.config/kimi\n"
+        "  echo 'sk-your-moonshot-key' > ~/.config/kimi/api_key\n"
+        "Get your key at: https://platform.moonshot.cn/console/api-keys",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def _parse_args(argv: list[str]) -> tuple[str, str]:
+    args = argv[1:]
+    if args and args[0] == "chat":
+        args = args[1:]
+
+    model = DEFAULT_MODEL
+    prompt_parts: list[str] = []
+    i = 0
+    while i < len(args):
+        if args[i] == "--model" and i + 1 < len(args):
+            model = args[i + 1]
+            i += 2
+        else:
+            prompt_parts.append(args[i])
+            i += 1
+
+    prompt = " ".join(prompt_parts).strip()
+    if not prompt:
+        print("Usage: kimi chat \"<prompt>\" [--model <model>]", file=sys.stderr)
+        sys.exit(1)
+    return prompt, model
+
+
+def main() -> None:
+    prompt, model = _parse_args(sys.argv)
+    api_key = _get_api_key()
+
+    payload = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 2048,
+        "temperature": 0.7,
+    }).encode()
+
+    req = urllib.request.Request(
+        MOONSHOT_API_URL,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read())
+        print(data["choices"][0]["message"]["content"])
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode(errors="replace")
+        print(f"kimi: API error {exc.code}: {body}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as exc:
+        print(f"kimi: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
