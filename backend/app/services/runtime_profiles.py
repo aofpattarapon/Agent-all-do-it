@@ -22,57 +22,60 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
     # Free-tier only: groq-api (Llama) + openrouter-api (free models).
     # No paid API calls. Use for pipeline validation and prompt testing.
     "test": {
+        # All agents: primary = openrouter/gpt-oss-120b:free (free, no cost).
+        # fb1 = groq/llama-3.3-70b-versatile, fb2 = openrouter/llama-3.3-70b:free.
+        # All gates = continue — run overnight without human intervention.
         "news_monitor": {
-            "runtime_kind": "groq-api",
-            "model": "llama-3.3-70b-versatile",
+            "runtime_kind": "openrouter-api",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
+                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
         "source_reliability": {
             "runtime_kind": "openrouter-api",
-            "model": "meta-llama/llama-3.3-70b-instruct:free",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
-                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
+                {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
             ],
             "gate_policy": "continue",
         },
         "market_regime": {
-            "runtime_kind": "groq-api",
-            "model": "llama-3.3-70b-versatile",
+            "runtime_kind": "openrouter-api",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
+                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
         "hawk_trend": {
-            "runtime_kind": "groq-api",
-            "model": "llama-3.3-70b-versatile",
+            "runtime_kind": "openrouter-api",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
+                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
         "hawk_structure": {
             "runtime_kind": "openrouter-api",
-            "model": "meta-llama/llama-3.3-70b-instruct:free",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
-                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
+                {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
             ],
             "gate_policy": "continue",
         },
         "hawk_counter": {
-            "runtime_kind": "groq-api",
-            "model": "llama-3.3-70b-versatile",
+            "runtime_kind": "openrouter-api",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
+                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
@@ -95,29 +98,29 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "gate_policy": "continue",
         },
         "execution": {
-            "runtime_kind": "groq-api",
-            "model": "llama-3.1-8b-instant",
+            "runtime_kind": "openrouter-api",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
-                {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
+                {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
             ],
             "gate_policy": "continue",
         },
         "position_monitor": {
-            "runtime_kind": "groq-api",
-            "model": "llama-3.1-8b-instant",
+            "runtime_kind": "openrouter-api",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
-                {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
+                {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
             ],
             "gate_policy": "continue",
         },
         "trade_journal": {
-            "runtime_kind": "groq-api",
-            "model": "llama-3.3-70b-versatile",
+            "runtime_kind": "openrouter-api",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
+                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
