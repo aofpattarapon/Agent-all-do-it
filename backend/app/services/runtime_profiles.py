@@ -18,13 +18,16 @@ VALID_PROFILES: tuple[ProfileName, ...] = ("test", "production")
 # ── Per-role profile definitions ──────────────────────────────────────────────
 
 RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
+    # ── TEST MODE ─────────────────────────────────────────────────────────────
+    # Free-tier only: groq-api (Llama) + openrouter-api (free models).
+    # No paid API calls. Use for pipeline validation and prompt testing.
     "test": {
         "news_monitor": {
             "runtime_kind": "groq-api",
             "model": "llama-3.3-70b-versatile",
             "fallback_chain": [
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
@@ -33,7 +36,7 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "model": "meta-llama/llama-3.3-70b-instruct:free",
             "fallback_chain": [
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
@@ -42,7 +45,7 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "model": "llama-3.3-70b-versatile",
             "fallback_chain": [
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
@@ -51,7 +54,7 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "model": "llama-3.3-70b-versatile",
             "fallback_chain": [
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
@@ -60,7 +63,7 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "model": "meta-llama/llama-3.3-70b-instruct:free",
             "fallback_chain": [
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
@@ -69,7 +72,7 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "model": "llama-3.3-70b-versatile",
             "fallback_chain": [
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
@@ -78,16 +81,16 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
             ],
             "gate_policy": "continue",
         },
         "trade_proposal": {
             "runtime_kind": "openrouter-api",
-            "model": "meta-llama/llama-3.3-70b-instruct:free",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
             ],
             "gate_policy": "continue",
         },
@@ -96,7 +99,7 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "model": "llama-3.1-8b-instant",
             "fallback_chain": [
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
             ],
             "gate_policy": "continue",
         },
@@ -105,7 +108,7 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "model": "llama-3.1-8b-instant",
             "fallback_chain": [
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
             ],
             "gate_policy": "continue",
         },
@@ -114,7 +117,7 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "model": "llama-3.3-70b-versatile",
             "fallback_chain": [
                 {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "continue",
         },
@@ -123,45 +126,49 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
             ],
             "gate_policy": "continue",
         },
     },
+    # ── PRODUCTION MODE ───────────────────────────────────────────────────────
+    # Claude agents use claude-cli (CLI bridge) — models unchanged.
+    # codex-cli used for Execution Agent (structured JSON + reasoning strength).
+    # Critical gates (SAGE, Trade Proposal, Post-Trade Review) use pause policy.
     "production": {
         "news_monitor": {
-            "runtime_kind": "kimi-cli",
-            "model": "kimi-k2.6",
+            "runtime_kind": "groq-api",
+            "model": "llama-3.3-70b-versatile",
             "fallback_chain": [
-                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
-                {"runtime_kind": "claude-cli", "model": "claude-sonnet-4-6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
+                {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
             ],
             "gate_policy": "continue",
         },
         "source_reliability": {
-            "runtime_kind": "claude-cli",
-            "model": "claude-sonnet-4-6",
+            "runtime_kind": "groq-api",
+            "model": "llama-3.3-70b-versatile",
             "fallback_chain": [
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
-                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
+                {"runtime_kind": "openrouter-api", "model": "meta-llama/llama-3.3-70b-instruct:free"},
             ],
-            "gate_policy": "pause",
+            "gate_policy": "continue",
         },
         "market_regime": {
-            "runtime_kind": "kimi-cli",
-            "model": "kimi-k2.6",
+            "runtime_kind": "openrouter-api",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
-                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
                 {"runtime_kind": "claude-cli", "model": "claude-sonnet-4-6"},
+                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
             ],
             "gate_policy": "continue",
         },
         "hawk_trend": {
-            "runtime_kind": "groq-api",
-            "model": "llama-3.3-70b-versatile",
+            "runtime_kind": "claude-cli",
+            "model": "claude-sonnet-4-6",
             "fallback_chain": [
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
-                {"runtime_kind": "claude-cli", "model": "claude-sonnet-4-6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
+                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
             ],
             "gate_policy": "continue",
         },
@@ -169,17 +176,17 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "runtime_kind": "claude-cli",
             "model": "claude-sonnet-4-6",
             "fallback_chain": [
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
             ],
             "gate_policy": "continue",
         },
         "hawk_counter": {
-            "runtime_kind": "kimi-cli",
-            "model": "kimi-k2.6",
+            "runtime_kind": "groq-api",
+            "model": "llama-3.3-70b-versatile",
             "fallback_chain": [
-                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
-                {"runtime_kind": "claude-cli", "model": "claude-sonnet-4-6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
+                {"runtime_kind": "claude-cli", "model": "claude-haiku-4-5-20251001"},
             ],
             "gate_policy": "continue",
         },
@@ -188,8 +195,7 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "model": "claude-opus-4-8",
             "fallback_chain": [
                 {"runtime_kind": "claude-cli", "model": "claude-sonnet-4-6"},
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
-                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "pause",
         },
@@ -197,44 +203,44 @@ RUNTIME_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "runtime_kind": "claude-cli",
             "model": "claude-sonnet-4-6",
             "fallback_chain": [
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
             ],
             "gate_policy": "pause",
         },
         "execution": {
-            "runtime_kind": "groq-api",
-            "model": "llama-3.1-8b-instant",
+            "runtime_kind": "codex-cli",
+            "model": "o4-mini",
             "fallback_chain": [
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
-                {"runtime_kind": "claude-cli", "model": "claude-sonnet-4-6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
+                {"runtime_kind": "claude-cli", "model": "claude-haiku-4-5-20251001"},
             ],
             "gate_policy": "pause",
         },
         "position_monitor": {
-            "runtime_kind": "groq-api",
-            "model": "llama-3.1-8b-instant",
+            "runtime_kind": "openrouter-api",
+            "model": "openai/gpt-oss-120b:free",
             "fallback_chain": [
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
-                {"runtime_kind": "claude-cli", "model": "claude-sonnet-4-6"},
+                {"runtime_kind": "groq-api", "model": "llama-3.1-8b-instant"},
+                {"runtime_kind": "claude-cli", "model": "claude-haiku-4-5-20251001"},
             ],
             "gate_policy": "continue",
         },
         "trade_journal": {
-            "runtime_kind": "kimi-cli",
-            "model": "kimi-k2.6",
+            "runtime_kind": "claude-cli",
+            "model": "claude-sonnet-4-6",
             "fallback_chain": [
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
                 {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
-                {"runtime_kind": "claude-cli", "model": "claude-sonnet-4-6"},
             ],
             "gate_policy": "continue",
         },
         "post_trade_review": {
             "runtime_kind": "claude-cli",
-            "model": "claude-sonnet-4-6",
+            "model": "claude-opus-4-8",
             "fallback_chain": [
-                {"runtime_kind": "kimi-cli", "model": "kimi-k2.6"},
-                {"runtime_kind": "groq-api", "model": "llama-3.3-70b-versatile"},
+                {"runtime_kind": "claude-cli", "model": "claude-sonnet-4-6"},
+                {"runtime_kind": "openrouter-api", "model": "openai/gpt-oss-120b:free"},
             ],
             "gate_policy": "pause",
         },

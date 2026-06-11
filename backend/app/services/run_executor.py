@@ -44,6 +44,9 @@ from app.services.trace_emitter import TraceEmitter
 
 logger = logging.getLogger(__name__)
 
+# Step keys that are HAWK analysis agents — used for retry and context tracking.
+_HAWK_STEP_KEYS: frozenset[str] = frozenset({"hawk_trend", "hawk_structure", "hawk_counter"})
+
 
 def _extract_pnl_pct(text: str) -> float | None:
     """Extract realized PnL% from journal/execution output. Returns None if not found."""
@@ -291,6 +294,34 @@ class RunExecutor:
             if isinstance(tokens, int):
                 total_tokens += tokens
 
+            # Re-run HAWK analysis steps if output is empty or not valid JSON.
+            # The workflow waits — data completeness matters more than speed.
+            if step_kind == "prompt" and step_key in _HAWK_STEP_KEYS:
+                _retry = 0
+                while _retry < 2 and (not output_text.strip() or extract_json_object(output_text) is None):
+                    _retry += 1
+                    logger.warning("HAWK step '%s' returned invalid output — retry %d/2", step_key, _retry)
+                    await self._emit(
+                        project_id, run_id, "run.step_retry", agent_name=step_key,
+                        data=f"{step_key}: output missing or not JSON, retrying ({_retry}/2)",
+                    )
+                    try:
+                        output_text, step_meta = await self._run_step(
+                            project_id=project_id,
+                            run_id=run_id,
+                            run_step_id=db_step.id,
+                            step_kind=step_kind,
+                            config=config,
+                            agent_key=step_def.get("agent_key") or config.get("agent_key"),
+                            context=context,
+                        )
+                        tokens = step_meta.get("tokens_used")
+                        if isinstance(tokens, int):
+                            total_tokens += tokens
+                    except Exception as exc:
+                        logger.error("HAWK step '%s' retry %d raised: %s", step_key, _retry, exc)
+                        break
+
             db_step.output_json = {"output": output_text, "meta": step_meta}
             db_step.status = "completed"
             db_step.finished_at = datetime.now(UTC)
@@ -357,6 +388,10 @@ class RunExecutor:
                 logger.warning("Handoff contract check failed: %s", exc)
 
             context["last_output"] = output_text
+
+            # Keep individual HAWK outputs in context so SAGE can read each one.
+            if step_kind == "prompt" and step_key in _HAWK_STEP_KEYS:
+                context[f"{step_key}_output"] = output_text
 
             # ── Conditional skip ──
             if step_kind == "conditional" and output_text == "false":
@@ -463,9 +498,17 @@ class RunExecutor:
                     trace_id,
                 )
 
-            # Store passed hawk_vote result so SAGE can reference it via $hawk_vote_result.
+            # Build $hawk_vote_result: vote-gate tally + each HAWK's full JSON output.
+            # SAGE needs the individual outputs to verify invalidation_level per hawk.
             if _is_hawk_gate and bool(step_meta.get("gate_passed")):
-                context["hawk_vote_result"] = output_text
+                hawk_individual = {
+                    k: context.get(f"{k}_output", "")
+                    for k in ("hawk_trend", "hawk_structure", "hawk_counter")
+                }
+                context["hawk_vote_result"] = json.dumps(
+                    {"vote_gate": output_text, "hawk_outputs": hawk_individual},
+                    ensure_ascii=False,
+                )
 
             # ── SAGE veto gate ─────────────────────────────────────────────────────
             # If any prompt step outputs sage_decision=VETOED, stop the pipeline now
@@ -1366,11 +1409,16 @@ class RunExecutor:
             payload_str = json.dumps(payload, ensure_ascii=False)
         except (TypeError, ValueError):
             payload_str = str(payload)
+        hawk_outputs = json.dumps(
+            {k: context.get(f"{k}_output", "") for k in ("hawk_trend", "hawk_structure", "hawk_counter")},
+            ensure_ascii=False,
+        )
         result = template.replace("$last_output", str(context.get("last_output") or ""))
         result = result.replace("$input_payload", payload_str)
         result = result.replace("$project_name", str(context.get("project_name") or ""))
         result = result.replace("$project_slug", str(context.get("project_slug") or ""))
         result = result.replace("$hawk_vote_result", str(context.get("hawk_vote_result") or ""))
+        result = result.replace("$hawk_outputs", hawk_outputs)
         return result
 
     async def _pause(
