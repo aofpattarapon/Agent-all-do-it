@@ -1,4 +1,3 @@
-
 """SQLAlchemy base model."""
 
 from datetime import datetime

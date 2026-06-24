@@ -55,9 +55,7 @@ class AdminService:
         total_conversations = (
             await self.db.execute(select(func.count(Conversation.id)))
         ).scalar_one()
-        total_messages = (
-            await self.db.execute(select(func.count(Message.id)))
-        ).scalar_one()
+        total_messages = (await self.db.execute(select(func.count(Message.id)))).scalar_one()
 
         # Billing — best-effort, only if tables exist + billing on
         credits_30d = 0
@@ -84,11 +82,7 @@ class AdminService:
 
             # Sum active subscription unit_amount * quantity, monthly equiv.
             stmt = (
-                select(
-                    func.coalesce(
-                        func.sum(Price.amount_cents * Subscription.seats_quantity), 0
-                    )
-                )
+                select(func.coalesce(func.sum(Price.amount_cents * Subscription.seats_quantity), 0))
                 .select_from(Subscription)
                 .join(Price, Price.id == Subscription.price_id)
                 .where(Subscription.status.in_(("active", "trialing")))
@@ -107,9 +101,7 @@ class AdminService:
             "mrr_cents": mrr_cents,
         }
 
-    async def list_stripe_events(
-        self, *, skip: int = 0, limit: int = 50
-    ) -> tuple[list[Any], int]:
+    async def list_stripe_events(self, *, skip: int = 0, limit: int = 50) -> tuple[list[Any], int]:
         """Page through the Stripe webhook idempotency log.
 
         Returns ([], 0) when the StripeEvent table doesn't exist (billing
@@ -123,11 +115,15 @@ class AdminService:
 
         total = (await self.db.execute(select(func.count(StripeEvent.id)))).scalar_one()
         rows = (
-            await self.db.execute(
-                select(StripeEvent)
-                .order_by(StripeEvent.created_at.desc())
-                .offset(skip)
-                .limit(limit)
+            (
+                await self.db.execute(
+                    select(StripeEvent)
+                    .order_by(StripeEvent.created_at.desc())
+                    .offset(skip)
+                    .limit(limit)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return list(rows), int(total)

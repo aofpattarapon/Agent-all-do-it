@@ -79,7 +79,9 @@ def discover_commands() -> list[click.Command]:
         try:
             importlib.import_module(f"app.commands.{module_name}")
         except ImportError as e:
-            click.secho(f"Warning: Failed to import command module '{module_name}': {e}", fg="yellow")
+            click.secho(
+                f"Warning: Failed to import command module '{module_name}': {e}", fg="yellow"
+            )
 
     _discovered = True
     return _commands

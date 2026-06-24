@@ -29,38 +29,71 @@ class LLMErrorInfo:
 _RULES: list[tuple[str, re.Pattern[str], int, int, str, bool]] = [
     (
         "auth_error",
-        re.compile(r"\b(401|403)\b|invalid[\s_-]?(api[\s_-]?)?key|unauthorized|authentication[\s_-]?fail|"
-                   r"permission[\s_-]?denied|invalid[\s_-]?x[\s_-]?api[\s_-]?key|not[\s_-]?configured", re.I),
-        401, 0, "manual_token_fix", True,
+        re.compile(
+            r"\b(401|403)\b|invalid[\s_-]?(api[\s_-]?)?key|unauthorized|authentication[\s_-]?fail|"
+            r"permission[\s_-]?denied|invalid[\s_-]?x[\s_-]?api[\s_-]?key|not[\s_-]?configured",
+            re.I,
+        ),
+        401,
+        0,
+        "manual_token_fix",
+        True,
     ),
     (
         "quota_exceeded",
-        re.compile(r"quota|billing|insufficient[\s_-]?(funds|credit|balance)|"
-                   r"credit[\s_-]?balance[\s_-]?(is[\s_-]?)?too[\s_-]?low|exceeded[\s_-]?your[\s_-]?current", re.I),
-        429, 3600, "auto", True,
+        re.compile(
+            r"quota|billing|insufficient[\s_-]?(funds|credit|balance)|"
+            r"credit[\s_-]?balance[\s_-]?(is[\s_-]?)?too[\s_-]?low|exceeded[\s_-]?your[\s_-]?current",
+            re.I,
+        ),
+        429,
+        3600,
+        "auto",
+        True,
     ),
     (
         "rate_limited",
         re.compile(r"\b429\b|rate[\s_-]?limit|too[\s_-]?many[\s_-]?requests|slow[\s_-]?down", re.I),
-        429, 60, "auto", True,
+        429,
+        60,
+        "auto",
+        True,
     ),
     (
         "context_limit_exceeded",
-        re.compile(r"context[\s_-]?(length|window)|maximum[\s_-]?context|too[\s_-]?(long|large|many[\s_-]?tokens)|"
-                   r"prompt[\s_-]?is[\s_-]?too[\s_-]?long|input[\s_-]?too[\s_-]?long", re.I),
-        400, 0, "auto", True,
+        re.compile(
+            r"context[\s_-]?(length|window)|maximum[\s_-]?context|too[\s_-]?(long|large|many[\s_-]?tokens)|"
+            r"prompt[\s_-]?is[\s_-]?too[\s_-]?long|input[\s_-]?too[\s_-]?long",
+            re.I,
+        ),
+        400,
+        0,
+        "auto",
+        True,
     ),
     (
         "provider_unavailable",
-        re.compile(r"\b(500|502|503|504)\b|overloaded|service[\s_-]?unavailable|"
-                   r"internal[\s_-]?server[\s_-]?error|bad[\s_-]?gateway|gateway[\s_-]?timeout|"
-                   r"server[\s_-]?(is[\s_-]?)?busy|capacity", re.I),
-        503, 120, "auto", True,
+        re.compile(
+            r"\b(500|502|503|504)\b|overloaded|service[\s_-]?unavailable|"
+            r"internal[\s_-]?server[\s_-]?error|bad[\s_-]?gateway|gateway[\s_-]?timeout|"
+            r"server[\s_-]?(is[\s_-]?)?busy|capacity",
+            re.I,
+        ),
+        503,
+        120,
+        "auto",
+        True,
     ),
     (
         "timeout",
-        re.compile(r"\btimed?[\s_-]?out\b|timeout|deadline[\s_-]?exceeded|read[\s_-]?timeout|connect[\s_-]?timeout", re.I),
-        408, 30, "auto", True,
+        re.compile(
+            r"\btimed?[\s_-]?out\b|timeout|deadline[\s_-]?exceeded|read[\s_-]?timeout|connect[\s_-]?timeout",
+            re.I,
+        ),
+        408,
+        30,
+        "auto",
+        True,
     ),
 ]
 

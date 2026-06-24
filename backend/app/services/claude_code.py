@@ -29,7 +29,7 @@ class AgentResult:
 
 @dataclass
 class AgentEvent:
-    type: str   # "text" | "result" | "error"
+    type: str  # "text" | "result" | "error"
     data: str
     cost_usd: float | None = None
     backend: str = "unknown"
@@ -51,9 +51,12 @@ async def _stream_cli(prompt: str, system_prompt: str, max_turns: int) -> AsyncI
     cmd = [
         cli_path,
         "--print",
-        "--output-format", "text",
-        "--max-turns", str(max_turns),
-        "--system-prompt", system_prompt,
+        "--output-format",
+        "text",
+        "--max-turns",
+        str(max_turns),
+        "--system-prompt",
+        system_prompt,
         prompt,
     ]
 
@@ -76,7 +79,9 @@ async def _stream_cli(prompt: str, system_prompt: str, max_turns: int) -> AsyncI
     yield AgentEvent(type="result", data="", backend=BACKEND_CLI)
 
 
-async def _stream_api(prompt: str, system_prompt: str, model: str, api_key: str = "") -> AsyncIterator[AgentEvent]:
+async def _stream_api(
+    prompt: str, system_prompt: str, model: str, api_key: str = ""
+) -> AsyncIterator[AgentEvent]:
     """Stream via langchain-anthropic (direct Anthropic API)."""
     from langchain_anthropic import ChatAnthropic
     from langchain_core.messages import HumanMessage, SystemMessage
@@ -86,7 +91,11 @@ async def _stream_api(prompt: str, system_prompt: str, model: str, api_key: str 
     # DB-stored key (from app_settings) takes precedence over .env
     resolved_key = api_key or settings.ANTHROPIC_API_KEY
     if not resolved_key:
-        yield AgentEvent(type="error", data="ANTHROPIC_API_KEY not configured. Go to Settings → AI Backend to set it.", backend=BACKEND_API)
+        yield AgentEvent(
+            type="error",
+            data="ANTHROPIC_API_KEY not configured. Go to Settings → AI Backend to set it.",
+            backend=BACKEND_API,
+        )
         return
 
     llm = ChatAnthropic(
@@ -145,7 +154,11 @@ class ClaudeCodeService:
                 logger.warning("Claude CLI failed: %s", exc)
 
             if not auto_fallback:
-                yield AgentEvent(type="error", data="Claude CLI unavailable and auto_fallback is disabled", backend=BACKEND_CLI)
+                yield AgentEvent(
+                    type="error",
+                    data="Claude CLI unavailable and auto_fallback is disabled",
+                    backend=BACKEND_CLI,
+                )
                 return
 
             logger.info("Falling back to anthropic-api")
@@ -179,6 +192,8 @@ class ClaudeCodeService:
                 cost = event.cost_usd
                 used_backend = event.backend
             elif event.type == "error":
-                return AgentResult(text="", is_error=True, error_message=event.data, backend=event.backend)
+                return AgentResult(
+                    text="", is_error=True, error_message=event.data, backend=event.backend
+                )
 
         return AgentResult(text="".join(parts), cost_usd=cost, backend=used_backend)

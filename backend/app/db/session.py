@@ -1,4 +1,3 @@
-
 """Async PostgreSQL database session."""
 
 from collections.abc import AsyncGenerator

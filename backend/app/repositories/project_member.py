@@ -8,9 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models.project_member import ProjectMember
 
 
-async def get(
-    db: AsyncSession, *, project_id: UUID, user_id: UUID
-) -> ProjectMember | None:
+async def get(db: AsyncSession, *, project_id: UUID, user_id: UUID) -> ProjectMember | None:
     """Return the membership row for ``(project_id, user_id)`` or ``None``."""
     result = await db.execute(
         select(ProjectMember).where(
@@ -21,9 +19,7 @@ async def get(
     return result.scalar_one_or_none()
 
 
-async def list_for_project(
-    db: AsyncSession, *, project_id: UUID
-) -> list[ProjectMember]:
+async def list_for_project(db: AsyncSession, *, project_id: UUID) -> list[ProjectMember]:
     """Return all membership rows for a project."""
     result = await db.execute(
         select(ProjectMember)
@@ -44,9 +40,7 @@ async def upsert(
         await db.flush()
         await db.refresh(existing)
         return existing
-    member = ProjectMember(
-        project_id=project_id, user_id=user_id, project_role=project_role
-    )
+    member = ProjectMember(project_id=project_id, user_id=user_id, project_role=project_role)
     db.add(member)
     await db.flush()
     await db.refresh(member)

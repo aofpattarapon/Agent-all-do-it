@@ -28,11 +28,11 @@ logger = logging.getLogger(__name__)
 class SupervisorState(TypedDict):
     task: str
     project_id: str
-    step_index: int                     # which step in the pipeline we're on
+    step_index: int  # which step in the pipeline we're on
     agent_queue: list[dict]
-    current_agent: dict | None          # the agent currently being processed
+    current_agent: dict | None  # the agent currently being processed
     pending_handoff_id: str | None
-    last_output: str                    # output from the previous agent step
+    last_output: str  # output from the previous agent step
     agent_results: Annotated[dict[str, str], lambda a, b: {**a, **b}]
     messages: Annotated[list[BaseMessage], operator.add]
     final_response: str | None
@@ -122,7 +122,9 @@ class SupervisorAgent:
                 await db.commit()
                 return str(handoff.id)
         except Exception as exc:
-            logger.debug("Failed to create handoff %s -> %s: %s", agent_cfg["name"], next_agent["name"], exc)
+            logger.debug(
+                "Failed to create handoff %s -> %s: %s", agent_cfg["name"], next_agent["name"], exc
+            )
             return None
 
     def _dispatch_node(self, state: SupervisorState) -> dict:
@@ -184,14 +186,16 @@ class SupervisorAgent:
             last_output=state.get("last_output", ""),
         )
 
-        await event_bus.emit(AgentEvent(
-            type="agent_started",
-            project_id=project_id,
-            run_id=self.run_id,
-            task=state["task"],
-            agent_name=agent_name,
-            agent_role=agent_role,
-        ))
+        await event_bus.emit(
+            AgentEvent(
+                type="agent_started",
+                project_id=project_id,
+                run_id=self.run_id,
+                task=state["task"],
+                agent_name=agent_name,
+                agent_role=agent_role,
+            )
+        )
 
         # Build a lightweight AgentConfig-like object for the runtime dispatcher
         class _AgentProxy:
@@ -216,37 +220,47 @@ class SupervisorAgent:
                     db=db,
                 )
             new_handoff_id: str | None = None
-            is_error = text.startswith("[Agent error:") or text.startswith("[kimi-cli error") or text.startswith("[claude-cli error")
+            is_error = (
+                text.startswith("[Agent error:")
+                or text.startswith("[kimi-cli error")
+                or text.startswith("[claude-cli error")
+            )
             if is_error:
-                await event_bus.emit(AgentEvent(
-                    type="agent_error",
-                    project_id=project_id,
-                    run_id=self.run_id,
-                    agent_name=agent_name,
-                    agent_role=agent_role,
-                    data=text[:500],
-                ))
-            else:
-                # Stream the output in chunks so the UI sees progress
-                chunk_size = 120
-                for i in range(0, len(text), chunk_size):
-                    chunk = text[i:i + chunk_size]
-                    await event_bus.emit(AgentEvent(
-                        type="agent_chunk",
+                await event_bus.emit(
+                    AgentEvent(
+                        type="agent_error",
                         project_id=project_id,
                         run_id=self.run_id,
                         agent_name=agent_name,
                         agent_role=agent_role,
-                        data=chunk,
-                    ))
-                await event_bus.emit(AgentEvent(
-                    type="agent_done",
-                    project_id=project_id,
-                    run_id=self.run_id,
-                    agent_name=agent_name,
-                    agent_role=agent_role,
-                    data=text[:500],
-                ))
+                        data=text[:500],
+                    )
+                )
+            else:
+                # Stream the output in chunks so the UI sees progress
+                chunk_size = 120
+                for i in range(0, len(text), chunk_size):
+                    chunk = text[i : i + chunk_size]
+                    await event_bus.emit(
+                        AgentEvent(
+                            type="agent_chunk",
+                            project_id=project_id,
+                            run_id=self.run_id,
+                            agent_name=agent_name,
+                            agent_role=agent_role,
+                            data=chunk,
+                        )
+                    )
+                await event_bus.emit(
+                    AgentEvent(
+                        type="agent_done",
+                        project_id=project_id,
+                        run_id=self.run_id,
+                        agent_name=agent_name,
+                        agent_role=agent_role,
+                        data=text[:500],
+                    )
+                )
                 next_agent = state["agent_queue"][0] if state.get("agent_queue") else None
                 new_handoff_id: str | None = None
                 if next_agent:
@@ -257,15 +271,19 @@ class SupervisorAgent:
                             next_agent=next_agent,
                             output_text=text,
                         )
-                    await event_bus.emit(AgentEvent(
-                        type="agent_handoff",
-                        project_id=project_id,
-                        run_id=self.run_id,
-                        agent_name=agent_name,
-                        agent_role=agent_role,
-                        data=f"{agent_name} handed off to {next_agent['name']}",
-                    ))
-            logger.info("Agent '%s' (step %d) completed (error=%s)", agent_name, step_index, is_error)
+                    await event_bus.emit(
+                        AgentEvent(
+                            type="agent_handoff",
+                            project_id=project_id,
+                            run_id=self.run_id,
+                            agent_name=agent_name,
+                            agent_role=agent_role,
+                            data=f"{agent_name} handed off to {next_agent['name']}",
+                        )
+                    )
+            logger.info(
+                "Agent '%s' (step %d) completed (error=%s)", agent_name, step_index, is_error
+            )
             return {
                 "step_index": step_index + 1,
                 "last_output": text,
@@ -277,14 +295,16 @@ class SupervisorAgent:
         except Exception as exc:
             err_text = f"[Agent error: {exc}]"
             logger.exception("Agent '%s' (step %d) failed", agent_name, step_index)
-            await event_bus.emit(AgentEvent(
-                type="agent_error",
-                project_id=project_id,
-                run_id=self.run_id,
-                agent_name=agent_name,
-                agent_role=agent_role,
-                data=err_text[:500],
-            ))
+            await event_bus.emit(
+                AgentEvent(
+                    type="agent_error",
+                    project_id=project_id,
+                    run_id=self.run_id,
+                    agent_name=agent_name,
+                    agent_role=agent_role,
+                    data=err_text[:500],
+                )
+            )
             return {
                 "step_index": step_index + 1,
                 "last_output": err_text,

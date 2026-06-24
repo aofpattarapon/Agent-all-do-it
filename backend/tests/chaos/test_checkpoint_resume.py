@@ -5,7 +5,7 @@ required. Exercises CheckpointEngine save/restore and CostGuard hard-stop path.
 """
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -13,8 +13,8 @@ import pytest
 from app.services.checkpoint_engine import CheckpointEngine
 from app.services.cost_guard import CostGuard
 
-
 # ── CheckpointEngine ──────────────────────────────────────────────────────────
+
 
 @pytest.mark.anyio
 async def test_checkpoint_saved_during_step(mock_redis):
@@ -66,13 +66,15 @@ async def test_restore_partial_output_on_resume(mock_redis):
     """CheckpointEngine.restore deserializes and returns the stored checkpoint."""
     run_id = uuid4()
     step_id = uuid4()
-    stored = json.dumps({
-        "run_id": str(run_id),
-        "step_id": str(step_id),
-        "partial_output": "partial result — trade signal computed",
-        "tool_calls": [],
-        "conversation_history": [],
-    })
+    stored = json.dumps(
+        {
+            "run_id": str(run_id),
+            "step_id": str(step_id),
+            "partial_output": "partial result — trade signal computed",
+            "tool_calls": [],
+            "conversation_history": [],
+        }
+    )
 
     mock_client = AsyncMock()
     mock_client.get = AsyncMock(return_value=stored)
@@ -118,6 +120,7 @@ async def test_checkpoint_save_skips_when_redis_not_connected():
 
 # ── CostGuard budget abort ────────────────────────────────────────────────────
 
+
 @pytest.mark.anyio
 async def test_budget_exceeded_returns_hard_stop():
     """CostGuard returns 'hard_stop' when 100% of the daily budget is spent."""
@@ -126,7 +129,7 @@ async def test_budget_exceeded_returns_hard_stop():
     db = AsyncMock()
 
     budget = MagicMock(spec=CostBudget)
-    budget.daily_budget_usd = 0.001   # $0.001 / day
+    budget.daily_budget_usd = 0.001  # $0.001 / day
     budget.alert_at_pct = 80
     budget.hard_stop_at_pct = 100
 

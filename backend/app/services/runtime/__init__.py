@@ -14,9 +14,11 @@ from typing import TYPE_CHECKING
 
 from app.services.runtime import (
     anthropic_api,
+    cerebras_api,
     claude_cli,
     claude_cli_work,
     codex_cli,
+    google_ai_api,
     groq_api,
     kimi_api,
     kimi_cli,
@@ -36,6 +38,8 @@ _ADAPTERS = {
     "kimi-cli": kimi_cli,
     "kimi-api": kimi_api,
     "groq-api": groq_api,
+    "cerebras-api": cerebras_api,
+    "google-ai-studio": google_ai_api,
     "anthropic-api": anthropic_api,
     "openai-api": openai_api,
     "ollama": ollama_sdk,

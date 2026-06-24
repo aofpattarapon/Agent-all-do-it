@@ -39,6 +39,10 @@ class KillSwitchResult:
     warnings: list[str] = field(default_factory=list)
     adjusted_position_size_usdt: float | None = None
     checks_run: list[str] = field(default_factory=list)
+    # True when the consecutive-loss block was bypassed by an explicit, audited
+    # strategy-review acknowledgement. The caller consumes that single-use ack after
+    # the order attempt (see ExecutionService._execute_proposal).
+    consecutive_loss_ack_used: bool = False
 
 
 class KillSwitch:
@@ -64,6 +68,7 @@ class KillSwitch:
         warnings: list[str] = []
         checks: list[str] = []
         adjusted_size = proposed_size_usdt
+        consecutive_loss_ack_used = False
 
         checks.append("sl_required")
         if self.cfg.require_sl and not stop_loss:
@@ -74,10 +79,24 @@ class KillSwitch:
             blocked.append("NO_TAKE_PROFIT: At least one take profit level is required.")
 
         checks.append("risk_reward")
+        norm_direction = direction.upper()
         if stop_loss and take_profit_levels and entry_price > 0:
-            sl_dist = abs(entry_price - stop_loss)
-            tp_dist = abs(take_profit_levels[0] - entry_price)
-            if sl_dist > 0:
+            # Signed, direction-aware distances: a wrong-direction SL/TP yields a
+            # non-positive distance and is blocked rather than masked by abs().
+            if norm_direction == "LONG":
+                sl_dist = entry_price - stop_loss
+                tp_dist = take_profit_levels[0] - entry_price
+            else:  # SHORT
+                sl_dist = stop_loss - entry_price
+                tp_dist = entry_price - take_profit_levels[0]
+
+            if sl_dist <= 0 or tp_dist <= 0:
+                blocked.append(
+                    f"WRONG_DIRECTION_SL_TP: For {norm_direction}, stop_loss ({stop_loss}) and "
+                    f"take_profit ({take_profit_levels[0]}) are on the wrong side of entry "
+                    f"({entry_price})."
+                )
+            else:
                 rr = round(tp_dist / sl_dist, 2)
                 if rr < self.cfg.min_risk_reward:
                     blocked.append(
@@ -86,7 +105,10 @@ class KillSwitch:
 
         checks.append("risk_per_trade")
         if stop_loss and entry_price > 0 and proposed_size_usdt > 0:
-            sl_pct = abs(entry_price - stop_loss) / entry_price
+            signed_sl_dist = (
+                entry_price - stop_loss if norm_direction == "LONG" else stop_loss - entry_price
+            )
+            sl_pct = abs(signed_sl_dist) / entry_price
             max_loss_usdt = proposed_size_usdt * sl_pct
             risk_pct = (max_loss_usdt / self.cfg.portfolio_usdt) * 100
             if risk_pct > self.cfg.max_risk_per_trade_pct:
@@ -98,7 +120,11 @@ class KillSwitch:
                 )
 
         checks.append("market_regime")
-        if self.cfg.block_longs_in_risk_off and market_regime == "RISK_OFF" and direction.upper() == "LONG":
+        if (
+            self.cfg.block_longs_in_risk_off
+            and market_regime == "RISK_OFF"
+            and direction.upper() == "LONG"
+        ):
             blocked.append("MARKET_RISK_OFF: No new LONG positions during RISK_OFF market regime.")
 
         checks.append("leverage")
@@ -119,8 +145,11 @@ class KillSwitch:
                     "Close existing positions first."
                 )
         except Exception as exc:
-            logger.warning("Could not check open positions: %s", exc)
-            warnings.append(f"POSITION_CHECK_SKIPPED: {exc}")
+            # Fail CLOSED: a risk check we cannot evaluate must block the trade, never
+            # silently pass. Letting it through would disable the kill switch exactly
+            # when the system is least healthy.
+            logger.warning("Could not check open positions — blocking: %s", exc)
+            blocked.append(f"POSITION_CHECK_UNAVAILABLE: max-positions check failed ({exc}).")
 
         checks.append("daily_loss")
         try:
@@ -144,8 +173,9 @@ class KillSwitch:
                     f"(80% of {self.cfg.max_daily_loss_pct}% limit)."
                 )
         except Exception as exc:
-            logger.warning("Could not check daily loss: %s", exc)
-            warnings.append(f"DAILY_LOSS_CHECK_SKIPPED: {exc}")
+            # Fail CLOSED — see max_positions rationale above.
+            logger.warning("Could not check daily loss — blocking: %s", exc)
+            blocked.append(f"DAILY_LOSS_CHECK_UNAVAILABLE: daily-loss check failed ({exc}).")
 
         checks.append("consecutive_losses")
         try:
@@ -157,23 +187,46 @@ class KillSwitch:
             )
             result = await self.db.execute(stmt)
             recent = [row[0] for row in result.fetchall()]
-            if (
-                len(recent) >= self.cfg.block_after_consecutive_losses
-                and all(item == "LOSS" for item in recent)
+            if len(recent) >= self.cfg.block_after_consecutive_losses and all(
+                item == "LOSS" for item in recent
             ):
-                blocked.append(
-                    f"CONSECUTIVE_LOSSES: Last {self.cfg.block_after_consecutive_losses} trades "
-                    "all lost. Review strategy before continuing."
-                )
+                # An explicit, audited strategy-review acknowledgement may bypass THIS gate
+                # only. It is read fail-closed (a missing/expired/used/invalid ack → block) and
+                # never affects any other check above. The single-use ack is consumed by the
+                # caller after the order attempt.
+                from app.services import risk_ack
+
+                ack = await risk_ack.get_active_ack(self.db, project_id)
+                if ack is not None:
+                    consecutive_loss_ack_used = True
+                    checks.append("consecutive_losses_ack")
+                    warnings.append(
+                        f"CONSECUTIVE_LOSSES_ACK: consecutive-loss block bypassed by an explicit "
+                        f"strategy-review acknowledgement recorded by {ack.get('acknowledged_by')} "
+                        f"at {ack.get('acknowledged_at')} (reason: {ack.get('reason')}). All other "
+                        "risk checks still apply; this acknowledgement is single-use."
+                    )
+                else:
+                    blocked.append(
+                        f"CONSECUTIVE_LOSSES: Last {self.cfg.block_after_consecutive_losses} trades "
+                        "all lost. Review strategy before continuing."
+                    )
         except Exception as exc:
-            logger.warning("Could not check consecutive losses: %s", exc)
+            # Fail CLOSED — see max_positions rationale above.
+            logger.warning("Could not check consecutive losses — blocking: %s", exc)
+            blocked.append(
+                f"CONSECUTIVE_LOSSES_CHECK_UNAVAILABLE: consecutive-losses check failed ({exc})."
+            )
 
         return KillSwitchResult(
             passed=len(blocked) == 0,
             blocked_reasons=blocked,
             warnings=warnings,
-            adjusted_position_size_usdt=adjusted_size if adjusted_size != proposed_size_usdt else None,
+            adjusted_position_size_usdt=adjusted_size
+            if adjusted_size != proposed_size_usdt
+            else None,
             checks_run=checks,
+            consecutive_loss_ack_used=consecutive_loss_ack_used,
         )
 
     async def expire_old_proposals(self, project_id: UUID) -> int:

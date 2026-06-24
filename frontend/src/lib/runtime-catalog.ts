@@ -9,6 +9,8 @@ export const RUNTIME_OPTIONS = [
   { value: "kimi-cli",        label: "Kimi CLI (local)",           description: "Uses local 'kimi' binary — reads key from ~/.config/kimi/api_key" },
   { value: "kimi-api",        label: "Kimi API (Moonshot)",        description: "Set MOONSHOT_API_KEY in .env — free key from platform.moonshot.cn" },
   { value: "groq-api",        label: "Groq API (fast inference)",  description: "Set GROQ_API_KEY — free tier, very fast Llama/Mixtral models" },
+  { value: "cerebras-api",    label: "Cerebras API (fast, free)",  description: "Set CEREBRAS_API_KEY — free tier, very fast Llama/Qwen, high RPD" },
+  { value: "google-ai-studio", label: "Google AI Studio (Gemini)", description: "Set GOOGLE_API_KEY — free Gemini Flash with 1M context" },
   { value: "anthropic-api",   label: "Anthropic API (per-token)",  description: "Uses ANTHROPIC_API_KEY — charged per token" },
   { value: "openai-api",      label: "OpenAI API (per-token)",     description: "Uses OPENAI_API_KEY — charged per token" },
   { value: "openrouter-api",  label: "OpenRouter (free & paid)",   description: "Set OPENROUTER_API_KEY — access 200+ models including free tiers" },
@@ -57,6 +59,16 @@ export const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> =
     { value: "mixtral-8x7b-32768",      label: "Mixtral 8x7B" },
     { value: "gemma2-9b-it",            label: "Gemma 2 9B" },
   ],
+  "cerebras-api": [
+    { value: "llama-3.3-70b", label: "Llama 3.3 70B (default)" },
+    { value: "llama-3.1-8b",  label: "Llama 3.1 8B (fastest)" },
+    { value: "qwen-3-32b",    label: "Qwen 3 32B" },
+  ],
+  "google-ai-studio": [
+    { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash (default, 1M ctx)" },
+    { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+    { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
+  ],
   "anthropic-api": [
     { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5 (default)" },
     { value: "claude-sonnet-4-6",         label: "Claude Sonnet 4.6" },
@@ -72,7 +84,7 @@ export const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> =
   "openrouter-api": [
     { value: "openai/gpt-oss-120b:free",                  label: "GPT-OSS 120B (free)" },
     { value: "meta-llama/llama-3.3-70b-instruct:free",    label: "Llama 3.3 70B Instruct (free)" },
-    { value: "moonshotai/kimi-k2.6:free",                 label: "Kimi K2.6 (free)" },
+    { value: "google/gemma-4-31b-it:free",                label: "Gemma 4 31B (free)" },
     { value: "nvidia/nemotron-3-ultra-550b-a55b:free",    label: "Nemotron 3 Ultra 550B (free)" },
     { value: "openrouter/owl-alpha",                      label: "Owl Alpha (stealth)" },
   ],
@@ -81,6 +93,9 @@ export const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> =
     { value: "llama3.1",          label: "Llama 3.1" },
     { value: "mistral",           label: "Mistral" },
     { value: "codellama",         label: "CodeLlama" },
+    { value: "qwen3:8b",          label: "Qwen3 8B" },
+    { value: "qwen3:14b",         label: "Qwen3 14B" },
+    { value: "gemma3:12b",        label: "Gemma3 12B" },
   ],
 };
 

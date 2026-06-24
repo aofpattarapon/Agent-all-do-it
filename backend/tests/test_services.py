@@ -1,4 +1,3 @@
-
 """Tests for service layer."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -146,7 +145,9 @@ class TestUserServicePostgresql:
             assert result == mock_user
 
     @pytest.mark.anyio
-    async def test_authenticate_invalid_password(self, user_service: UserService, mock_user: MockUser):
+    async def test_authenticate_invalid_password(
+        self, user_service: UserService, mock_user: MockUser
+    ):
         """Test authentication with wrong password."""
         with (
             patch("app.services.user.user_repo") as mock_repo,

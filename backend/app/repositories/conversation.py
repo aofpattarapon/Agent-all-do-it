@@ -1,4 +1,3 @@
-
 """Conversation repository (PostgreSQL async).
 
 Contains database operations for Conversation, Message, and ToolCall entities.
@@ -56,9 +55,15 @@ async def get_conversations_by_user(
         query = query.where(Conversation.project_id == project_id)
     if not include_archived:
         query = query.where(Conversation.is_archived == False)  # noqa: E712
-    query = query.order_by(func.coalesce(Conversation.updated_at, Conversation.created_at).desc()).offset(skip).limit(limit)
+    query = (
+        query.order_by(func.coalesce(Conversation.updated_at, Conversation.created_at).desc())
+        .offset(skip)
+        .limit(limit)
+    )
     result = await db.execute(query)
     return list(result.scalars().all())
+
+
 async def get_all_conversations_with_count(
     db: AsyncSession,
     *,
@@ -89,9 +94,11 @@ async def get_all_conversations_with_count(
             | Conversation.id.cast(String).ilike(f"{safe_search}%", escape="\\")
         )
 
-    query = query.order_by(
-        func.coalesce(Conversation.updated_at, Conversation.created_at).desc()
-    ).offset(skip).limit(limit)
+    query = (
+        query.order_by(func.coalesce(Conversation.updated_at, Conversation.created_at).desc())
+        .offset(skip)
+        .limit(limit)
+    )
     result = await db.execute(query)
     rows = result.all()
 

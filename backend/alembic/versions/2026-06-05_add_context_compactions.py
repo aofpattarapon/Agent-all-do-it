@@ -66,18 +66,44 @@ def upgrade() -> None:
         sa.Column("estimated_tokens_before", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("estimated_tokens_after", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("summary_text", sa.Text(), nullable=False, server_default=""),
-        sa.Column("structured_facts_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="[]"),
-        sa.Column("entities_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="[]"),
-        sa.Column("relations_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="[]"),
-        sa.Column("metadata_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="{}"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "structured_facts_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="[]",
+        ),
+        sa.Column(
+            "entities_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="[]",
+        ),
+        sa.Column(
+            "relations_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="[]",
+        ),
+        sa.Column(
+            "metadata_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="{}",
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_context_compactions_project_id", "context_compactions", ["project_id"])
-    op.create_index("ix_context_compactions_agent_config_id", "context_compactions", ["agent_config_id"])
+    op.create_index(
+        "ix_context_compactions_agent_config_id", "context_compactions", ["agent_config_id"]
+    )
     op.create_index("ix_context_compactions_run_id", "context_compactions", ["run_id"])
     op.create_index("ix_context_compactions_run_step_id", "context_compactions", ["run_step_id"])
-    op.create_index("ix_context_compactions_conversation_id", "context_compactions", ["conversation_id"])
+    op.create_index(
+        "ix_context_compactions_conversation_id", "context_compactions", ["conversation_id"]
+    )
     op.create_index("ix_context_compactions_user_id", "context_compactions", ["user_id"])
     op.create_index("ix_context_compactions_source_type", "context_compactions", ["source_type"])
     op.create_index("ix_context_compactions_source_hash", "context_compactions", ["source_hash"])

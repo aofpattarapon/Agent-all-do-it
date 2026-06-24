@@ -8,6 +8,7 @@ from app.schemas.base import BaseSchema
 
 class FileUploadResponse(BaseSchema):
     """Response after successful file upload."""
+
     id: UUID
     filename: str
     mime_type: str

@@ -1,4 +1,3 @@
-
 """ConversationShare repository (PostgreSQL async)."""
 
 from uuid import UUID
@@ -63,9 +62,7 @@ async def get_conversations_shared_with_user(
     return list(result.scalars().all())
 
 
-async def count_conversations_shared_with_user(
-    db: AsyncSession, user_id: UUID
-) -> int:
+async def count_conversations_shared_with_user(db: AsyncSession, user_id: UUID) -> int:
     """Count conversations shared with a specific user."""
     result = await db.scalar(
         select(func.count())

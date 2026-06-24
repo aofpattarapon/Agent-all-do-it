@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import type { TradeExecution, Position, TradeJournal } from "@/types/trading";
 import { PixelFrame, SectionLabel, StatCard } from "@/components/pixel-ui";
 import { Badge } from "@/components/ui/badge";
+import { RuntimeModeBadge, useRuntimeMode } from "@/components/projects/runtime-mode-badge";
 import {
   CandlestickChart,
   TrendingUp,
@@ -13,59 +15,6 @@ import {
   BarChart3,
   Target,
 } from "lucide-react";
-
-interface TradeExecution {
-  id: string;
-  proposal_id: string;
-  exchange: string;
-  order_id: string | null;
-  symbol: string;
-  side: string;
-  executed_price: number | null;
-  size: number | null;
-  sl_order_id: string | null;
-  tp_order_ids: string[];
-  execution_status: string;
-  error_message: string | null;
-  created_at: string;
-}
-
-interface Position {
-  id: string;
-  symbol: string;
-  side: string;
-  entry_price: number;
-  current_price: number | null;
-  size: number;
-  stop_loss: number | null;
-  take_profits: number[];
-  unrealized_pnl: number | null;
-  unrealized_pnl_pct: number | null;
-  status: string;
-  closed_at: string | null;
-  close_price: number | null;
-  realized_pnl: number | null;
-  close_reason: string | null;
-  created_at: string;
-}
-
-interface TradeJournal {
-  id: string;
-  position_id: string;
-  symbol: string;
-  direction: string;
-  entry_price: number;
-  exit_price: number | null;
-  size: number;
-  realized_pnl: number | null;
-  realized_pnl_pct: number | null;
-  holding_time_minutes: number | null;
-  result: string | null;
-  original_thesis: string | null;
-  decision_log: Array<{ timestamp: string; action: string; order_id: string }>;
-  agent_votes: Record<string, unknown>;
-  created_at: string;
-}
 
 interface Performance {
   total_trades: number;
@@ -102,14 +51,6 @@ function marketTypeFromExchange(exchange: string): string | null {
   if (exchange.includes("spot")) return "SPOT";
   if (exchange.includes("future") || exchange.includes("usdm") || exchange.includes("margin")) return "FUTURES";
   return null;
-}
-
-function statusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
-  const s = status.toUpperCase();
-  if (s === "SUCCESS" || s === "WIN" || s === "CLOSED") return "default";
-  if (s === "PENDING" || s === "OPEN") return "secondary";
-  if (s === "FAILED" || s === "LOSS") return "destructive";
-  return "outline";
 }
 
 function statusClass(status: string): string {
@@ -224,27 +165,42 @@ function PnlChart({ data }: { data: Array<{ date: string; cumulative_pnl: number
 export default function OrderHistoryView({ projectId }: { projectId: string }) {
   const [tab, setTab] = useState<TabKey>("executions");
 
+  const { data: runtime } = useRuntimeMode(projectId);
+
   const { data: executions, isLoading: execLoading } = useQuery<TradeExecution[]>({
     queryKey: ["order-history", projectId, "executions"],
     queryFn: () => apiClient.get<TradeExecution[]>(`/projects/${projectId}/trading/executions`),
+    refetchInterval: 15_000,
   });
 
   const { data: positions, isLoading: posLoading } = useQuery<Position[]>({
     queryKey: ["order-history", projectId, "positions"],
-    queryFn: () =>
-      apiClient.get<Position[]>(`/projects/${projectId}/trading/positions`, {
-        params: { status_filter: "OPEN,CLOSED" },
-      }),
+    // Backend now accepts a comma-separated status_filter, but we fetch OPEN and CLOSED
+    // separately and merge so each set is unambiguous and the monitor's CLOSED rows always show.
+    queryFn: async () => {
+      const [open, closed] = await Promise.all([
+        apiClient.get<Position[]>(`/projects/${projectId}/trading/positions`, {
+          params: { status_filter: "OPEN" },
+        }),
+        apiClient.get<Position[]>(`/projects/${projectId}/trading/positions`, {
+          params: { status_filter: "CLOSED" },
+        }),
+      ]);
+      return [...open, ...closed];
+    },
+    refetchInterval: 15_000,
   });
 
   const { data: journal, isLoading: journalLoading } = useQuery<TradeJournal[]>({
     queryKey: ["order-history", projectId, "journal"],
     queryFn: () => apiClient.get<TradeJournal[]>(`/projects/${projectId}/trading/journal`),
+    refetchInterval: 15_000,
   });
 
   const { data: performance, isLoading: perfLoading } = useQuery<Performance>({
     queryKey: ["order-history", projectId, "performance"],
     queryFn: () => apiClient.get<Performance>(`/projects/${projectId}/trading/performance`),
+    refetchInterval: 30_000,
   });
 
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
@@ -256,6 +212,13 @@ export default function OrderHistoryView({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-4">
+      {/* Current runtime trading mode — backend source of truth, not a substring guess. */}
+      {runtime && (
+        <PixelFrame tight>
+          <RuntimeModeBadge runtime={runtime} />
+        </PixelFrame>
+      )}
+
       {/* Tabs */}
       <div className="pix-tabs">
         {tabs.map((t) => (
@@ -350,6 +313,34 @@ export default function OrderHistoryView({ projectId }: { projectId: string }) {
                         <span className="pix-row-title">{pos.symbol}</span>
                         <Badge className={sideBadgeClass(pos.side)}>{pos.side}</Badge>
                         <Badge className={statusClass(pos.status)}>{pos.status}</Badge>
+                        {/* True execution mode from the backend (DEMO_FUTURES / PAPER_SIMULATION / …),
+                            never inferred from the exchange substring. */}
+                        {pos.execution_visibility && (
+                          <Badge variant="outline">
+                            {pos.execution_visibility.execution_mode_label}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        {pos.exchange_confirmed && (
+                          <Badge variant="outline" className="text-green-400 border-green-400">
+                            Exchange confirmed
+                          </Badge>
+                        )}
+                        {pos.pnl_estimated ? (
+                          <Badge variant="outline" className="text-yellow-400 border-yellow-400">
+                            PnL estimated
+                          </Badge>
+                        ) : (
+                          pos.realized_pnl != null && (
+                            <Badge variant="outline" className="pix-muted">
+                              PnL booked
+                            </Badge>
+                          )
+                        )}
+                        {pos.close_reason && (
+                          <span className="pix-muted">close: {pos.close_reason}</span>
+                        )}
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm" style={{ fontFamily: '"VT323", monospace', color: "var(--pix-ink-soft)" }}>
                         <div>

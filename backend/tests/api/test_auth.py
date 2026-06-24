@@ -1,9 +1,9 @@
-
 # ruff: noqa: I001 - Imports structured for Jinja2 template conditionals
 """Tests for authentication routes."""
 
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
+
 ServiceMock = AsyncMock
 from uuid import uuid4
 

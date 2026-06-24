@@ -7,7 +7,12 @@ from fastapi import APIRouter, Query, status
 
 from app.api.deps import CurrentUser, KnowledgeSvc, ProjectSvc
 from app.core.rbac import Permission
-from app.schemas.knowledge import KnowledgeDocCreate, KnowledgeDocList, KnowledgeDocRead, KnowledgeDocUpdate
+from app.schemas.knowledge import (
+    KnowledgeDocCreate,
+    KnowledgeDocList,
+    KnowledgeDocRead,
+    KnowledgeDocUpdate,
+)
 
 router = APIRouter()
 
@@ -27,7 +32,11 @@ async def list_docs(
     return KnowledgeDocList(items=items, total=total)
 
 
-@router.post("/projects/{project_id}/knowledge", response_model=KnowledgeDocRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/projects/{project_id}/knowledge",
+    response_model=KnowledgeDocRead,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_doc(
     project_id: UUID,
     data: KnowledgeDocCreate,
@@ -64,7 +73,11 @@ async def update_doc(
     return await knowledge_svc.update(doc_id, project_id, data)
 
 
-@router.delete("/projects/{project_id}/knowledge/{doc_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+@router.delete(
+    "/projects/{project_id}/knowledge/{doc_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
 async def delete_doc(
     project_id: UUID,
     doc_id: UUID,

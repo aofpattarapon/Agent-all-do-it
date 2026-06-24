@@ -1,10 +1,10 @@
 """Message rating repository for database operations."""
-from datetime import datetime, timedelta, UTC
-from typing import Any
 
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, and_, case, func, select
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -76,9 +76,7 @@ async def get_ratings_for_message(
     message_id: UUID,
 ) -> list[MessageRating]:
     """Get all ratings for a message."""
-    query = select(MessageRating).where(
-        MessageRating.message_id == message_id
-    )
+    query = select(MessageRating).where(MessageRating.message_id == message_id)
     result = await db.execute(query)
     return list(result.scalars().all())
 
@@ -194,23 +192,24 @@ async def get_rating_summary(
         func.sum(case((MessageRating.rating == 1, 1), else_=0)).label("likes"),
         func.sum(case((MessageRating.rating == -1, 1), else_=0)).label("dislikes"),
         func.avg(MessageRating.rating).label("avg_rating"),
-        func.sum(case((and_(MessageRating.comment.isnot(None), MessageRating.comment != ""), 1), else_=0)).label("with_comments"),
+        func.sum(
+            case((and_(MessageRating.comment.isnot(None), MessageRating.comment != ""), 1), else_=0)
+        ).label("with_comments"),
     ).where(MessageRating.created_at >= cutoff_date)
 
     result = await db.execute(counts_query)
     row = result.one()
 
     # Daily breakdown
-    daily_query = select(
-        func.date(MessageRating.created_at).label("date"),
-        func.sum(case((MessageRating.rating == 1, 1), else_=0)).label("likes"),
-        func.sum(case((MessageRating.rating == -1, 1), else_=0)).label("dislikes"),
-    ).where(
-        MessageRating.created_at >= cutoff_date
-    ).group_by(
-        func.date(MessageRating.created_at)
-    ).order_by(
-        func.date(MessageRating.created_at)
+    daily_query = (
+        select(
+            func.date(MessageRating.created_at).label("date"),
+            func.sum(case((MessageRating.rating == 1, 1), else_=0)).label("likes"),
+            func.sum(case((MessageRating.rating == -1, 1), else_=0)).label("dislikes"),
+        )
+        .where(MessageRating.created_at >= cutoff_date)
+        .group_by(func.date(MessageRating.created_at))
+        .order_by(func.date(MessageRating.created_at))
     )
 
     daily_result = await db.execute(daily_query)

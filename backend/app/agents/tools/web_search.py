@@ -67,7 +67,7 @@ async def web_search(query: str, max_results: int = 5) -> list[dict]:
             response = await client.post(_DDG_HTML_URL, data={"q": query})
             response.raise_for_status()
             body = response.text
-    except Exception as exc:  # noqa: BLE001 - best-effort tool, never raise
+    except Exception as exc:
         logger.warning("web_search failed for query %r: %s", query, exc)
         return []
 

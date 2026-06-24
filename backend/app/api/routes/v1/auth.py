@@ -5,8 +5,10 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
+
 from app.api.deps import CurrentUser, UserSvc
 from app.core.exceptions import AuthenticationError
+from app.core.rate_limit import limiter
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -21,6 +23,7 @@ router = APIRouter()
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit("10/minute")
 async def login(
     request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -38,7 +41,9 @@ async def login(
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     user_in: UserCreate,
     user_service: UserSvc,
 ) -> Any:

@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import type { TradeOutcome, RunDisplayFields } from "@/lib/run-status";
+import { displayStatusOf, workflowHealthOf } from "@/lib/run-status";
 
 // ── API shapes ───────────────────────────────────────────────────────────────
 
@@ -30,7 +32,7 @@ interface WorkflowList {
   items: { id: string; name: string; is_enabled?: boolean }[];
   total: number;
 }
-export interface RunItem {
+export interface RunItem extends RunDisplayFields {
   id: string;
   status: string;
   trigger: string;
@@ -40,6 +42,7 @@ export interface RunItem {
   error_text?: string;
   workflow_name?: string;
   agent_name?: string;
+  trade_outcome?: TradeOutcome | null;
 }
 interface RunList {
   items: RunItem[];
@@ -154,9 +157,10 @@ export function useConsoleData() {
       const lastRun = sortByRecency(runsMap?.[p.id]?.items ?? [])[0];
       let status: TeamMember["status"] = "idle";
       if (lastRun) {
-        if (lastRun.status === "running") status = "running";
-        else if (lastRun.status === "completed") status = "done";
-        else if (lastRun.status === "failed") status = "error";
+        const ds = displayStatusOf(lastRun);
+        if (ds === "active") status = "running";
+        else if (ds === "error") status = "error";
+        else status = "done";
       }
       (agentsMap[p.id]?.items ?? []).forEach((a, i) => {
         members.push({
@@ -176,11 +180,9 @@ export function useConsoleData() {
     [agentsMap, projects],
   );
   const totalRuns = allRuns.length;
-  const successRate = useMemo(() => {
-    if (totalRuns === 0) return 0;
-    const done = allRuns.filter((r) => r.status === "completed").length;
-    return Math.round((done / totalRuns) * 100);
-  }, [allRuns, totalRuns]);
+  // Workflow Health = share of terminal runs that did NOT error (see workflowHealthOf).
+  // complete-reject and limit are intentional outcomes (not failures); active runs are excluded.
+  const workflowHealth = useMemo(() => workflowHealthOf(allRuns).pct, [allRuns]);
 
   const isLoading =
     projectsQuery.isLoading || agentsQuery.isLoading || workflowsQuery.isLoading || runsQuery.isLoading;
@@ -195,7 +197,7 @@ export function useConsoleData() {
     totalProjects,
     totalAgents,
     totalRuns,
-    successRate,
+    workflowHealth,
     isLoading,
     runsLoading: runsQuery.isLoading,
   };

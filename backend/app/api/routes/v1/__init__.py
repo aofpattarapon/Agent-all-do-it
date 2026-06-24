@@ -28,6 +28,7 @@ from app.api.routes.v1 import skill_versions
 from app.api.routes.v1 import trading
 from app.api.routes.v1 import backtest
 from app.api.routes.v1 import admin, admin_setup
+from app.api.routes.v1 import learning, agent_quality
 
 v1_router = APIRouter()
 
@@ -69,6 +70,8 @@ v1_router.include_router(admin.router, prefix="/admin", tags=["admin:seed"])
 # Projects, Agents, Knowledge, Supervisor
 v1_router.include_router(projects.router, tags=["projects"])
 v1_router.include_router(knowledge.router, tags=["knowledge"])
+v1_router.include_router(learning.router, tags=["learning"])
+v1_router.include_router(agent_quality.router, tags=["agent-quality"])
 v1_router.include_router(supervisor.router, tags=["supervisor"])
 v1_router.include_router(app_settings.router, prefix="/admin", tags=["admin:settings"])
 v1_router.include_router(control_room.router, tags=["control-room"])

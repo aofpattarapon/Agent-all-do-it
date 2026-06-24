@@ -16,12 +16,8 @@ async def get_by_id(db: AsyncSession, template_id: uuid.UUID) -> AgentTemplate |
     return result.scalar_one_or_none()
 
 
-async def get_by_source_key(
-    db: AsyncSession, source_key: str
-) -> AgentTemplate | None:
-    result = await db.execute(
-        select(AgentTemplate).where(AgentTemplate.source_key == source_key)
-    )
+async def get_by_source_key(db: AsyncSession, source_key: str) -> AgentTemplate | None:
+    result = await db.execute(select(AgentTemplate).where(AgentTemplate.source_key == source_key))
     return result.scalar_one_or_none()
 
 

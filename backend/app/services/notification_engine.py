@@ -82,7 +82,12 @@ class NotificationEngine:
             meta=meta,
         )
 
-        if priority in ("urgent", "important") and config and config.discord_enabled and config.discord_webhook_url:
+        if (
+            priority in ("urgent", "important")
+            and config
+            and config.discord_enabled
+            and config.discord_webhook_url
+        ):
             await self._send_discord(
                 webhook_url=config.discord_webhook_url,
                 title=title,
@@ -118,13 +123,15 @@ class NotificationEngine:
                     project_id=project_id or UUID(int=0),
                     run_id=run_id,
                     agent_name="system",
-                    data=json.dumps({
-                        "title": title,
-                        "body": body,
-                        "priority": priority,
-                        "user_id": str(user_id),
-                        **(meta or {}),
-                    }),
+                    data=json.dumps(
+                        {
+                            "title": title,
+                            "body": body,
+                            "priority": priority,
+                            "user_id": str(user_id),
+                            **(meta or {}),
+                        }
+                    ),
                 )
             )
         except Exception as exc:
@@ -172,13 +179,15 @@ class NotificationEngine:
             return
         try:
             key = f"escalation:{run_id}"
-            payload = json.dumps({
-                "user_id": str(user_id),
-                "run_id": str(run_id),
-                "project_id": str(project_id),
-                "created_at": datetime.now(UTC).isoformat(),
-                "meta": meta,
-            })
+            payload = json.dumps(
+                {
+                    "user_id": str(user_id),
+                    "run_id": str(run_id),
+                    "project_id": str(project_id),
+                    "created_at": datetime.now(UTC).isoformat(),
+                    "meta": meta,
+                }
+            )
             await client.setex(key, _ESCALATION_TTL, payload)
         except Exception as exc:
             logger.warning("NotificationEngine escalation schedule failed: %s", exc)

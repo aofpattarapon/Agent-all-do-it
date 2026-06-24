@@ -19,6 +19,7 @@ from app.commands import command, info, success, warning
 # Try to import Faker for better data generation
 try:
     from faker import Faker
+
     fake = Faker()
     HAS_FAKER = True
 except ImportError:
@@ -30,7 +31,7 @@ def random_email() -> str:
     """Generate a random email address."""
     if HAS_FAKER:
         return str(fake.email())
-    random_str = ''.join(random.choices(string.ascii_lowercase, k=8))
+    random_str = "".join(random.choices(string.ascii_lowercase, k=8))
     return f"{random_str}@example.com"
 
 
@@ -64,7 +65,9 @@ def seed(
         project cmd seed --no-users  # Skip user seeding
     """
     if not HAS_FAKER:
-        warning("Faker not installed. Using basic random data. For better data: uv add faker --group dev")
+        warning(
+            "Faker not installed. Using basic random data. For better data: uv add faker --group dev"
+        )
 
     if dry_run:
         info(f"[DRY RUN] Would create {count} sample records per entity")

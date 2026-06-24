@@ -1,9 +1,12 @@
 """Apply a runtime profile to all agents in a project.
 
-Switches all 12 crypto agents between 'test' and 'production' modes in one command.
+Switches all 12 crypto agents between named runtime profiles in one command.
 
 Usage:
     uv run pixel_dream_agent cmd apply-runtime-profile --project-id <uuid> --profile test --dry-run
+    uv run pixel_dream_agent cmd apply-runtime-profile --project-id <uuid> --profile test-2 --dry-run
+    uv run pixel_dream_agent cmd apply-runtime-profile --project-id <uuid> --profile test-minimal-paid --dry-run
+    uv run pixel_dream_agent cmd apply-runtime-profile --project-id <uuid> --profile test-local-free-24x7-safe --dry-run
     uv run pixel_dream_agent cmd apply-runtime-profile --project-id <uuid> --profile production
 """
 
@@ -21,13 +24,24 @@ from app.services.agent_config import merge_runtime_tools_config
 from app.services.runtime_profiles import VALID_PROFILES, get_profile
 
 
-@command("apply-runtime-profile", help="Apply a runtime profile (test|production) to all agents in a project")
+def _format_fallback_chain(fallback_chain: list[dict[str, str]]) -> str:
+    if not fallback_chain:
+        return "none"
+    return " -> ".join(
+        f"{entry.get('runtime_kind', '-')}/{entry.get('model', '-')}" for entry in fallback_chain
+    )
+
+
+@command(
+    "apply-runtime-profile",
+    help="Apply a runtime profile to all agents in a project",
+)
 @click.option("--project-id", type=str, required=True, help="Target project UUID")
 @click.option(
     "--profile",
     type=click.Choice(list(VALID_PROFILES)),
     required=True,
-    help="Profile name: test or production",
+    help="Profile name",
 )
 @click.option("--dry-run", is_flag=True, help="Show planned changes without saving")
 def apply_runtime_profile(project_id: str, profile: str, dry_run: bool) -> None:
@@ -62,7 +76,9 @@ def apply_runtime_profile(project_id: str, profile: str, dry_run: bool) -> None:
                 policy = profile_map.get(role)
 
                 if policy is None:
-                    warning(f"  {agent.name} (role={role!r}): no mapping in '{profile}' profile — skipped")
+                    warning(
+                        f"  {agent.name} (role={role!r}): no mapping in '{profile}' profile — skipped"
+                    )
                     skipped += 1
                     continue
 
@@ -71,6 +87,8 @@ def apply_runtime_profile(project_id: str, profile: str, dry_run: bool) -> None:
                 )
                 fallback_chain = policy.get("fallback_chain", [])
                 gate_policy = policy.get("gate_policy", "continue")
+                temperature = policy.get("temperature")
+                max_tokens = policy.get("max_tokens")
 
                 next_tools = merge_runtime_tools_config(
                     agent.tools_config,
@@ -85,6 +103,8 @@ def apply_runtime_profile(project_id: str, profile: str, dry_run: bool) -> None:
                     or agent.model != model
                     or dict(agent.tools_config or {}).get("fallback_chain") != fallback_chain
                     or dict(agent.tools_config or {}).get("gate_policy") != gate_policy
+                    or (temperature is not None and agent.temperature != temperature)
+                    or (max_tokens is not None and agent.max_tokens != max_tokens)
                 )
 
                 if not needs_change:
@@ -96,7 +116,7 @@ def apply_runtime_profile(project_id: str, profile: str, dry_run: bool) -> None:
                     f"  {agent.name} (role={role!r}): "
                     f"{agent.runtime_kind or '-'}/{agent.model or '-'} "
                     f"→ {runtime_kind}/{model} "
-                    f"[gate={gate_policy}, fallbacks={len(fallback_chain)}]"
+                    f"[gate={gate_policy}, fallbacks={_format_fallback_chain(fallback_chain)}]"
                 )
 
                 if dry_run:
@@ -105,6 +125,10 @@ def apply_runtime_profile(project_id: str, profile: str, dry_run: bool) -> None:
                 agent.runtime_kind = runtime_kind
                 agent.model = model
                 agent.tools_config = next_tools
+                if temperature is not None:
+                    agent.temperature = temperature
+                if max_tokens is not None:
+                    agent.max_tokens = max_tokens
                 db.add(agent)
 
             if dry_run:
@@ -116,13 +140,18 @@ def apply_runtime_profile(project_id: str, profile: str, dry_run: bool) -> None:
 
             # Persist active profile in app_settings for UI visibility.
             from sqlalchemy import text
+
             setting_key = f"project.{project_id}.runtime_profile"
             await db.execute(
                 text(
                     "INSERT INTO app_settings (key, value, description) VALUES (:key, :value, :desc) "
                     "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"
                 ),
-                {"key": setting_key, "value": profile, "desc": f"Active runtime profile for project {project_id}"},
+                {
+                    "key": setting_key,
+                    "value": profile,
+                    "desc": f"Active runtime profile for project {project_id}",
+                },
             )
 
             await db.commit()

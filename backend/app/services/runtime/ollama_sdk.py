@@ -19,28 +19,38 @@ async def run_agent(
     max_tokens: int = 2048,
     temperature: float = 0.7,
     base_url: str | None = None,
+    format: str | None = None,
+    num_ctx: int = 8192,
 ) -> tuple[str, dict]:
     """Call an Ollama server's chat endpoint.
 
     ``base_url`` is injected by ``run_with_fallback`` from the DB-stored value so
     that the URL set in Admin → Settings takes effect without a container restart.
+    ``format`` may be set to ``"json"`` to request structured JSON output from
+    Ollama (supported by Ollama 0.1.20+).
+    ``num_ctx`` sets the Ollama context window size (default 8192). Without this,
+    Ollama uses the model's compiled default (~4096 for gemma3:12b), which can be
+    fully consumed by the input prompt, leaving no tokens for output.
     """
     import httpx
 
     base = (base_url or _url()).rstrip("/")
     resolved_model = model or "llama3.2"
+    request_body: dict = {
+        "model": resolved_model,
+        "messages": [
+            {"role": "system", "content": system_prompt or "You are a helpful assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        "options": {"temperature": temperature, "num_predict": max_tokens, "num_ctx": num_ctx},
+        "stream": False,
+    }
+    if format:
+        request_body["format"] = format
     async with httpx.AsyncClient(timeout=120) as client:
         resp = await client.post(
             f"{base}/api/chat",
-            json={
-                "model": resolved_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt or "You are a helpful assistant."},
-                    {"role": "user", "content": prompt},
-                ],
-                "options": {"temperature": temperature, "num_predict": max_tokens},
-                "stream": False,
-            },
+            json=request_body,
         )
         resp.raise_for_status()
         data = resp.json()

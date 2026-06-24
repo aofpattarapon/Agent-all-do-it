@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
   }
   try {
-    const data = await backendFetch("/health/runtimes", {
+    const data = await backendFetch("/api/v1/health/runtimes", {
       headers: { Authorization: `Bearer ${token}` },
     });
     return NextResponse.json(data);

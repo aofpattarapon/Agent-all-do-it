@@ -5,10 +5,8 @@ import asyncio
 import click
 
 from app.commands import command, info, success
-from app.core.config import settings
 from app.db.session import get_db_context
 from app.repositories import knowledge_template as repo
-
 
 # Curated knowledge base templates — high-quality reference documents
 # that users can import into their projects.
@@ -458,6 +456,7 @@ async def _seed_knowledge_templates(*, clear: bool = False) -> None:
     async with get_db_context() as db:
         if clear:
             from sqlalchemy import text
+
             await db.execute(text("DELETE FROM knowledge_templates WHERE source = 'curated'"))
             await db.commit()
             info("Cleared curated knowledge templates.")

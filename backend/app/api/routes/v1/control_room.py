@@ -46,20 +46,8 @@ async def control_room_ws(
     try:
         await websocket.send_json({"type": "connected", "project_id": pid})
         for event in event_bus.recent(pid):
-            await websocket.send_json({
-                "type": event.type,
-                "project_id": event.project_id,
-                "run_id": event.run_id,
-                "task": event.task,
-                "agent_name": event.agent_name,
-                "agent_role": event.agent_role,
-                "data": event.data,
-                "timestamp": event.timestamp,
-            })
-        while True:
-            try:
-                event = await asyncio.wait_for(q.get(), timeout=25.0)
-                await websocket.send_json({
+            await websocket.send_json(
+                {
                     "type": event.type,
                     "project_id": event.project_id,
                     "run_id": event.run_id,
@@ -68,7 +56,23 @@ async def control_room_ws(
                     "agent_role": event.agent_role,
                     "data": event.data,
                     "timestamp": event.timestamp,
-                })
+                }
+            )
+        while True:
+            try:
+                event = await asyncio.wait_for(q.get(), timeout=25.0)
+                await websocket.send_json(
+                    {
+                        "type": event.type,
+                        "project_id": event.project_id,
+                        "run_id": event.run_id,
+                        "task": event.task,
+                        "agent_name": event.agent_name,
+                        "agent_role": event.agent_role,
+                        "data": event.data,
+                        "timestamp": event.timestamp,
+                    }
+                )
             except TimeoutError:
                 await websocket.send_json({"type": "ping"})
     except WebSocketDisconnect:

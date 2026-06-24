@@ -5,15 +5,15 @@ provider is required. The goal is to verify that RunExecutor correctly handles
 the three pipeline states: running → waiting_approval → completed.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 
 from app.services.cost_guard import CostGuard
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _make_run(idx=0, status="queued"):
     run = MagicMock()
@@ -41,7 +41,11 @@ def _make_step(kind="prompt", key=None, agent_id=None):
     step.status = "pending"
     step.output = None
     step.error_text = ""
-    return {"kind": kind, "key": key or f"step_{uuid4().hex[:6]}", "agent_id": str(agent_id or uuid4())}
+    return {
+        "kind": kind,
+        "key": key or f"step_{uuid4().hex[:6]}",
+        "agent_id": str(agent_id or uuid4()),
+    }
 
 
 def _make_db_step(status="pending"):
@@ -56,6 +60,7 @@ def _make_db_step(status="pending"):
 
 
 # ── CostGuard unit tests (no DB required) ─────────────────────────────────────
+
 
 @pytest.mark.anyio
 async def test_cost_guard_returns_ok_for_zero_tokens():
@@ -100,8 +105,8 @@ async def test_cost_guard_records_cost_event():
 @pytest.mark.anyio
 async def test_cost_guard_hard_stop_when_budget_exceeded():
     """CostGuard returns 'hard_stop' when daily spend already exceeds budget."""
+
     from app.db.models.cost_tracking import CostBudget
-    from datetime import UTC, datetime
 
     db = AsyncMock()
 
@@ -151,6 +156,7 @@ async def test_cost_guard_hard_stop_when_budget_exceeded():
 
 
 # ── Approval gate unit test ────────────────────────────────────────────────────
+
 
 def test_workflow_approval_step_kind_is_recognized():
     """Verify that 'approval' is a recognized step kind in the executor."""

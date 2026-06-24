@@ -32,7 +32,15 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "Lead with the math. Defend the lambda rule. Be precise about confidence thresholds (< 0.75 → human review). "
             "Hard line on PII: Ollama only. Explain the audit trail for every claim."
         ),
-        "skills": ["semantic-clustering", "ollama", "data-pipelines", "python", "chromadb", "faiss", "anomaly-detection"],
+        "skills": [
+            "semantic-clustering",
+            "ollama",
+            "data-pipelines",
+            "python",
+            "chromadb",
+            "faiss",
+            "anomaly-detection",
+        ],
         "tags": ["data", "remediation", "ai", "self-healing", "pipelines"],
         "popularity": 72,
     },
@@ -65,7 +73,15 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "Model serving uptime > 99.5%. A/B test statistical significance for model improvements. "
             "User engagement improvement from AI features (20%+ typical)."
         ),
-        "skills": ["pytorch", "tensorflow", "langchain", "rag", "embeddings", "mlops", "prompt-engineering"],
+        "skills": [
+            "pytorch",
+            "tensorflow",
+            "langchain",
+            "rag",
+            "embeddings",
+            "mlops",
+            "prompt-engineering",
+        ],
         "tags": ["ml", "llm", "ai", "data-pipeline", "production"],
         "popularity": 90,
     },
@@ -96,7 +112,14 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "'I have evaluated 1,000 shadow executions. The experimental model outperforms baseline by 14% while reducing costs by 80%.' "
             "Always report circuit breaker trips with exact cause."
         ),
-        "skills": ["llm-routing", "a-b-testing", "circuit-breakers", "cost-optimization", "shadow-traffic", "typescript"],
+        "skills": [
+            "llm-routing",
+            "a-b-testing",
+            "circuit-breakers",
+            "cost-optimization",
+            "shadow-traffic",
+            "typescript",
+        ],
         "tags": ["optimization", "architecture", "ai-routing", "cost-control"],
         "popularity": 74,
     },
@@ -127,7 +150,15 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "API response times < 200ms p95. Uptime > 99.9%. Zero critical security vulnerabilities. "
             "System handles 10x normal traffic during peak loads."
         ),
-        "skills": ["postgresql", "redis", "docker", "microservices", "fastapi", "api-design", "system-design"],
+        "skills": [
+            "postgresql",
+            "redis",
+            "docker",
+            "microservices",
+            "fastapi",
+            "api-design",
+            "system-design",
+        ],
         "tags": ["backend", "architecture", "api", "database", "cloud"],
         "popularity": 92,
     },
@@ -255,7 +286,16 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "4. Lineage tracking for every transformation.\n"
             "5. Separate compute from storage for cost and scale flexibility."
         ),
-        "skills": ["spark", "dbt", "airflow", "kafka", "etl", "sql", "data-warehouse", "delta-lake"],
+        "skills": [
+            "spark",
+            "dbt",
+            "airflow",
+            "kafka",
+            "etl",
+            "sql",
+            "data-warehouse",
+            "delta-lake",
+        ],
         "tags": ["data", "pipeline", "etl", "analytics", "lakehouse"],
         "popularity": 75,
     },
@@ -284,7 +324,15 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "4. VACUUM and ANALYZE after bulk operations.\n"
             "5. Profile before optimizing — never guess at bottlenecks."
         ),
-        "skills": ["postgresql", "mysql", "query-optimization", "indexing", "replication", "partitioning", "migration"],
+        "skills": [
+            "postgresql",
+            "mysql",
+            "query-optimization",
+            "indexing",
+            "replication",
+            "partitioning",
+            "migration",
+        ],
         "tags": ["database", "sql", "performance", "schema", "postgresql"],
         "popularity": 78,
     },
@@ -314,7 +362,16 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "## Key Stack\n"
             "Docker, Kubernetes, Terraform, Ansible, GitHub Actions, Prometheus, Grafana, ArgoCD, AWS/GCP/Azure."
         ),
-        "skills": ["docker", "kubernetes", "terraform", "github-actions", "prometheus", "aws", "gitops", "cicd"],
+        "skills": [
+            "docker",
+            "kubernetes",
+            "terraform",
+            "github-actions",
+            "prometheus",
+            "aws",
+            "gitops",
+            "cicd",
+        ],
         "tags": ["devops", "cicd", "infrastructure", "cloud", "automation"],
         "popularity": 85,
     },
@@ -409,7 +466,15 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "font display swap, avoid layout shifts with explicit image dimensions, "
             "minimize main thread work, preconnect to external origins."
         ),
-        "skills": ["react", "typescript", "nextjs", "tailwind", "accessibility", "performance", "css"],
+        "skills": [
+            "react",
+            "typescript",
+            "nextjs",
+            "tailwind",
+            "accessibility",
+            "performance",
+            "css",
+        ],
         "tags": ["frontend", "web", "react", "typescript", "ui"],
         "popularity": 95,
     },
@@ -534,7 +599,15 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "Cold start < 1s. Frame rate 60fps minimum. Memory footprint < 100MB for most screens. "
             "Battery impact < 1% per hour of background operation."
         ),
-        "skills": ["swift", "swiftui", "kotlin", "jetpack-compose", "react-native", "flutter", "mobile"],
+        "skills": [
+            "swift",
+            "swiftui",
+            "kotlin",
+            "jetpack-compose",
+            "react-native",
+            "flutter",
+            "mobile",
+        ],
         "tags": ["mobile", "ios", "android", "app", "swift", "kotlin"],
         "popularity": 82,
     },
@@ -567,7 +640,14 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "4. Measure, don't guess — A/B test prompt changes with statistical significance.\n"
             "5. Defense against prompt injection: validate outputs, don't trust user-supplied context blindly."
         ),
-        "skills": ["prompt-engineering", "llm", "testing", "evaluation", "chain-of-thought", "few-shot"],
+        "skills": [
+            "prompt-engineering",
+            "llm",
+            "testing",
+            "evaluation",
+            "chain-of-thought",
+            "few-shot",
+        ],
         "tags": ["prompts", "llm", "ai", "optimization", "testing"],
         "popularity": 88,
     },
@@ -662,7 +742,15 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "4. Formal verification for critical math (Certora, Halmos).\n"
             "5. Emergency pause mechanism in all value-holding contracts."
         ),
-        "skills": ["solidity", "evm", "defi", "hardhat", "foundry", "gas-optimization", "smart-contracts"],
+        "skills": [
+            "solidity",
+            "evm",
+            "defi",
+            "hardhat",
+            "foundry",
+            "gas-optimization",
+            "smart-contracts",
+        ],
         "tags": ["blockchain", "solidity", "defi", "ethereum", "web3"],
         "popularity": 74,
     },
@@ -693,7 +781,15 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "4. Blameless culture — systems fail, not people. Fix the system.\n"
             "5. Progressive rollouts — canary → percentage → full. Never big-bang deploys."
         ),
-        "skills": ["slo", "sli", "error-budgets", "prometheus", "observability", "chaos-engineering", "on-call"],
+        "skills": [
+            "slo",
+            "sli",
+            "error-budgets",
+            "prometheus",
+            "observability",
+            "chaos-engineering",
+            "on-call",
+        ],
         "tags": ["sre", "reliability", "observability", "slo", "devops"],
         "popularity": 82,
     },
@@ -723,7 +819,14 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "Active voice. Short sentences. One idea per paragraph. "
             "Treat unclear documentation as a bug — if users ask the same question twice, write the doc."
         ),
-        "skills": ["technical-writing", "api-docs", "markdown", "docusaurus", "openapi", "tutorials"],
+        "skills": [
+            "technical-writing",
+            "api-docs",
+            "markdown",
+            "docusaurus",
+            "openapi",
+            "tutorials",
+        ],
         "tags": ["documentation", "writing", "api", "readme", "developer-experience"],
         "popularity": 77,
     },
@@ -754,7 +857,14 @@ ENGINEERING_TEMPLATES: list[dict] = [
             "4. Always preserve original timestamps — never infer missing time data.\n"
             "5. Test transcription accuracy on a held-out sample before production deployment."
         ),
-        "skills": ["whisper", "speech-to-text", "diarization", "audio-processing", "python", "subtitles"],
+        "skills": [
+            "whisper",
+            "speech-to-text",
+            "diarization",
+            "audio-processing",
+            "python",
+            "subtitles",
+        ],
         "tags": ["voice", "audio", "speech", "ai", "transcription"],
         "popularity": 71,
     },

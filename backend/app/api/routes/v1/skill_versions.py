@@ -42,7 +42,9 @@ async def get_skill_version(
 ) -> Any:
     version = await skill_version_repo.get_by_id(db, version_id)
     if version is None or version.skill_id != skill_id:
-        raise NotFoundError(message="Skill version not found", details={"version_id": str(version_id)})
+        raise NotFoundError(
+            message="Skill version not found", details={"version_id": str(version_id)}
+        )
     return version
 
 
@@ -74,7 +76,9 @@ async def approve_skill_version(
     """Promote a canary version to active. Admin approval required."""
     version = await skill_version_repo.get_by_id(db, version_id)
     if version is None or version.skill_id != skill_id:
-        raise NotFoundError(message="Skill version not found", details={"version_id": str(version_id)})
+        raise NotFoundError(
+            message="Skill version not found", details={"version_id": str(version_id)}
+        )
     return await _get_svc(db).approve(version_id=version_id, approver_id=admin.id)
 
 
@@ -88,7 +92,9 @@ async def rollback_skill_version(
     """Revert skill to a specific rollback-ready version. Admin only."""
     version = await skill_version_repo.get_by_id(db, version_id)
     if version is None or version.skill_id != skill_id:
-        raise NotFoundError(message="Skill version not found", details={"version_id": str(version_id)})
+        raise NotFoundError(
+            message="Skill version not found", details={"version_id": str(version_id)}
+        )
     return await _get_svc(db).rollback(skill_id=skill_id)
 
 
@@ -116,5 +122,7 @@ async def archive_skill_version(
     """Archive a skill version (soft delete). Admin only."""
     version = await skill_version_repo.get_by_id(db, version_id)
     if version is None or version.skill_id != skill_id:
-        raise NotFoundError(message="Skill version not found", details={"version_id": str(version_id)})
+        raise NotFoundError(
+            message="Skill version not found", details={"version_id": str(version_id)}
+        )
     await skill_version_repo.update(db, db_version=version, update_data={"status": "archived"})

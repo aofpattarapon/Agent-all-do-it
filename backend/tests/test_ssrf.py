@@ -13,7 +13,6 @@ from app.core.sanitize import (
     validate_webhook_url,
 )
 
-
 # _is_ip_blocked
 
 

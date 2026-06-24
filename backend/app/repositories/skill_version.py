@@ -62,9 +62,7 @@ async def list_by_skill(
     skip: int = 0,
     limit: int = 50,
 ) -> tuple[list[SkillVersion], int]:
-    count_result = await db.execute(
-        select(func.count()).where(SkillVersion.skill_id == skill_id)
-    )
+    count_result = await db.execute(select(func.count()).where(SkillVersion.skill_id == skill_id))
     total = count_result.scalar_one()
     result = await db.execute(
         select(SkillVersion)

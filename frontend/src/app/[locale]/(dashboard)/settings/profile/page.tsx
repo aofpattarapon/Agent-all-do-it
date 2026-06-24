@@ -108,8 +108,8 @@ function TradingSummary() {
 
   return (
     <SettingsSection
-      title="Demo Trading Performance (Binance Testnet)"
-      description="Aggregated stats across all your projects."
+      title="Trading Performance"
+      description="Aggregated stats across all your projects. Each project's mode (paper / demo / testnet / live) is shown on its Trade Floor."
     >
       <div className="grid gap-3 md:grid-cols-3">
         <StatCard

@@ -1,18 +1,14 @@
 """Dashboard stats routes."""
 
 from typing import Any
-from uuid import UUID
 
 from fastapi import APIRouter, Query
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, DBSession
-from app.db.models.project import AgentConfig
 from app.db.models.handoff import Handoff
-from app.db.models.project import Project
-from app.db.models.workflow import Run, RunStep
-from app.db.models.workflow import Workflow
+from app.db.models.project import AgentConfig, Project
+from app.db.models.workflow import Run
 
 router = APIRouter()
 
@@ -24,48 +20,63 @@ async def get_dashboard_stats(
 ) -> Any:
     """Aggregate counts for the dashboard summary cards."""
     # Projects total
-    projects_total = await db.scalar(
-        select(func.count(Project.id)).where(Project.user_id == user.id)
-    ) or 0
+    projects_total = (
+        await db.scalar(select(func.count(Project.id)).where(Project.user_id == user.id)) or 0
+    )
 
     # Workflows running / failed (across user's projects)
-    workflows_running = await db.scalar(
-        select(func.count(Run.id))
-        .join(Project, Run.project_id == Project.id)
-        .where(Project.user_id == user.id, Run.status == "running")
-    ) or 0
+    workflows_running = (
+        await db.scalar(
+            select(func.count(Run.id))
+            .join(Project, Run.project_id == Project.id)
+            .where(Project.user_id == user.id, Run.status == "running")
+        )
+        or 0
+    )
 
-    workflows_failed = await db.scalar(
-        select(func.count(Run.id))
-        .join(Project, Run.project_id == Project.id)
-        .where(Project.user_id == user.id, Run.status == "failed")
-    ) or 0
+    workflows_failed = (
+        await db.scalar(
+            select(func.count(Run.id))
+            .join(Project, Run.project_id == Project.id)
+            .where(Project.user_id == user.id, Run.status == "failed")
+        )
+        or 0
+    )
 
     # Active agents (is_active=True across user's projects)
-    agents_active = await db.scalar(
-        select(func.count(AgentConfig.id))
-        .join(Project, AgentConfig.project_id == Project.id)
-        .where(Project.user_id == user.id, AgentConfig.is_active == True)  # noqa: E712
-    ) or 0
+    agents_active = (
+        await db.scalar(
+            select(func.count(AgentConfig.id))
+            .join(Project, AgentConfig.project_id == Project.id)
+            .where(Project.user_id == user.id, AgentConfig.is_active == True)  # noqa: E712
+        )
+        or 0
+    )
 
     agents_error = 0  # Placeholder — would need error tracking per agent
 
     # Pending handoffs
-    handoffs_pending = await db.scalar(
-        select(func.count(Handoff.id))
-        .join(Project, Handoff.project_id == Project.id)
-        .where(
-            Project.user_id == user.id,
-            Handoff.status.in_(["draft", "ready", "sent"]),
+    handoffs_pending = (
+        await db.scalar(
+            select(func.count(Handoff.id))
+            .join(Project, Handoff.project_id == Project.id)
+            .where(
+                Project.user_id == user.id,
+                Handoff.status.in_(["draft", "ready", "sent"]),
+            )
         )
-    ) or 0
+        or 0
+    )
 
     # Runs waiting approval
-    approvals_waiting = await db.scalar(
-        select(func.count(Run.id))
-        .join(Project, Run.project_id == Project.id)
-        .where(Project.user_id == user.id, Run.status == "waiting_approval")
-    ) or 0
+    approvals_waiting = (
+        await db.scalar(
+            select(func.count(Run.id))
+            .join(Project, Run.project_id == Project.id)
+            .where(Project.user_id == user.id, Run.status == "waiting_approval")
+        )
+        or 0
+    )
 
     return {
         "projects_total": projects_total,

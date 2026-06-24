@@ -1,0 +1,36 @@
+# Phase W31F — DRY-RUN guarded DEMO auto-approval SOAK overlay (log-only).
+#
+# Enables the W29 auto-approval evaluator in DRY-RUN mode only:
+#   * AUTO_APPROVAL_ENABLED=true   -> the evaluator task stops short-circuiting and
+#                                     logs a guarded decision every 15m (:05/:20/:35/:50).
+#   * AUTO_APPROVAL_PLACE_ORDERS=false (EXPLICIT) -> never place an order. This is also the
+#                                     config.py default; set here so the intent is visible and
+#                                     guaranteed at the container boundary. Order PLACEMENT is
+#                                     additionally NOT wired in code (W31E), so even if this
+#                                     flipped, the approved branch only logs — no order.
+#
+# This overlay is intentionally NOT named docker-compose.override.yml (not auto-loaded).
+# It adds env to celery_worker + celery_beat ONLY. It does NOT change trading mode
+# (TRADING_MODE=DEMO etc. continue to come from backend/.env), schedules, HAWK/SAGE/risk/
+# preflight thresholds, or any cron enablement.
+#
+# Apply (recreate worker+beat only; no db/redis/backend/frontend):
+#   docker compose -f docker-compose.yml -f docker-compose.w31f.yml up -d \
+#     --force-recreate --no-deps celery_worker celery_beat
+#
+# Roll back to disabled (W31E state):
+#   docker compose -f docker-compose.yml up -d --force-recreate --no-deps celery_worker celery_beat
+#   (recreating WITHOUT this overlay drops AUTO_APPROVAL_ENABLED -> config default false)
+#
+# SAFETY: this is a log-only soak. Do NOT set AUTO_APPROVAL_PLACE_ORDERS=true and do NOT
+# wire placement here. The first controlled DEMO order requires explicit owner approval
+# only after the guards are observed passing (a later W31G/one-order phase).
+services:
+  celery_worker:
+    environment:
+      - AUTO_APPROVAL_ENABLED=true
+      - AUTO_APPROVAL_PLACE_ORDERS=false
+  celery_beat:
+    environment:
+      - AUTO_APPROVAL_ENABLED=true
+      - AUTO_APPROVAL_PLACE_ORDERS=false

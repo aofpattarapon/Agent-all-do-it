@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -17,7 +17,10 @@ class NewsEvent(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
     news_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
@@ -35,12 +38,32 @@ class NewsEvent(Base, TimestampMixin):
     used_for_trade: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
+class CryptoRawPayload(Base, TimestampMixin):
+    __tablename__ = "crypto_raw_payloads"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    payload_kind: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    agent_role: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    step_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    payload_json: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+
+
 class MarketSnapshot(Base, TimestampMixin):
     __tablename__ = "market_snapshots"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     snapshot_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -61,7 +84,10 @@ class TokenCandidate(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     symbol: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
@@ -74,7 +100,9 @@ class TokenCandidate(Base, TimestampMixin):
     onchain_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     sentiment_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_score: Mapped[float | None] = mapped_column(Float, nullable=True)
-    candidate_status: Mapped[str] = mapped_column(String(30), default="WATCHLIST", nullable=False, index=True)
+    candidate_status: Mapped[str] = mapped_column(
+        String(30), default="WATCHLIST", nullable=False, index=True
+    )
     signals: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
 
@@ -83,7 +111,10 @@ class AgentVote(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     token_candidate_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -102,7 +133,10 @@ class TradeProposal(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     symbol: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
@@ -128,17 +162,35 @@ class TradeProposal(Base, TimestampMixin):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     full_proposal_md: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_payload: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
 
 class TradeExecution(Base, TimestampMixin):
     __tablename__ = "trade_executions"
 
+    # H6 backstop: at most one SUCCESS execution per proposal (idempotent entry). FAILED/PENDING
+    # rows are still allowed so a failed attempt can be retried.
+    __table_args__ = (
+        Index(
+            "uq_trade_executions_proposal_success",
+            "proposal_id",
+            unique=True,
+            postgresql_where=text("execution_status = 'SUCCESS'"),
+        ),
+    )
+
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     proposal_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("trade_proposals.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("trade_proposals.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     exchange: Mapped[str] = mapped_column(String(50), nullable=False)
     order_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -158,7 +210,10 @@ class Position(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     execution_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("trade_executions.id", ondelete="CASCADE"), nullable=False
@@ -184,7 +239,10 @@ class TradeJournal(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     position_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("positions.id", ondelete="CASCADE"), nullable=False
@@ -207,3 +265,4 @@ class TradeJournal(Base, TimestampMixin):
     decision_log: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     news_used: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     agent_votes: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    raw_facts: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)

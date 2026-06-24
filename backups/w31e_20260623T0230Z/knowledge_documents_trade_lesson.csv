@@ -1,0 +1,147 @@
+id,project_id,title,content,tags,source_url,created_at,updated_at,agent_config_id,source_type,confidence_score,use_count,positive_count,negative_count
+52d154c5-fd5d-4ad5-86e1-cce1978f2a40,288bc95a-b4da-46e7-bdfa-b5630233f586,Trade Lesson: BTCUSDT SL,"# Trade Lesson: BTCUSDT — SL
+
+## Summary
+- **Symbol**: BTCUSDT
+- **Trade ID**: f778464c-25cb-4851-b44b-5700a9cda399
+- **Outcome**: SL
+- **P&L**: -0.38%
+- **Recorded at**: 2026-06-20T05:11:38.155552+00:00
+
+## Error / Observation
+The HAWK agents' consensus was only 'MODERATE' but the trade proceeded as if it had strong support. The entry price (63206.9) was lower than the thesis entry (63421.0), leading to premature stop-loss activation. SAGE provided no risk notes about potential trend reversals.
+
+## Market Pattern at Entry
+The original thesis assumed a bearish trend continuation below VWAP, but the price broke above the stop-loss, indicating a failed bearish setup. The trade lost because the market moved contrary to the predicted direction.
+
+## Agent Votes
+  - **main_risk**: Potential reversal if price breaks above 63757.2
+  - **sage_notes**: No specific risk notes provided
+  - **main_bull_case**: Bearish trend and structure aligned with current price below VWAP
+  - **consensus_strength**: MODERATE
+  - **majority_direction**: SHORT
+
+## Key Takeaway
+This trade resulted in a loss. Review the pattern and agent consensus before entering similar setups.
+","[""trade_lesson"", ""BTCUSDT"", ""loss""]",,2026-06-20 05:10:47.866125+00,,,trade_lesson,50,0,0,0
+3d36d72a-d2e3-4b31-b843-67e4ae4d475f,288bc95a-b4da-46e7-bdfa-b5630233f586,Trade Lesson: SOLUSDT UNKNOWN_EXCHANGE_FLAT,"# Trade Lesson: SOLUSDT — UNKNOWN_EXCHANGE_FLAT
+
+## Summary
+- **Symbol**: SOLUSDT
+- **Trade ID**: c237af3c-2a1b-44d1-a655-46ae70e020fc
+- **Outcome**: UNKNOWN_EXCHANGE_FLAT
+- **P&L**: -1.39%
+- **Recorded at**: 2026-06-15T02:16:17.200586+00:00
+
+## Error / Observation
+The stop‑loss was never triggered due to an exchange‑flat closure, and the counter HAWK's bearish bias proved wrong.
+
+## Market Pattern at Entry
+The bearish setup predicted a price decline, but the market moved higher, invalidating the core premise of the trade.
+
+## Agent Votes
+  - **main_risk**: Counter HAWK flags bearish pressure could reverse if long‑short ratio shifts.
+  - **sage_notes**: Maintain tight risk; monitor funding rate and fear/greed index.
+  - **main_bull_case**: Price near VWAP and short‑term RSI suggests limited upside.
+  - **consensus_strength**: MODERATE
+  - **majority_direction**: SHORT
+
+## Key Takeaway
+This trade resulted in a loss. Review the pattern and agent consensus before entering similar setups.
+","[""trade_lesson"", ""SOLUSDT"", ""loss""]",,2026-06-15 02:15:38.663298+00,2026-06-22 04:20:40.197331+00,,trade_lesson,50,116,0,0
+4079a0b1-e9d9-4ef7-8e45-cd3893aa73c9,288bc95a-b4da-46e7-bdfa-b5630233f586,Trade Lesson: BTCUSDT UNKNOWN_EXCHANGE_FLAT,"# Trade Lesson: BTCUSDT — UNKNOWN_EXCHANGE_FLAT
+
+## Summary
+- **Symbol**: BTCUSDT
+- **Trade ID**: 30e3f8e2-9612-4d5c-ad2d-fc3e7b35f63c
+- **Outcome**: UNKNOWN_EXCHANGE_FLAT
+- **P&L**: -0.28%
+- **Recorded at**: 2026-06-15T02:31:12.746213+00:00
+
+## Error / Observation
+The Trend‑HAWK over‑estimated bullish momentum, leading to an entry just as the market reversed; entry timing and reliance on the trend signal were poor.
+
+## Market Pattern at Entry
+The trade was predicated on a bullish continuation that never materialised; price moved lower immediately after entry, invalidating the uptrend premise.
+
+## Agent Votes
+  - **main_risk**: Crowded long positions may trigger a rapid unwind.
+  - **sage_notes**: 
+  - **main_bull_case**: Trend HAWK sees bullish uptrend with higher highs and higher lows.
+  - **consensus_strength**: MODERATE
+  - **majority_direction**: BEARISH
+
+## Key Takeaway
+This trade resulted in a loss. Review the pattern and agent consensus before entering similar setups.
+","[""trade_lesson"", ""BTCUSDT"", ""loss""]",,2026-06-15 02:30:46.691102+00,2026-06-22 04:20:40.197331+00,,trade_lesson,50,114,0,0
+b15f3814-1464-44f6-85b6-3052f7d58138,288bc95a-b4da-46e7-bdfa-b5630233f586,Trade Lesson: ETHUSDT UNKNOWN_EXCHANGE_FLAT,"# Trade Lesson: ETHUSDT — UNKNOWN_EXCHANGE_FLAT
+
+## Summary
+- **Symbol**: ETHUSDT
+- **Trade ID**: 3180e0f7-b30e-48ff-9dfd-f794a5e9709b
+- **Outcome**: UNKNOWN_EXCHANGE_FLAT
+- **P&L**: -0.27%
+- **Recorded at**: 2026-06-15T02:16:59.836556+00:00
+
+## Error / Observation
+Stop‑loss was placed too close to entry, and the counter‑HAWK warning about a short‑squeeze was not given sufficient weight in risk management.
+
+## Market Pattern at Entry
+The mean‑reversion short thesis assumed a bearish regime and oversold conditions, but price rallied sharply instead, invalidating the core premise.
+
+## Agent Votes
+  - **main_risk**: Counter HAWK warns of potential short squeeze if buying pressure returns.
+  - **sage_notes**: Maintain tight risk; monitor funding rates for reversal signs.
+  - **main_bull_case**: Price is below key EMAs and RSI shows oversold conditions, suggesting further downside.
+  - **consensus_strength**: STRONG
+  - **majority_direction**: SHORT
+
+## Key Takeaway
+This trade resulted in a loss. Review the pattern and agent consensus before entering similar setups.
+","[""trade_lesson"", ""ETHUSDT"", ""loss""]",,2026-06-15 02:15:38.663298+00,2026-06-22 04:20:40.197331+00,,trade_lesson,50,116,0,0
+7227c6c6-8bc9-4834-9c77-9012a838a863,288bc95a-b4da-46e7-bdfa-b5630233f586,Trade Lesson: BTCUSDT SL,"# Trade Lesson: BTCUSDT — SL
+
+## Summary
+- **Symbol**: BTCUSDT
+- **Trade ID**: 834d0425-1ace-47bd-bb2c-0f2cc6e2937d
+- **Outcome**: SL
+- **P&L**: -0.80%
+- **Recorded at**: 2026-06-19T16:11:04.657750+00:00
+
+## Error / Observation
+Stop-loss at 63,088.0 was too tight for the volatility environment, leading to premature exit. Hawk_counter's lower confidence (65%) failed to flag short-term bounce risk.
+
+## Market Pattern at Entry
+The setup included valid bearish indicators (price below EMAs, bearish MACD, RSI < 50). However, the trade failed due to immediate volatility contradicting the thesis, suggesting the bearish bias did not materialize as expected.
+
+## Agent Votes
+  - **main_risk**: Price below EMAs with bearish MACD and RSI at 34.84 (oversold but not extreme)
+  - **sage_notes**: No specific risk notes provided
+  - **main_bull_case**: Price below EMA20/EMA50 with bearish MACD and RSI < 50 confirm downward momentum
+  - **consensus_strength**: STRONG
+  - **majority_direction**: BEARISH
+
+## Key Takeaway
+This trade resulted in a loss. Review the pattern and agent consensus before entering similar setups.
+","[""trade_lesson"", ""BTCUSDT"", ""loss""]",,2026-06-19 16:10:18.914251+00,2026-06-22 04:20:40.197331+00,,trade_lesson,50,15,0,0
+95fa70cb-518d-408e-aa12-457a1e27419c,288bc95a-b4da-46e7-bdfa-b5630233f586,Trade Lesson: SOLUSDT UNKNOWN_EXCHANGE_FLAT,"# Trade Lesson: SOLUSDT — UNKNOWN_EXCHANGE_FLAT
+
+## Summary
+- **Symbol**: SOLUSDT
+- **Trade ID**: 5f7b7a85-7c5e-46d3-a045-99b951febe11
+- **Outcome**: UNKNOWN_EXCHANGE_FLAT
+- **P&L**: -2.04%
+- **Recorded at**: 2026-06-18T04:07:59.726099+00:00
+
+## Error / Observation
+The trade was negatively impacted by an unhandled exchange-specific event (UNKNOWN_EXCHANGE_FLAT), which was not accounted for in the thesis or risk parameters. Agent votes were not recorded, indicating a process gap in demo validation.
+
+## Market Pattern at Entry
+The thesis aimed to validate an Algo SL/TP fix in a controlled demo, which was technically executed. However, the loss was not due to a flawed setup but an external exchange event (UNKNOWN_EXCHANGE_FLAT), which the thesis did not anticipate.
+
+## Agent Votes
+  - (no agent votes recorded)
+
+## Key Takeaway
+This trade resulted in a loss. Review the pattern and agent consensus before entering similar setups.
+","[""trade_lesson"", ""SOLUSDT"", ""loss""]",,2026-06-18 04:07:23.136108+00,2026-06-22 04:20:40.197331+00,,trade_lesson,50,24,0,0

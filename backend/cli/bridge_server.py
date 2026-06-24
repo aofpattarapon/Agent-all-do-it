@@ -10,6 +10,7 @@ Usage (run this on your Mac in a terminal before starting Docker):
 Then set in docker-compose.yml environment:
     CLI_BRIDGE_URL=http://host.docker.internal:7777
 """
+
 import asyncio
 import json
 import os
@@ -26,10 +27,10 @@ os.environ["PATH"] = f"{os.environ.get('PATH', '')}:{_BRIDGE_DIR}"
 
 
 class BridgeHandler(BaseHTTPRequestHandler):
-    def log_message(self, format, *args):  # noqa: A002
+    def log_message(self, format, *args):
         print(f"[bridge] {self.address_string()} {format % args}", flush=True)
 
-    def do_POST(self):  # noqa: N802
+    def do_POST(self):
         if self.path == "/exec":
             self._handle_exec()
         elif self.path == "/which":
@@ -96,7 +97,10 @@ async def _run(args: list[str], timeout: int) -> dict:
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 7777
     server = ThreadingHTTPServer(("0.0.0.0", port), BridgeHandler)
-    print(f"[bridge] CLI Bridge listening on 0.0.0.0:{port} (reachable from Docker via host.docker.internal:{port})", flush=True)
+    print(
+        f"[bridge] CLI Bridge listening on 0.0.0.0:{port} (reachable from Docker via host.docker.internal:{port})",
+        flush=True,
+    )
     print("[bridge] Keep this running while using Docker. Press Ctrl+C to stop.", flush=True)
     try:
         server.serve_forever()

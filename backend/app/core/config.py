@@ -97,6 +97,18 @@ class Settings(BaseSettings):
             )
         return v
 
+    # === Agent code-execution tool ===
+    # The `code_exec` tool runs Python in a host subprocess and is NOT a real sandbox
+    # (host RCE risk). Disabled by default; only enable in a trusted/isolated environment.
+    ENABLE_CODE_EXEC: bool = False
+
+    # === Secret store encryption (Fernet, at-rest for the `secrets` table) ===
+    # Optional. If unset, a key is derived deterministically from SECRET_KEY so existing
+    # deployments work without a new env var. Set a dedicated Fernet key (openssl rand and
+    # urlsafe-base64, or `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`)
+    # to rotate it independently of SECRET_KEY.
+    SECRET_ENCRYPTION_KEY: str = ""
+
     # === JWT Settings ===
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
@@ -141,6 +153,72 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
+    # === Crypto Trade Pipeline ===
+    PIPELINE_STEP_DELAY_SECONDS: int = 4  # inter-step pacing (anti-rate-limit)
+    PIPELINE_WARMUP_TRADES: int = 10  # paper trades before winrate gate enforced
+    PIPELINE_WINRATE_THRESHOLD: float = 60.0  # auto-execute if winrate >= this
+    # Warmup-window policy (W22E): how the Auto winrate gate behaves while
+    # closed_count < PIPELINE_WARMUP_TRADES. One of: auto_execute | pending_approval |
+    # validation_only. Safe default is pending_approval; any invalid/unreadable value
+    # fails closed to pending_approval (see app.services.warmup_policy). Declared as a
+    # plain str (not Literal) so an invalid env value never crashes boot — it is
+    # validated/normalized at resolution time, never silently becoming auto_execute.
+    PIPELINE_WARMUP_MODE: str = "pending_approval"
+
+    # When True (default), re-seeding the crypto workflows is idempotent w.r.t. operator
+    # enable/disable decisions: existing schedules keep their current `enabled` value, and a
+    # newly created schedule defaults to disabled unless it is the Position Monitor (always-on
+    # safety observer). When False, the seed restores the legacy behavior of force-enabling
+    # every cron schedule it touches. Default True is the safe posture — it stops a reseed from
+    # silently re-arming order-capable schedules (Market Watch / Screeners / Proposal pipeline).
+    PRESERVE_SCHEDULE_ENABLED_STATE: bool = True
+
+    # === W29 Watch Cron Observer (Phase W31A) ===
+    # A STRICTLY READ-ONLY periodic beat task (every 15m) that evaluates the HAWK
+    # condition watch and logs the advisory posture. It never dispatches a workflow,
+    # creates an order/proposal/execution/risk_ack, or mutates validation_only — it only
+    # reads and logs (see app.services.w29_watch_observer). Off-switch: set this to False
+    # and restart celery_beat; the task then short-circuits before touching the DB.
+    W29_WATCH_OBSERVER_ENABLED: bool = True
+    # Read-only evaluation scope for the observer (the crypto trading project).
+    W29_WATCH_OBSERVER_PROJECT_ID: str = "288bc95a-b4da-46e7-bdfa-b5630233f586"
+
+    # === DEMO Guarded Auto-Approval (Phase W31E) ===
+    # A guarded, DEMO-ONLY auto-approval policy (``DEMO_GUARDED_AUTO_APPROVAL``). SHIPS
+    # DISABLED. When enabled it can transform "fresh live READY + all guards pass + DEMO +
+    # within caps" into a single, fully-logged ``AUTO_APPROVED_DEMO`` decision authorising
+    # ONE controlled DEMO attempt. It NEVER weakens HAWK/SAGE/kill-switch/preflight (those
+    # downstream gates still run unchanged during execution), NEVER enables LIVE, NEVER
+    # creates a risk_ack, NEVER flips validation_only globally, and NEVER uses the retry
+    # endpoint. Two independent off-switches, both default False:
+    #   * AUTO_APPROVAL_ENABLED       — lets the evaluator RUN and LOG decisions (no order).
+    #   * AUTO_APPROVAL_PLACE_ORDERS  — second gate required before any order placement.
+    # Order-placement wiring is intentionally deferred to an owner-reviewed follow-up; with
+    # the current build, an AUTO_APPROVED_DEMO decision is logged but NO order is placed.
+    AUTO_APPROVAL_ENABLED: bool = False
+    AUTO_APPROVAL_PLACE_ORDERS: bool = False
+    AUTO_APPROVAL_SCOPE: str = "demo_ready_watch_only"
+    AUTO_APPROVAL_PROJECT_ID: str = "288bc95a-b4da-46e7-bdfa-b5630233f586"
+    AUTO_APPROVAL_MAX_NOTIONAL_USDT: float = 50.0
+    AUTO_APPROVAL_MAX_OPEN_POSITIONS: int = 1
+    AUTO_APPROVAL_MAX_ORDERS_PER_DAY: int = 1
+    AUTO_APPROVAL_READY_CONFIRMATION_TICKS: int = 2
+    AUTO_APPROVAL_READY_MAX_AGE_SECONDS: int = 300
+    # W31H — durable multi-tick READY confirmation (read-only state in the Celery broker Redis).
+    # Max gap between two ticks that still counts as "consecutive" (default 16 min; the evaluator
+    # runs every 15 min, so a single non-READY tick in between breaks the streak). TTL auto-expires
+    # an idle counter. Neither tunable can place an order — they only gate readiness.
+    AUTO_APPROVAL_READY_CONFIRM_MAX_GAP_SECONDS: int = 960
+    AUTO_APPROVAL_READY_CONFIRM_TTL_SECONDS: int = 1200
+    AUTO_APPROVAL_COOLDOWN_MINUTES: int = 60
+    AUTO_APPROVAL_REQUIRE_EXCHANGE_FLAT: bool = True
+    AUTO_APPROVAL_REQUIRE_HAWK_2_OF_3: bool = True
+    AUTO_APPROVAL_REQUIRE_SAGE_APPROVAL: bool = True
+    AUTO_APPROVAL_REQUIRE_SL_TP_RR_PREFLIGHT: bool = True
+    AUTO_APPROVAL_REQUIRE_DEMO_MODE: bool = True
+    # If the kill-switch consecutive-loss gate is armed and no ack exists, block auto-approval
+    # (owner must separately/explicitly choose any consecutive-loss ack — never auto-created).
+    AUTO_APPROVAL_BLOCK_IF_CONSECUTIVE_LOSS_ACK_MISSING: bool = True
 
     # === AI Agent (langgraph, all) ===
     OPENAI_API_KEY: str = ""
@@ -148,7 +226,8 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
     MOONSHOT_API_KEY: str | None = None  # Moonshot AI (Kimi) — https://platform.moonshot.cn
-    GROQ_API_KEY: str | None = None       # Groq Cloud — https://console.groq.com/keys
+    GROQ_API_KEY: str | None = None  # Groq Cloud — https://console.groq.com/keys
+    CEREBRAS_API_KEY: str | None = None  # Cerebras Cloud — https://cloud.cerebras.ai
     OLLAMA_URL: str = "http://localhost:11434"  # Remote Ollama: set to http://<host>:<port>
     # Multi-provider: model can come from any installed SDK. Prefix with the
     # provider name (`openai/gpt-5.5`, `anthropic/claude-opus-4-7`,
@@ -203,8 +282,7 @@ class Settings(BaseSettings):
         env = info.data.get("ENVIRONMENT", "local") if info.data else "local"
         if "*" in v and env == "production":
             raise ValueError(
-                "CORS_ORIGINS cannot contain '*' in production! "
-                "Specify explicit allowed origins."
+                "CORS_ORIGINS cannot contain '*' in production! Specify explicit allowed origins."
             )
         return v
 

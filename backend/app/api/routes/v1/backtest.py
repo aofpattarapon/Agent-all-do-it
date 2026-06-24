@@ -30,6 +30,7 @@ async def run_backtest(
     user: CurrentUser,
 ) -> Any:
     from app.services.backtest_engine import BacktestEngine
+
     try:
         engine = BacktestEngine(db)
         result = await engine.run(
@@ -42,7 +43,9 @@ async def run_backtest(
         )
         return result
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+        ) from exc
 
 
 @router.get("")
@@ -52,7 +55,9 @@ async def list_backtests(
     user: CurrentUser,
 ) -> Any:
     from sqlalchemy import select
+
     from app.services.backtest_engine import BacktestResult
+
     result = await db.execute(
         select(BacktestResult)
         .where(BacktestResult.project_id == project_id)

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AgentEvent:
-    type: str           # "task_started" | "agent_started" | "agent_chunk" | "agent_done" | "agent_error" | "task_done"
+    type: str  # "task_started" | "agent_started" | "agent_chunk" | "agent_done" | "agent_error" | "task_done"
     project_id: str
     task: str = ""
     agent_name: str = ""
@@ -43,6 +43,7 @@ class EventBus:
 
     def unsubscribe(self, project_id: str, q: asyncio.Queue) -> None:
         import contextlib
+
         with contextlib.suppress(ValueError):
             self._subscribers[project_id].remove(q)
 

@@ -18,6 +18,8 @@ interface AiConfig {
   auto_fallback: boolean;
   moonshot_api_key_set: boolean;
   groq_api_key_set: boolean;
+  cerebras_api_key_set: boolean;
+  google_api_key_set: boolean;
   openrouter_api_key_set: boolean;
   ollama_url: string;
 }
@@ -27,11 +29,15 @@ export default function AISettingsPage() {
   const [anthropicKey, setAnthropicKey] = useState("");
   const [moonshotKey, setMoonshotKey] = useState("");
   const [groqKey, setGroqKey] = useState("");
+  const [cerebrasKey, setCerebrasKey] = useState("");
+  const [googleKey, setGoogleKey] = useState("");
   const [openrouterKey, setOpenrouterKey] = useState("");
   const [ollamaUrl, setOllamaUrl] = useState("");
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showMoonshotKey, setShowMoonshotKey] = useState(false);
   const [showGroqKey, setShowGroqKey] = useState(false);
+  const [showCerebrasKey, setShowCerebrasKey] = useState(false);
+  const [showGoogleKey, setShowGoogleKey] = useState(false);
   const [showOpenrouterKey, setShowOpenrouterKey] = useState(false);
 
   const { data: cfg, isLoading } = useQuery<AiConfig>({
@@ -46,7 +52,7 @@ export default function AISettingsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (body: Partial<AiConfig & { anthropic_api_key: string; moonshot_api_key: string; groq_api_key: string; openrouter_api_key: string }>) =>
+    mutationFn: (body: Partial<AiConfig & { anthropic_api_key: string; moonshot_api_key: string; groq_api_key: string; cerebras_api_key: string; google_api_key: string; openrouter_api_key: string }>) =>
       apiClient.patch<AiConfig>("/admin/settings/ai", body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ai-settings"] });
@@ -54,6 +60,8 @@ export default function AISettingsPage() {
       setAnthropicKey("");
       setMoonshotKey("");
       setGroqKey("");
+      setCerebrasKey("");
+      setGoogleKey("");
       setOpenrouterKey("");
       setOllamaUrl("");
     },
@@ -93,6 +101,8 @@ export default function AISettingsPage() {
             { value: "kimi-cli",        icon: <Zap className="h-4 w-4" />,      label: "Kimi CLI",             sub: "Local 'kimi' binary\nNo app API key needed" },
             { value: "kimi-api",        icon: <Zap className="h-4 w-4" />,      label: "Kimi API (Moonshot)",  sub: "MOONSHOT_API_KEY\nFree tier available" },
             { value: "groq-api",        icon: <Cpu className="h-4 w-4" />,      label: "Groq API",             sub: "GROQ_API_KEY\nFast Llama/Mixtral, free tier" },
+            { value: "cerebras-api",    icon: <Cpu className="h-4 w-4" />,      label: "Cerebras API",         sub: "CEREBRAS_API_KEY\nFast Llama/Qwen, high free RPD" },
+            { value: "google-ai-studio", icon: <Cpu className="h-4 w-4" />,     label: "Google AI Studio",     sub: "GOOGLE_API_KEY\nGemini Flash, 1M context, free" },
             { value: "anthropic-api",   icon: <Key className="h-4 w-4" />,      label: "Anthropic API",        sub: "ANTHROPIC_API_KEY\nPer-token billing" },
             { value: "openai-api",      icon: <Key className="h-4 w-4" />,      label: "OpenAI API",           sub: "OPENAI_API_KEY\nPer-token billing" },
             { value: "openrouter-api",  icon: <Key className="h-4 w-4" />,      label: "OpenRouter",           sub: "OPENROUTER_API_KEY\n200+ models, free tiers" },
@@ -250,6 +260,64 @@ export default function AISettingsPage() {
               <PixelButton onClick={() => setShowGroqKey(!showGroqKey)}>{showGroqKey ? "Hide" : "Show"}</PixelButton>
               <PixelButton variant="gold" disabled={!groqKey.trim() || updateMutation.isPending}
                 onClick={() => updateMutation.mutate({ groq_api_key: groqKey.trim() })}>
+                Save
+              </PixelButton>
+            </div>
+          </div>
+
+          {/* Cerebras */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <Cpu className="h-4 w-4" style={{ color: "var(--pix-ink)" }} />
+              <span className="pix-mono" style={{ fontSize: 13, color: "var(--pix-ink)" }}>Cerebras API Key</span>
+              {cfg?.cerebras_api_key_set
+                ? <span className="pix-pill pix-completed" style={{ marginLeft: "auto" }}><CheckCircle className="h-3 w-3" /> Set</span>
+                : <span className="pix-pill pix-failed" style={{ marginLeft: "auto" }}><XCircle className="h-3 w-3" /> Not set</span>}
+            </div>
+            <p className="pix-mono" style={{ fontSize: 12, color: "var(--pix-ink-soft)", marginBottom: 8 }}>
+              Free key at cloud.cerebras.ai — very fast Llama 3.3 70B / Qwen, high free RPD
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <input
+                type={showCerebrasKey ? "text" : "password"}
+                placeholder={cfg?.cerebras_api_key_set ? "csk-… (enter new key to change)" : "csk-…"}
+                value={cerebrasKey}
+                onChange={(e) => setCerebrasKey(e.target.value)}
+                className="pix-input"
+                style={{ flex: 1, minWidth: 200, fontFamily: '"VT323", monospace' }}
+              />
+              <PixelButton onClick={() => setShowCerebrasKey(!showCerebrasKey)}>{showCerebrasKey ? "Hide" : "Show"}</PixelButton>
+              <PixelButton variant="gold" disabled={!cerebrasKey.trim() || updateMutation.isPending}
+                onClick={() => updateMutation.mutate({ cerebras_api_key: cerebrasKey.trim() })}>
+                Save
+              </PixelButton>
+            </div>
+          </div>
+
+          {/* Google AI Studio */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <Key className="h-4 w-4" style={{ color: "var(--pix-ink)" }} />
+              <span className="pix-mono" style={{ fontSize: 13, color: "var(--pix-ink)" }}>Google AI Studio Key</span>
+              {cfg?.google_api_key_set
+                ? <span className="pix-pill pix-completed" style={{ marginLeft: "auto" }}><CheckCircle className="h-3 w-3" /> Set</span>
+                : <span className="pix-pill pix-failed" style={{ marginLeft: "auto" }}><XCircle className="h-3 w-3" /> Not set</span>}
+            </div>
+            <p className="pix-mono" style={{ fontSize: 12, color: "var(--pix-ink-soft)", marginBottom: 8 }}>
+              Free key at aistudio.google.com/apikey — Gemini Flash, 1M context
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <input
+                type={showGoogleKey ? "text" : "password"}
+                placeholder={cfg?.google_api_key_set ? "AIza… (enter new key to change)" : "AIza…"}
+                value={googleKey}
+                onChange={(e) => setGoogleKey(e.target.value)}
+                className="pix-input"
+                style={{ flex: 1, minWidth: 200, fontFamily: '"VT323", monospace' }}
+              />
+              <PixelButton onClick={() => setShowGoogleKey(!showGoogleKey)}>{showGoogleKey ? "Hide" : "Show"}</PixelButton>
+              <PixelButton variant="gold" disabled={!googleKey.trim() || updateMutation.isPending}
+                onClick={() => updateMutation.mutate({ google_api_key: googleKey.trim() })}>
                 Save
               </PixelButton>
             </div>

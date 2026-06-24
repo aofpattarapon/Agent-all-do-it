@@ -90,6 +90,7 @@ class TestRegisterCommands:
 
     def test_register_commands_adds_to_group(self):
         """Test that register_commands adds discovered commands to CLI group."""
+
         @click.group()
         def cli():
             pass
@@ -163,3 +164,22 @@ class TestCleanupCommand:
         runner = CliRunner()
         result = runner.invoke(cleanup, ["--dry-run", "--days", "7"])
         assert result.exit_code == 0
+
+
+class TestApplyRuntimeProfileCommand:
+    """Tests for apply-runtime-profile CLI surface."""
+
+    def test_profile_option_lists_all_valid_profiles(self):
+        from app.commands.apply_runtime_profile import apply_runtime_profile
+
+        profile_option = next(
+            param for param in apply_runtime_profile.params if getattr(param, "name", None) == "profile"
+        )
+        assert tuple(profile_option.type.choices) == (
+            "test",
+            "test-2",
+            "test-minimal-paid",
+            "test-jam",
+            "test-local-free-24x7-safe",
+            "production",
+        )

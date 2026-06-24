@@ -20,8 +20,11 @@ import {
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { PixelButton, PixelFrame, SectionLabel, Sparkline, StatCard } from "@/components/pixel-ui";
-import { Badge } from "@/components/ui/badge";
 import { ProjectSectionShell } from "@/components/projects/ProjectSectionShell";
+import { PositionProtection, type ExecutionVisibility } from "@/components/projects/position-protection";
+import { RuntimeModeBadge, useRuntimeMode } from "@/components/projects/runtime-mode-badge";
+import { HawkConditionWatchPanel } from "@/components/trading/HawkConditionWatchCard";
+import { TradingSafetySettingsPanel } from "@/components/trading/TradingSafetySettingsCard";
 
 interface TradeProposal {
   id: string;
@@ -101,6 +104,10 @@ interface PositionRow {
   realized_pnl: number | null;
   close_reason: string | null;
   created_at: string;
+  execution_visibility?: ExecutionVisibility | null;
+  protection_summary?: Record<string, unknown> | null;
+  exchange_confirmed?: boolean;
+  pnl_estimated?: boolean;
 }
 
 interface JournalRow {
@@ -258,17 +265,15 @@ export default function ProjectTradeFloorView({
     refetchInterval: 15_000,
   });
 
-  const { data: executions } = useQuery<MarketExecution[]>({
+  // Kept warm so the Order History / header views stay in sync; consumed via the cache.
+  useQuery<MarketExecution[]>({
     queryKey: ["trade-floor", projectId, "executions"],
     queryFn: () => apiClient.get<MarketExecution[]>(`/projects/${projectId}/trading/executions`),
   });
 
-  const marketType = (() => {
-    const ex = executions?.[0]?.exchange ?? "";
-    if (ex.includes("spot")) return { label: "SPOT", className: "bg-blue-600 text-white border-transparent" };
-    if (ex.includes("future") || ex.includes("usdm") || ex.includes("margin")) return { label: "FUTURES", className: "bg-orange-500 text-white border-transparent" };
-    return null;
-  })();
+  // Current runtime trading mode — the source of truth for the header badge. Replaces the
+  // old SPOT/FUTURES guess derived from the latest execution's exchange substring.
+  const { data: runtime } = useRuntimeMode(projectId);
 
   const invalidate = async () => {
     await Promise.all([
@@ -279,6 +284,10 @@ export default function ProjectTradeFloorView({
       queryClient.invalidateQueries({ queryKey: ["trade-floor", projectId, "performance"] }),
       queryClient.invalidateQueries({ queryKey: ["trade-floor", projectId, "news"] }),
       queryClient.invalidateQueries({ queryKey: ["trade-floor", projectId, "market-snapshot"] }),
+      // Executions feed the header/order-history mode views — keep them in sync on every action.
+      queryClient.invalidateQueries({ queryKey: ["trade-floor", projectId, "executions"] }),
+      // Cross-invalidate the Order History namespace so the two views never diverge.
+      queryClient.invalidateQueries({ queryKey: ["order-history", projectId] }),
       queryClient.invalidateQueries({ queryKey: ["runs", projectId] }),
       queryClient.invalidateQueries({ queryKey: ["handoffs", projectId] }),
     ]);
@@ -324,7 +333,9 @@ export default function ProjectTradeFloorView({
         `/projects/${projectId}/trading/proposals/${proposalId}/execute`,
       ),
     onSuccess: async (data) => {
-      toast.success(`Paper execution ${data.execution_status.toLowerCase()}`);
+      // Mode-aware message — never hardcode "Paper": demo/testnet/live route differently.
+      const modeLabel = runtime?.label ?? "Execution";
+      toast.success(`${modeLabel}: order ${data.execution_status.toLowerCase()}`);
       await invalidate();
     },
     onError: (error: Error) => toast.error(error.message || "Failed to execute proposal"),
@@ -342,11 +353,9 @@ export default function ProjectTradeFloorView({
       <PixelFrame tight>
         <div className="pix-greet">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="pix-eyebrow">Trade Floor</div>
-              {marketType && (
-                <Badge className={marketType.className}>{marketType.label}</Badge>
-              )}
+              <RuntimeModeBadge runtime={runtime} />
             </div>
             <h2>Proposal approval and live market posture</h2>
             <p className="pix-row-sub">
@@ -355,6 +364,12 @@ export default function ProjectTradeFloorView({
           </div>
         </div>
       </PixelFrame>
+
+      {/* Read-only, advisory HAWK condition watch (Phase 6.14.W28N). No order-capable controls. */}
+      <HawkConditionWatchPanel projectId={projectId} />
+
+      {/* Read-only Trading Safety Settings sync (Phase W32A). No order-capable / unsafe controls. */}
+      <TradingSafetySettingsPanel projectId={projectId} />
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -470,6 +485,32 @@ export default function ProjectTradeFloorView({
                         <p className="pix-row-sub">
                           Unrealized {formatMoney(position.unrealized_pnl)} ({formatPct(position.unrealized_pnl_pct)})
                         </p>
+                        {/* Honest close/confirmation flags — exchange-confirmed vs simulated,
+                            booked vs estimated PnL, and the recorded close reason. */}
+                        <div className="flex flex-wrap items-center gap-2" style={{ fontFamily: '"VT323", monospace', fontSize: 12 }}>
+                          {position.exchange_confirmed && (
+                            <span className="pix-pill" style={{ color: "var(--pix-success, #4ade80)", borderColor: "var(--pix-success, #4ade80)" }} title="Close was reconciled against live exchange state.">
+                              Exchange confirmed
+                            </span>
+                          )}
+                          {position.pnl_estimated ? (
+                            <span className="pix-pill" style={{ color: "var(--pix-gold, #fbbf24)", borderColor: "var(--pix-gold, #fbbf24)" }} title="No booked realized PnL — figure shown is an estimate/unrealized.">
+                              PnL estimated
+                            </span>
+                          ) : (
+                            position.realized_pnl != null && (
+                              <span className="pix-pill" style={{ color: "var(--pix-muted, #9ca3af)", borderColor: "var(--pix-muted, #9ca3af)" }} title="Realized PnL booked on close.">
+                                PnL booked
+                              </span>
+                            )
+                          )}
+                          {position.close_reason && (
+                            <span className="pix-row-sub" style={{ opacity: 0.7 }}>
+                              close: {position.close_reason}
+                            </span>
+                          )}
+                        </div>
+                        <PositionProtection visibility={position.execution_visibility} />
                       </div>
                     </div>
                   </PixelFrame>

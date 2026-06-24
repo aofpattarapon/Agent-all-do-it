@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { Terminal } from "lucide-react";
 import { PixelFrame, PixelButton } from "@/components/pixel-ui";
+import { StatusBadge } from "@/components/run-status/StatusBadge";
 import { cn } from "@/lib/utils";
 import type { EnrichedRun } from "@/components/console/use-console-data";
 
@@ -39,17 +40,6 @@ function relTime(startedAt: string | null, finishedAt: string | null): string {
     return "Queued";
   }
 }
-
-const statusBadgeClass: Record<string, string> = {
-  queued: "bg-gray-200 text-gray-700",
-  running: "bg-blue-100 text-blue-700",
-  waiting_approval: "bg-amber-100 text-amber-700",
-  paused: "bg-amber-100 text-amber-700",
-  blocked: "bg-orange-100 text-orange-700",
-  failed: "bg-red-100 text-red-700",
-  cancelled: "bg-red-100 text-red-700",
-  completed: "bg-green-100 text-green-700",
-};
 
 const triggerBadgeClass: Record<string, string> = {
   schedule: "bg-amber-100 text-amber-700",
@@ -172,8 +162,6 @@ export function RunCard({ run, onAction }: RunCardProps) {
       .finally(() => setStepsLoading(false));
   }, [expanded, run.status, run.projectId, run.id, steps]);
 
-  const statusLabel = run.status;
-  const badgeClass = statusBadgeClass[statusLabel] ?? "bg-gray-100 text-gray-600";
   const triggerClass = triggerBadgeClass[run.trigger] ?? "bg-gray-100 text-gray-600";
   const title = run.workflow_name || run.trigger || "Manual run";
 
@@ -208,9 +196,7 @@ export function RunCard({ run, onAction }: RunCardProps) {
               >
                 {run.projectName}
               </span>
-              <span className={cn("inline-block rounded px-1.5 py-0.5 text-xs", badgeClass)} style={{ fontFamily: '"VT323", monospace' }}>
-                {statusLabel}
-              </span>
+              <StatusBadge run={run} />
               {run.trigger && (
                 <span className={cn("inline-block rounded px-1.5 py-0.5 text-xs", triggerClass)} style={{ fontFamily: '"VT323", monospace' }}>
                   {run.trigger}

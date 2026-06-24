@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.workflow import Run, RunMetric, RunStep
 
-
 # ── Run ───────────────────────────────────────────────────────────────────────
 
 
@@ -19,11 +18,7 @@ async def get_run_by_id(db: AsyncSession, run_id: UUID) -> Run | None:
 async def list_runs_by_project(
     db: AsyncSession, *, project_id: UUID, skip: int = 0, limit: int = 50
 ) -> tuple[list[Run], int]:
-    query = (
-        select(Run)
-        .where(Run.project_id == project_id)
-        .order_by(Run.created_at.desc())
-    )
+    query = select(Run).where(Run.project_id == project_id).order_by(Run.created_at.desc())
     count_query = select(func.count()).select_from(Run).where(Run.project_id == project_id)
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset(skip).limit(limit))
@@ -94,11 +89,7 @@ async def get_run_step_by_id(db: AsyncSession, step_id: UUID) -> RunStep | None:
 async def list_steps_by_run(
     db: AsyncSession, *, run_id: UUID, skip: int = 0, limit: int = 100
 ) -> tuple[list[RunStep], int]:
-    query = (
-        select(RunStep)
-        .where(RunStep.run_id == run_id)
-        .order_by(RunStep.created_at.asc())
-    )
+    query = select(RunStep).where(RunStep.run_id == run_id).order_by(RunStep.created_at.asc())
     count_query = select(func.count()).select_from(RunStep).where(RunStep.run_id == run_id)
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset(skip).limit(limit))

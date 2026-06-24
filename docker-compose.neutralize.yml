@@ -1,0 +1,23 @@
+# TEMPORARY safety override for an order-disabled E2E test-jam validation session.
+# Forces PAPER / paper mode on the three task-executing services so NO Binance
+# order endpoint (demo/testnet/live) is reachable. Apply explicitly with:
+#   docker compose -f docker-compose.yml -f docker-compose.neutralize.yml up -d \
+#     --force-recreate --no-deps app celery_worker celery_beat
+# Remove by recreating the same services WITHOUT this -f file.
+# Not auto-loaded (intentionally not named docker-compose.override.yml).
+services:
+  app:
+    environment:
+      - TRADING_MODE=PAPER
+      - EXCHANGE_MODE=paper
+      - LIVE_TRADING_ENABLED=false
+  celery_worker:
+    environment:
+      - TRADING_MODE=PAPER
+      - EXCHANGE_MODE=paper
+      - LIVE_TRADING_ENABLED=false
+  celery_beat:
+    environment:
+      - TRADING_MODE=PAPER
+      - EXCHANGE_MODE=paper
+      - LIVE_TRADING_ENABLED=false

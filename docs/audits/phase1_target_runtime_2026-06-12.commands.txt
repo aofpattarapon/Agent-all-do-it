@@ -1,0 +1,19 @@
+Phase 1 commands executed on 2026-06-12
+
+1. Read Phase 0 baseline snapshot
+sed -n '1,260p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/docs/audits/phase0_baseline_2026-06-12.md
+
+2. Read current run executor
+sed -n '1,260p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/run_executor.py
+
+3. Read current crypto workflow seed
+sed -n '1,260p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/commands/seed_crypto_workflow.py
+
+4. Locate workflow architecture, seeded steps, and agent prompt sections
+rg -n "Architecture: NEXMIND pipeline|Execution Agent|Post-Trade Review|steps|exchange_execute|hawk_vote" /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/commands/seed_crypto_workflow.py
+
+5. Locate runtime paths and validator references
+rg -n "exchange_execute|_run_exchange_execute|_auto_execute_trade_proposal|validate_hawk_output|check_handoff|ContextCompactionService|trade_journal|post_trade_review" /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/agents/tools
+
+6. Read the remainder of the baseline summary
+sed -n '260,520p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/docs/audits/phase0_baseline_2026-06-12.md

@@ -3,28 +3,32 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Terminal, CheckCircle2, XCircle, Clock, Loader2, ArrowLeft, ThumbsUp, ThumbsDown } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRunLogStream, type RunLogStep } from "@/hooks/useRunLogStream";
 import { PixelFrame, PixelButton } from "@/components/pixel-ui";
 import { apiClient } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/run-status/StatusBadge";
+import type { TradeOutcome, RunDisplayFields } from "@/lib/run-status";
+import { normalizedStatusReason } from "@/lib/run-status";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-interface RunRead {
+interface RunRead extends RunDisplayFields {
   id: string;
   project_id: string;
   workflow_id: string | null;
   workflow_name: string | null;
   trigger: string;
   status: string;
+  pause_reason?: string | null;
   started_at: string | null;
   finished_at: string | null;
   error_text: string;
   output_text: string;
   runtime_summary: Record<string, unknown>;
+  trade_outcome?: TradeOutcome | null;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -304,6 +308,33 @@ export default function RunLogPage({
                   <span style={{ color: "var(--pix-parch)", fontSize: 11 }}>#{runId.slice(-8)}</span>
                 </div>
               </div>
+
+              {/* Normalized status (source of truth) + legacy debug evidence */}
+              {run && (() => {
+                const reason = normalizedStatusReason(run);
+                const oc = run.trade_outcome ?? null;
+                const ns = run.normalized_status;
+                return (
+                  <div className="border-t pt-3 space-y-1 text-xs" style={{ fontFamily: '"VT323", monospace', borderColor: "var(--pix-border)" }}>
+                    <div style={{ color: "var(--pix-muted)", fontSize: 11, marginBottom: 4 }}>RUN STATUS</div>
+                    <StatusBadge run={run} size="md" showRaw />
+                    {reason && <p style={{ color: "var(--pix-muted)", fontSize: 11, marginTop: 4 }}>{reason}</p>}
+                    <p style={{ color: "var(--pix-muted)", fontSize: 10, opacity: 0.6 }}>
+                      raw: {run.status}{run.pause_reason ? ` · ${run.pause_reason}` : ""}
+                      {ns ? ` · category: ${ns.workflow_category} · group: ${ns.status_group}` : ""}
+                      {ns ? ` · subtype: ${ns.status_subtype}` : ""}
+                    </p>
+                    {oc && (
+                      <div className="space-y-0.5 mt-1" style={{ color: "var(--pix-muted)", fontSize: 10, opacity: 0.7 }}>
+                        {oc.reason_code !== "unknown" && <p>legacy code: {oc.reason_code}</p>}
+                        <p>has_execution: {String(oc.evidence.has_execution ?? false)}</p>
+                        <p>has_position: {String(oc.evidence.has_position ?? false)}</p>
+                        {oc.evidence.pause_reason ? <p>blocker: {String(oc.evidence.pause_reason)}</p> : null}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </PixelFrame>
 

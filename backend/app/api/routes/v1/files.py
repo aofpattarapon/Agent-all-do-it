@@ -1,4 +1,3 @@
-
 """File upload and download endpoints for chat attachments."""
 
 import logging
@@ -84,10 +83,14 @@ async def download_file(
     try:
         chat_file = await file_upload_svc.get_file(file_id)
     except NotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found") from None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
+        ) from None
 
     if chat_file.project_id is not None:
-        await project_svc.resolve_access(chat_file.project_id, current_user, require=Permission.PROJECT_VIEW)
+        await project_svc.resolve_access(
+            chat_file.project_id, current_user, require=Permission.PROJECT_VIEW
+        )
     elif str(chat_file.user_id) != str(current_user.id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
@@ -124,10 +127,14 @@ async def get_file_info(
     try:
         chat_file = await file_upload_svc.get_file(file_id)
     except NotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found") from None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
+        ) from None
 
     if chat_file.project_id is not None:
-        await project_svc.resolve_access(chat_file.project_id, current_user, require=Permission.PROJECT_VIEW)
+        await project_svc.resolve_access(
+            chat_file.project_id, current_user, require=Permission.PROJECT_VIEW
+        )
     elif str(chat_file.user_id) != str(current_user.id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 

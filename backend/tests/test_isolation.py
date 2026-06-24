@@ -18,18 +18,19 @@ OTHER = "22222222-2222-2222-2222-222222222222"
 
 # ── validate_raw_query: rejections ──────────────────────────────────────────
 
+
 @pytest.mark.parametrize(
     "sql",
     [
-        "UPDATE knowledge_documents SET content='x'",          # not select
-        "DELETE FROM runs",                                     # not select
-        "SELECT 1; DROP TABLE users",                           # stacked
-        "SELECT * FROM runs -- WHERE project_id='x'",           # comment smuggle
-        "SELECT * FROM runs /* x */ WHERE 1=1",                 # block comment
-        "SELECT * FROM users WHERE id='x'",                     # default-deny table
-        "SELECT * FROM conversations",                          # default-deny table
-        "SELECT * FROM runs",                                   # scoped, no predicate
-        "SELECT pg_sleep(10)",                                  # forbidden fn (and no table)
+        "UPDATE knowledge_documents SET content='x'",  # not select
+        "DELETE FROM runs",  # not select
+        "SELECT 1; DROP TABLE users",  # stacked
+        "SELECT * FROM runs -- WHERE project_id='x'",  # comment smuggle
+        "SELECT * FROM runs /* x */ WHERE 1=1",  # block comment
+        "SELECT * FROM users WHERE id='x'",  # default-deny table
+        "SELECT * FROM conversations",  # default-deny table
+        "SELECT * FROM runs",  # scoped, no predicate
+        "SELECT pg_sleep(10)",  # forbidden fn (and no table)
     ],
 )
 def test_raw_query_rejected(sql):
@@ -56,6 +57,7 @@ def test_raw_query_rejects_into_outfile():
 
 
 # ── validate_raw_query: acceptances ─────────────────────────────────────────
+
 
 def test_raw_query_allows_global_catalog_unscoped():
     sql = "SELECT id, name FROM agent_templates"
@@ -85,6 +87,7 @@ def test_raw_query_projects_table_filtered_by_id():
 
 
 # ── build_scoped_query ──────────────────────────────────────────────────────
+
 
 def test_build_scoped_query_forces_project_filter():
     sql, params = build_scoped_query(PID, "knowledge_documents")
@@ -124,6 +127,7 @@ def test_build_scoped_query_rejects_non_scoped_table():
 
 
 # ── path extraction ─────────────────────────────────────────────────────────
+
 
 def test_extract_project_id_from_path():
     assert extract_project_id_from_path(f"/api/v1/projects/{PID}/runs") == PID

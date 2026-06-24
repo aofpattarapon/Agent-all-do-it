@@ -32,8 +32,8 @@ async def list_by_project(
         .where(Integration.project_id == project_id)
         .order_by(Integration.created_at.desc())
     )
-    count_query = select(func.count()).select_from(Integration).where(
-        Integration.project_id == project_id
+    count_query = (
+        select(func.count()).select_from(Integration).where(Integration.project_id == project_id)
     )
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset(skip).limit(limit))

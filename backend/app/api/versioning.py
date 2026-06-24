@@ -61,9 +61,7 @@ class VersionDeprecationMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.deprecated_versions = deprecated_versions or {}
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Process the request and add deprecation headers if needed."""
         response = await call_next(request)
 
@@ -156,9 +154,7 @@ def deprecated(
                 response.headers["Deprecation"] = "true"
                 if sunset:
                     sunset_date = datetime.fromisoformat(sunset)
-                    response.headers["Sunset"] = sunset_date.strftime(
-                        "%a, %d %b %Y %H:%M:%S GMT"
-                    )
+                    response.headers["Sunset"] = sunset_date.strftime("%a, %d %b %Y %H:%M:%S GMT")
                 if link:
                     response.headers["Link"] = f'<{link}>; rel="deprecation"'
                 if message:

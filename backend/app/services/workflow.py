@@ -45,7 +45,9 @@ class WorkflowService:
     async def update(self, workflow_id: UUID, project_id: UUID, data: WorkflowUpdate) -> Workflow:
         workflow = await self.get(workflow_id, project_id)
         update_data = data.model_dump(exclude_unset=True)
-        return await workflow_repo.update_workflow(self.db, db_workflow=workflow, update_data=update_data)
+        return await workflow_repo.update_workflow(
+            self.db, db_workflow=workflow, update_data=update_data
+        )
 
     async def delete(self, workflow_id: UUID, project_id: UUID) -> None:
         workflow = await self.get(workflow_id, project_id)
@@ -85,7 +87,9 @@ class ScheduleService:
     async def update(self, schedule_id: UUID, workflow_id: UUID, data: ScheduleUpdate) -> Schedule:
         schedule = await self.get(schedule_id, workflow_id)
         update_data = data.model_dump(exclude_unset=True)
-        return await workflow_repo.update_schedule(self.db, db_schedule=schedule, update_data=update_data)
+        return await workflow_repo.update_schedule(
+            self.db, db_schedule=schedule, update_data=update_data
+        )
 
     async def delete(self, schedule_id: UUID, workflow_id: UUID) -> None:
         schedule = await self.get(schedule_id, workflow_id)
@@ -98,15 +102,23 @@ class ScheduleService:
             self.db, project_id=project_id, skip=skip, limit=limit
         )
 
-    async def update_by_project(self, schedule_id: UUID, project_id: UUID, data: ScheduleUpdate) -> Schedule:
+    async def update_by_project(
+        self, schedule_id: UUID, project_id: UUID, data: ScheduleUpdate
+    ) -> Schedule:
         schedule = await workflow_repo.get_schedule_by_id(self.db, schedule_id)
         if not schedule or schedule.project_id != project_id:
-            raise NotFoundError(message="Schedule not found", details={"schedule_id": str(schedule_id)})
+            raise NotFoundError(
+                message="Schedule not found", details={"schedule_id": str(schedule_id)}
+            )
         update_data = data.model_dump(exclude_unset=True)
-        return await workflow_repo.update_schedule(self.db, db_schedule=schedule, update_data=update_data)
+        return await workflow_repo.update_schedule(
+            self.db, db_schedule=schedule, update_data=update_data
+        )
 
     async def delete_by_project(self, schedule_id: UUID, project_id: UUID) -> None:
         schedule = await workflow_repo.get_schedule_by_id(self.db, schedule_id)
         if not schedule or schedule.project_id != project_id:
-            raise NotFoundError(message="Schedule not found", details={"schedule_id": str(schedule_id)})
+            raise NotFoundError(
+                message="Schedule not found", details={"schedule_id": str(schedule_id)}
+            )
         await workflow_repo.delete_schedule(self.db, schedule.id)

@@ -1,9 +1,9 @@
-
 """Tests for user routes."""
 # ruff: noqa: I001 - Imports structured for Jinja2 template conditionals
 
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
+
 ServiceMock = AsyncMock
 from uuid import uuid4
 
@@ -139,9 +139,7 @@ async def test_read_user_by_id(
     mock_user_service: MagicMock,
 ):
     """Test getting user by ID as superuser."""
-    response = await superuser_client.get(
-        f"{settings.API_V1_STR}/users/{mock_user.id}"
-    )
+    response = await superuser_client.get(f"{settings.API_V1_STR}/users/{mock_user.id}")
     assert response.status_code == 200
     data = response.json()
     assert data["email"] == mock_user.email
@@ -155,13 +153,9 @@ async def test_read_user_by_id_not_found(
     """Test getting non-existent user."""
     from app.core.exceptions import NotFoundError
 
-    mock_user_service.get_by_id = ServiceMock(
-        side_effect=NotFoundError(message="User not found")
-    )
+    mock_user_service.get_by_id = ServiceMock(side_effect=NotFoundError(message="User not found"))
 
-    response = await superuser_client.get(
-        f"{settings.API_V1_STR}/users/{uuid4()}"
-    )
+    response = await superuser_client.get(f"{settings.API_V1_STR}/users/{uuid4()}")
     assert response.status_code == 404
 
 
@@ -187,9 +181,7 @@ async def test_delete_user_by_id(
     mock_user_service: MagicMock,
 ):
     """Test deleting user by ID as superuser."""
-    response = await superuser_client.delete(
-        f"{settings.API_V1_STR}/users/{mock_user.id}"
-    )
+    response = await superuser_client.delete(f"{settings.API_V1_STR}/users/{mock_user.id}")
     assert response.status_code == 204
     mock_user_service.delete.assert_called_once()
 
@@ -202,11 +194,7 @@ async def test_delete_user_by_id_not_found(
     """Test deleting non-existent user."""
     from app.core.exceptions import NotFoundError
 
-    mock_user_service.delete = ServiceMock(
-        side_effect=NotFoundError(message="User not found")
-    )
+    mock_user_service.delete = ServiceMock(side_effect=NotFoundError(message="User not found"))
 
-    response = await superuser_client.delete(
-        f"{settings.API_V1_STR}/users/{uuid4()}"
-    )
+    response = await superuser_client.delete(f"{settings.API_V1_STR}/users/{uuid4()}")
     assert response.status_code == 404

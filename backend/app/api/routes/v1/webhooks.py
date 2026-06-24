@@ -87,6 +87,7 @@ async def trigger_workflow_webhook(
 
 # ── Trigger registry webhooks (HMAC-verified) ────────────────────────────────
 
+
 @router.post("/webhooks/{webhook_path}", status_code=status.HTTP_202_ACCEPTED)
 async def receive_trigger_webhook(
     webhook_path: str,
@@ -119,7 +120,9 @@ async def receive_trigger_webhook(
     if trigger.webhook_secret:
         _verify_hmac(body, trigger.webhook_secret, x_hub_signature_256)
 
-    background_tasks.add_task(_fire_trigger_run, trigger.project_id, trigger.workflow_id, trigger.name, body)
+    background_tasks.add_task(
+        _fire_trigger_run, trigger.project_id, trigger.workflow_id, trigger.name, body
+    )
     return {"accepted": True, "trigger_id": str(trigger.id)}
 
 

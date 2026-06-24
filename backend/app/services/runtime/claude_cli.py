@@ -74,7 +74,11 @@ def _parse_output(out: str) -> tuple[str, int | None]:
 def healthcheck() -> dict:
     """Check whether the ``claude`` binary is on PATH (or bridge is configured)."""
     if CLI_BRIDGE_URL:
-        return {"kind": "claude-cli", "available": True, "detail": f"via CLI bridge at {CLI_BRIDGE_URL}"}
+        return {
+            "kind": "claude-cli",
+            "available": True,
+            "detail": f"via CLI bridge at {CLI_BRIDGE_URL}",
+        }
     binary = shutil.which(BINARY)
     return {
         "kind": "claude-cli",

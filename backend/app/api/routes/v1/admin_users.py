@@ -1,4 +1,3 @@
-
 """Admin user management routes.
 
 All endpoints require the admin role (CurrentAdmin).
@@ -23,6 +22,7 @@ from app.schemas.conversation_share import AdminUserList
 from app.schemas.user import UserRead, UserUpdate
 
 router = APIRouter()
+
 
 @router.get("", response_model=AdminUserList)
 async def list_users(

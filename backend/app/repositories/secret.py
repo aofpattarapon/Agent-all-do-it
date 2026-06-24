@@ -25,14 +25,8 @@ async def get_by_id_and_project(
 async def list_by_project(
     db: AsyncSession, *, project_id: UUID, skip: int = 0, limit: int = 50
 ) -> tuple[list[Secret], int]:
-    query = (
-        select(Secret)
-        .where(Secret.project_id == project_id)
-        .order_by(Secret.created_at.desc())
-    )
-    count_query = select(func.count()).select_from(Secret).where(
-        Secret.project_id == project_id
-    )
+    query = select(Secret).where(Secret.project_id == project_id).order_by(Secret.created_at.desc())
+    count_query = select(func.count()).select_from(Secret).where(Secret.project_id == project_id)
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset(skip).limit(limit))
     return list(result.scalars().all()), total
@@ -64,9 +58,7 @@ async def create(
     return secret
 
 
-async def update(
-    db: AsyncSession, *, db_secret: Secret, update_data: dict[str, Any]
-) -> Secret:
+async def update(db: AsyncSession, *, db_secret: Secret, update_data: dict[str, Any]) -> Secret:
     for field, value in update_data.items():
         setattr(db_secret, field, value)
     db.add(db_secret)

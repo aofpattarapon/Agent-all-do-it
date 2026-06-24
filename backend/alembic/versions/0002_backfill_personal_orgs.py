@@ -1,4 +1,3 @@
-
 """backfill personal orgs — skipped (enable_teams=false or no SQL DB)
 
 Revision ID: 0002_backfill_orgs

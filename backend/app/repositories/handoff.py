@@ -31,9 +31,7 @@ async def list_by_project(
     limit: int = 50,
 ) -> tuple[list[Handoff], int]:
     query = select(Handoff).where(Handoff.project_id == project_id)
-    count_query = select(func.count()).select_from(Handoff).where(
-        Handoff.project_id == project_id
-    )
+    count_query = select(func.count()).select_from(Handoff).where(Handoff.project_id == project_id)
     if status:
         query = query.where(Handoff.status == status)
         count_query = count_query.where(Handoff.status == status)
@@ -46,9 +44,7 @@ async def list_by_project(
 async def list_by_run(
     db: AsyncSession, *, run_id: UUID, skip: int = 0, limit: int = 50
 ) -> tuple[list[Handoff], int]:
-    query = (
-        select(Handoff).where(Handoff.run_id == run_id).order_by(Handoff.created_at.desc())
-    )
+    query = select(Handoff).where(Handoff.run_id == run_id).order_by(Handoff.created_at.desc())
     count_query = select(func.count()).select_from(Handoff).where(Handoff.run_id == run_id)
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset(skip).limit(limit))
@@ -59,8 +55,10 @@ async def list_pending(
     db: AsyncSession, *, project_id: UUID | None = None, skip: int = 0, limit: int = 50
 ) -> tuple[list[Handoff], int]:
     query = select(Handoff).where(Handoff.status.in_(["draft", "ready", "sent"]))
-    count_query = select(func.count()).select_from(Handoff).where(
-        Handoff.status.in_(["draft", "ready", "sent"])
+    count_query = (
+        select(func.count())
+        .select_from(Handoff)
+        .where(Handoff.status.in_(["draft", "ready", "sent"]))
     )
     if project_id:
         query = query.where(Handoff.project_id == project_id)
@@ -99,9 +97,7 @@ async def create(
     return handoff
 
 
-async def update(
-    db: AsyncSession, *, db_handoff: Handoff, update_data: dict[str, Any]
-) -> Handoff:
+async def update(db: AsyncSession, *, db_handoff: Handoff, update_data: dict[str, Any]) -> Handoff:
     for field, value in update_data.items():
         setattr(db_handoff, field, value)
     db.add(db_handoff)

@@ -39,6 +39,7 @@ def svc() -> ProjectService:
 
 # ── Non-member isolation ──────────────────────────────────────────────────────
 
+
 @pytest.mark.anyio
 async def test_user_b_cannot_read_user_a_project(svc):
     """Non-member gets NotFoundError (we never reveal the project exists)."""
@@ -46,8 +47,10 @@ async def test_user_b_cannot_read_user_a_project(svc):
     user_b = _User()
     project_a = _Project(owner_id=user_a.id)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project_a)
         member_repo.get = AsyncMock(return_value=None)
 
@@ -62,8 +65,10 @@ async def test_user_b_cannot_list_user_a_agents(svc):
     user_b = _User()
     project_a = _Project(owner_id=user_a.id)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project_a)
         member_repo.get = AsyncMock(return_value=None)
 
@@ -78,8 +83,10 @@ async def test_user_b_cannot_run_user_a_workflow(svc):
     user_b = _User()
     project_a = _Project(owner_id=user_a.id)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project_a)
         member_repo.get = AsyncMock(return_value=None)
 
@@ -94,8 +101,10 @@ async def test_user_b_cannot_read_user_a_knowledge(svc):
     user_b = _User()
     project_a = _Project(owner_id=user_a.id)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project_a)
         member_repo.get = AsyncMock(return_value=None)
 
@@ -105,6 +114,7 @@ async def test_user_b_cannot_read_user_a_knowledge(svc):
 
 # ── Member access ─────────────────────────────────────────────────────────────
 
+
 @pytest.mark.anyio
 async def test_project_member_viewer_can_read_project(svc):
     """A VIEWER member can resolve PROJECT_VIEW without error."""
@@ -113,8 +123,10 @@ async def test_project_member_viewer_can_read_project(svc):
     project = _Project(owner_id=owner.id)
     membership = _Member(ProjectRole.VIEWER)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project)
         member_repo.get = AsyncMock(return_value=membership)
 
@@ -130,8 +142,10 @@ async def test_project_member_viewer_cannot_execute_run(svc):
     project = _Project(owner_id=owner.id)
     membership = _Member(ProjectRole.VIEWER)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project)
         member_repo.get = AsyncMock(return_value=membership)
 

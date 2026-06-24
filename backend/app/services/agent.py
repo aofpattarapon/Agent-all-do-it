@@ -62,7 +62,9 @@ class AgentConnectionManager:
         """Remove a WebSocket connection."""
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
-        logger.info(f"Agent WebSocket disconnected. Total connections: {len(self.active_connections)}")
+        logger.info(
+            f"Agent WebSocket disconnected. Total connections: {len(self.active_connections)}"
+        )
 
     async def send_event(self, websocket: WebSocket, event_type: str, data: Any) -> bool:
         """Forward to the module-level :func:`send_event`."""
@@ -115,13 +117,15 @@ async def persist_user_turn(
 
             if requested_conversation_id:
                 current_conversation_id = requested_conversation_id
-                conv = await conv_service.get_conversation(UUID(requested_conversation_id), user_id=user.id)
+                conv = await conv_service.get_conversation(
+                    UUID(requested_conversation_id), user_id=user.id
+                )
                 if project_id and conv.project_id and str(conv.project_id) != str(project_id):
                     raise ValueError("Conversation does not belong to the requested project")
                 if not conv.title and user_message:
                     await conv_service.update_conversation(
                         UUID(requested_conversation_id),
-                    ConversationUpdate(title=truncate_title(user_message)),
+                        ConversationUpdate(title=truncate_title(user_message)),
                         user_id=user.id,
                     )
             elif not current_conversation_id:

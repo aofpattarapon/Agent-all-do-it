@@ -1,4 +1,3 @@
-
 """User repository (PostgreSQL async).
 
 Contains only database operations. Business logic (password hashing,
@@ -137,6 +136,7 @@ async def admin_list_with_counts(
     Returns list of (user, conversation_count) tuples and total count.
     """
     from sqlalchemy import func
+
     from app.db.models.conversation import Conversation
 
     conv_count_col = func.count(Conversation.id).label("conversation_count")

@@ -119,7 +119,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always consider ACID compliance, partitioning, and archival strategies. "
             "Profile slow queries and recommend concrete index or schema changes."
         ),
-        "skills": ["postgresql", "mysql", "query-optimization", "indexing", "replication", "partitioning"],
+        "skills": [
+            "postgresql",
+            "mysql",
+            "query-optimization",
+            "indexing",
+            "replication",
+            "partitioning",
+        ],
         "tags": ["database", "sql", "performance", "schema"],
         "popularity": 78,
     },
@@ -173,7 +180,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always design with accessibility in mind (WCAG contrast, focus states, screen readers). "
             "Deliver specs with tokens, measurements, and interaction states."
         ),
-        "skills": ["figma", "design-systems", "typography", "color-theory", "accessibility", "tokens"],
+        "skills": [
+            "figma",
+            "design-systems",
+            "typography",
+            "color-theory",
+            "accessibility",
+            "tokens",
+        ],
         "tags": ["design", "ui", "visual", "components"],
         "popularity": 82,
     },
@@ -191,7 +205,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always separate observations from interpretations and report confidence levels. "
             "Recommend specific design changes backed by evidence, not opinion."
         ),
-        "skills": ["usability-testing", "interviews", "analytics", "journey-mapping", "a-b-testing", "surveys"],
+        "skills": [
+            "usability-testing",
+            "interviews",
+            "analytics",
+            "journey-mapping",
+            "a-b-testing",
+            "surveys",
+        ],
         "tags": ["research", "ux", "user-testing", "insights"],
         "popularity": 76,
     },
@@ -209,7 +230,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always measure impact with statistical significance and consider CAC vs LTV. "
             "Prioritize high-leverage, low-cost experiments with clear success metrics."
         ),
-        "skills": ["a-b-testing", "analytics", "viral-loops", "seo", "content-marketing", "retention"],
+        "skills": [
+            "a-b-testing",
+            "analytics",
+            "viral-loops",
+            "seo",
+            "content-marketing",
+            "retention",
+        ],
         "tags": ["growth", "marketing", "experiments", "acquisition"],
         "popularity": 84,
     },
@@ -227,7 +255,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always match tone to brand voice and include clear CTAs. "
             "Think about content distribution, repurposing, and editorial calendars."
         ),
-        "skills": ["copywriting", "seo", "social-media", "email-marketing", "storytelling", "editorial"],
+        "skills": [
+            "copywriting",
+            "seo",
+            "social-media",
+            "email-marketing",
+            "storytelling",
+            "editorial",
+        ],
         "tags": ["content", "marketing", "copywriting", "brand"],
         "popularity": 79,
     },
@@ -245,7 +280,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always balance short-term wins with long-term authority building. "
             "Deliver keyword maps, content briefs, and technical audit reports."
         ),
-        "skills": ["technical-seo", "keyword-research", "content-strategy", "link-building", "analytics", "serp"],
+        "skills": [
+            "technical-seo",
+            "keyword-research",
+            "content-strategy",
+            "link-building",
+            "analytics",
+            "serp",
+        ],
         "tags": ["seo", "organic", "search", "content"],
         "popularity": 77,
     },
@@ -263,7 +305,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always align social tactics with business objectives and brand voice. "
             "Deliver campaign briefs, posting schedules, and performance dashboards."
         ),
-        "skills": ["instagram", "tiktok", "linkedin", "twitter", "analytics", "community-management"],
+        "skills": [
+            "instagram",
+            "tiktok",
+            "linkedin",
+            "twitter",
+            "analytics",
+            "community-management",
+        ],
         "tags": ["social", "community", "campaigns", "engagement"],
         "popularity": 74,
     },
@@ -317,7 +366,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always be honest about deal health and recommend specific next steps. "
             "Deliver deal reviews, risk assessments, and action plans."
         ),
-        "skills": ["meddpicc", "competitive-intel", "negotiation", "forecasting", "stakeholder-mapping", "win-plan"],
+        "skills": [
+            "meddpicc",
+            "competitive-intel",
+            "negotiation",
+            "forecasting",
+            "stakeholder-mapping",
+            "win-plan",
+        ],
         "tags": ["sales", "strategy", "deals", "qualification"],
         "popularity": 68,
     },
@@ -353,7 +409,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always back claims with data and distinguish signal from noise. "
             "Deliver trend briefs, competitive landscapes, and opportunity sizing."
         ),
-        "skills": ["market-analysis", "competitive-intel", "tam-sam-som", "technology-trends", "regulatory", "data-synthesis"],
+        "skills": [
+            "market-analysis",
+            "competitive-intel",
+            "tam-sam-som",
+            "technology-trends",
+            "regulatory",
+            "data-synthesis",
+        ],
         "tags": ["research", "market", "trends", "competitive"],
         "popularity": 72,
     },
@@ -371,7 +434,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always surface blockers early and communicate status transparently. "
             "Deliver project plans, risk registers, and status reports."
         ),
-        "skills": ["agile", "scrum", "timeline-management", "risk-management", "stakeholder-comms", "jira"],
+        "skills": [
+            "agile",
+            "scrum",
+            "timeline-management",
+            "risk-management",
+            "stakeholder-comms",
+            "jira",
+        ],
         "tags": ["project-management", "coordination", "delivery", "agile"],
         "popularity": 73,
     },
@@ -389,7 +459,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always require evidence for every claim and demand visual proof for UI changes. "
             "Deliver release checklists, test summaries, and risk assessments."
         ),
-        "skills": ["test-planning", "ci-cd", "automation", "regression", "observability", "release-mgmt"],
+        "skills": [
+            "test-planning",
+            "ci-cd",
+            "automation",
+            "regression",
+            "observability",
+            "release-mgmt",
+        ],
         "tags": ["qa", "testing", "quality", "release"],
         "popularity": 69,
     },
@@ -461,7 +538,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always sanity-check assumptions and stress-test sensitivities. "
             "Deliver financial models, forecast decks, and investment memos."
         ),
-        "skills": ["excel", "financial-modeling", "forecasting", "valuation", "variance-analysis", "dcf"],
+        "skills": [
+            "excel",
+            "financial-modeling",
+            "forecasting",
+            "valuation",
+            "variance-analysis",
+            "dcf",
+        ],
         "tags": ["finance", "modeling", "forecasting", "investment"],
         "popularity": 72,
     },
@@ -479,7 +563,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always distinguish facts from opinions and disclose key risks. "
             "Deliver research notes, valuation models, and risk assessments."
         ),
-        "skills": ["equity-research", "valuation", "portfolio-analysis", "macro", "risk-assessment", "due-diligence"],
+        "skills": [
+            "equity-research",
+            "valuation",
+            "portfolio-analysis",
+            "macro",
+            "risk-assessment",
+            "due-diligence",
+        ],
         "tags": ["investment", "research", "valuation", "portfolio"],
         "popularity": 64,
     },
@@ -497,7 +588,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always prototype ideas quickly and validate with playtesting data. "
             "Deliver design docs, balance spreadsheets, and mechanic specifications."
         ),
-        "skills": ["gdd", "economy-balancing", "progression", "monetization", "prototyping", "playtesting"],
+        "skills": [
+            "gdd",
+            "economy-balancing",
+            "progression",
+            "monetization",
+            "prototyping",
+            "playtesting",
+        ],
         "tags": ["game-design", "systems", "economy", "progression"],
         "popularity": 63,
     },
@@ -533,7 +631,14 @@ AGENCY_TEMPLATES: list[dict] = [
             "Always define clear interfaces between agents and handle failure gracefully. "
             "Deliver workflow diagrams, agent contracts, and execution plans."
         ),
-        "skills": ["workflow-design", "multi-agent", "state-management", "error-handling", "parallelism", "coordination"],
+        "skills": [
+            "workflow-design",
+            "multi-agent",
+            "state-management",
+            "error-handling",
+            "parallelism",
+            "coordination",
+        ],
         "tags": ["orchestration", "multi-agent", "workflow", "coordination"],
         "popularity": 60,
     },
@@ -591,7 +696,13 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always include disclaimers that you are not a substitute for professional medical advice. "
             "Deliver clear summaries, trend charts, and actionable lifestyle suggestions."
         ),
-        "skills": ["medical-analysis", "trend-identification", "risk-assessment", "patient-education", "hipaa-awareness"],
+        "skills": [
+            "medical-analysis",
+            "trend-identification",
+            "risk-assessment",
+            "patient-education",
+            "hipaa-awareness",
+        ],
         "tags": ["healthcare", "medical", "wellness", "analysis"],
         "popularity": 83,
     },
@@ -609,7 +720,13 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always prioritize safety and include medical disclaimers. "
             "Deliver symptom assessments, care plan reminders, and educational summaries."
         ),
-        "skills": ["symptom-checking", "patient-education", "care-planning", "medication-awareness", "triage"],
+        "skills": [
+            "symptom-checking",
+            "patient-education",
+            "care-planning",
+            "medication-awareness",
+            "triage",
+        ],
         "tags": ["healthcare", "assistant", "symptoms", "patient-care"],
         "popularity": 81,
     },
@@ -627,7 +744,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always include risk management and never guarantee returns. "
             "Deliver trade signals, portfolio updates, and performance analytics."
         ),
-        "skills": ["technical-analysis", "risk-management", "portfolio", "market-data", "backtesting", "python"],
+        "skills": [
+            "technical-analysis",
+            "risk-management",
+            "portfolio",
+            "market-data",
+            "backtesting",
+            "python",
+        ],
         "tags": ["finance", "trading", "automation", "stocks"],
         "popularity": 86,
     },
@@ -645,7 +769,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always disclose limitations and provide both bull and bear cases. "
             "Deliver research reports, valuation models, and risk assessments."
         ),
-        "skills": ["financial-analysis", "valuation", "dcf", "comparables", "technical-analysis", "reporting"],
+        "skills": [
+            "financial-analysis",
+            "valuation",
+            "dcf",
+            "comparables",
+            "technical-analysis",
+            "reporting",
+        ],
         "tags": ["finance", "stocks", "equity", "valuation"],
         "popularity": 79,
     },
@@ -663,7 +794,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always encourage the learner and adjust difficulty based on performance. "
             "Deliver lesson plans, practice sets, and progress summaries."
         ),
-        "skills": ["pedagogy", "adaptive-learning", "assessment", "motivation", "curriculum", "feedback"],
+        "skills": [
+            "pedagogy",
+            "adaptive-learning",
+            "assessment",
+            "motivation",
+            "curriculum",
+            "feedback",
+        ],
         "tags": ["education", "tutoring", "learning", "adaptive"],
         "popularity": 80,
     },
@@ -681,7 +819,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always set realistic goals and build in review cycles. "
             "Deliver study plans, resource lists, and self-assessment quizzes."
         ),
-        "skills": ["resource-curation", "scheduling", "quizzing", "goal-setting", "progress-tracking", "motivation"],
+        "skills": [
+            "resource-curation",
+            "scheduling",
+            "quizzing",
+            "goal-setting",
+            "progress-tracking",
+            "motivation",
+        ],
         "tags": ["education", "study", "planning", "resources"],
         "popularity": 74,
     },
@@ -699,7 +844,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always be polite, concise, and transparent about being an AI. "
             "Deliver accurate answers, troubleshooting steps, and smooth handoffs."
         ),
-        "skills": ["faq", "troubleshooting", "escalation", "sentiment-analysis", "knowledge-base", "multilingual"],
+        "skills": [
+            "faq",
+            "troubleshooting",
+            "escalation",
+            "sentiment-analysis",
+            "knowledge-base",
+            "multilingual",
+        ],
         "tags": ["customer-service", "chatbot", "support", "automation"],
         "popularity": 87,
     },
@@ -717,7 +869,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always explain why an item is recommended and respect user privacy. "
             "Deliver curated lists, comparison tables, and trend alerts."
         ),
-        "skills": ["recommendation-engines", "collaborative-filtering", "personalization", "analytics", "privacy", "a-b-testing"],
+        "skills": [
+            "recommendation-engines",
+            "collaborative-filtering",
+            "personalization",
+            "analytics",
+            "privacy",
+            "a-b-testing",
+        ],
         "tags": ["retail", "recommendations", "ecommerce", "personalization"],
         "popularity": 78,
     },
@@ -735,7 +894,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always note that you are not a lawyer and recommend legal review for final decisions. "
             "Deliver clause summaries, risk matrices, and redline suggestions."
         ),
-        "skills": ["contract-analysis", "risk-flagging", "compliance", "nlp", "summarization", "redlining"],
+        "skills": [
+            "contract-analysis",
+            "risk-flagging",
+            "compliance",
+            "nlp",
+            "summarization",
+            "redlining",
+        ],
         "tags": ["legal", "contracts", "review", "compliance"],
         "popularity": 75,
     },
@@ -753,7 +919,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always prioritize severity, provide IoCs, and suggest containment steps. "
             "Deliver alert summaries, threat intel, and response recommendations."
         ),
-        "skills": ["siem", "log-analysis", "threat-intel", "mitre-attack", "incident-response", "forensics"],
+        "skills": [
+            "siem",
+            "log-analysis",
+            "threat-intel",
+            "mitre-attack",
+            "incident-response",
+            "forensics",
+        ],
         "tags": ["security", "threats", "detection", "siem"],
         "popularity": 73,
     },
@@ -771,7 +944,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always be honest about availability and suggest alternatives when needed. "
             "Deliver curated selections, comparison guides, and style advice."
         ),
-        "skills": ["product-discovery", "preference-elicitation", "styling", "gifting", "inventory", "recommendations"],
+        "skills": [
+            "product-discovery",
+            "preference-elicitation",
+            "styling",
+            "gifting",
+            "inventory",
+            "recommendations",
+        ],
         "tags": ["ecommerce", "shopping", "personalization", "discovery"],
         "popularity": 70,
     },
@@ -789,7 +969,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always balance cost, speed, and reliability in recommendations. "
             "Deliver route plans, inventory reports, and cost-saving analyses."
         ),
-        "skills": ["route-optimization", "inventory-mgmt", "demand-forecasting", "warehouse", "cost-analysis", "scheduling"],
+        "skills": [
+            "route-optimization",
+            "inventory-mgmt",
+            "demand-forecasting",
+            "warehouse",
+            "cost-analysis",
+            "scheduling",
+        ],
         "tags": ["supply-chain", "logistics", "optimization", "routing"],
         "popularity": 62,
     },
@@ -807,7 +994,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always evaluate fairly and focus on qualifications over demographics. "
             "Deliver shortlists, match scores, and interview question suggestions."
         ),
-        "skills": ["resume-parsing", "jd-analysis", "skills-matching", "bias-mitigation", "interview-prep", "ats"],
+        "skills": [
+            "resume-parsing",
+            "jd-analysis",
+            "skills-matching",
+            "bias-mitigation",
+            "interview-prep",
+            "ats",
+        ],
         "tags": ["hr", "recruitment", "hiring", "talent"],
         "popularity": 69,
     },
@@ -825,7 +1019,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always consider sustainability and cost-effectiveness in recommendations. "
             "Deliver crop health reports, yield forecasts, and action plans."
         ),
-        "skills": ["agronomy", "pest-management", "irrigation", "yield-forecasting", "soil-analysis", "weather"],
+        "skills": [
+            "agronomy",
+            "pest-management",
+            "irrigation",
+            "yield-forecasting",
+            "soil-analysis",
+            "weather",
+        ],
         "tags": ["agriculture", "farming", "crops", "sustainability"],
         "popularity": 56,
     },
@@ -843,7 +1044,14 @@ FIVE_HUNDRED_AI_TEMPLATES: list[dict] = [
             "Always balance reliability, cost, and environmental impact. "
             "Deliver demand forecasts, load profiles, and optimization strategies."
         ),
-        "skills": ["time-series", "forecasting", "grid-ops", "renewables", "peak-shaving", "optimization"],
+        "skills": [
+            "time-series",
+            "forecasting",
+            "grid-ops",
+            "renewables",
+            "peak-shaving",
+            "optimization",
+        ],
         "tags": ["energy", "forecasting", "grid", "renewables"],
         "popularity": 54,
     },

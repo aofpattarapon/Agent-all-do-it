@@ -1,4 +1,3 @@
-
 """add is_app_admin — skipped (enable_teams=false or no SQL DB)
 
 Revision ID: 0003_is_app_admin

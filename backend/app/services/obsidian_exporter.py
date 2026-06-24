@@ -88,7 +88,11 @@ def export_compaction(
     try:
         today = datetime.now(UTC).strftime("%Y-%m-%d")
         scope = _safe(source_type) or "memory"
-        base = project_compactions_dir(project_id) if project_id is not None else global_compactions_dir()
+        base = (
+            project_compactions_dir(project_id)
+            if project_id is not None
+            else global_compactions_dir()
+        )
         note_dir = base / scope / today
         note_dir.mkdir(parents=True, exist_ok=True)
 

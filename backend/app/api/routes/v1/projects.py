@@ -7,7 +7,15 @@ from uuid import UUID
 from fastapi import APIRouter, File, Query, UploadFile, status
 from pydantic import BaseModel
 
-from app.api.deps import AgentChatSvc, AgentConfigSvc, AppSettingSvc, CurrentUser, DBSession, KnowledgeSvc, ProjectSvc
+from app.api.deps import (
+    AgentChatSvc,
+    AgentConfigSvc,
+    AppSettingSvc,
+    CurrentUser,
+    DBSession,
+    KnowledgeSvc,
+    ProjectSvc,
+)
 from app.core.rbac import Permission
 from app.schemas.agent_chat import AgentChatRequest, AgentChatResponse
 from app.schemas.agent_config import (
@@ -39,10 +47,13 @@ def get_project_vault_path(project_id: UUID) -> Path:
 
 # ── Projects ──────────────────────────────────────────────────────────────────
 
+
 @router.get("/projects", response_model=ProjectList)
 async def list_projects(
-    user: CurrentUser, svc: ProjectSvc,
-    skip: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100),
+    user: CurrentUser,
+    svc: ProjectSvc,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
 ) -> Any:
     items, total = await svc.list(user.id, skip=skip, limit=limit)
     return ProjectList(items=items, total=total)
@@ -55,19 +66,21 @@ async def create_project(data: ProjectCreate, user: CurrentUser, svc: ProjectSvc
 
 @router.get("/projects/{project_id}", response_model=ProjectRead)
 async def get_project(project_id: UUID, user: CurrentUser, svc: ProjectSvc) -> Any:
-    access = await svc.resolve_access(
-        project_id, user, require=Permission.PROJECT_VIEW
-    )
+    access = await svc.resolve_access(project_id, user, require=Permission.PROJECT_VIEW)
     return access.project
 
 
 @router.patch("/projects/{project_id}", response_model=ProjectRead)
-async def update_project(project_id: UUID, data: ProjectUpdate, user: CurrentUser, svc: ProjectSvc) -> Any:
+async def update_project(
+    project_id: UUID, data: ProjectUpdate, user: CurrentUser, svc: ProjectSvc
+) -> Any:
     await svc.resolve_access(project_id, user, require=Permission.PROJECT_EDIT)
     return await svc.update(project_id, user.id, data)
 
 
-@router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+@router.delete(
+    "/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+)
 async def delete_project(project_id: UUID, user: CurrentUser, svc: ProjectSvc) -> None:
     await svc.resolve_access(project_id, user, require=Permission.PROJECT_DELETE)
     await svc.delete(project_id, user.id)
@@ -75,21 +88,33 @@ async def delete_project(project_id: UUID, user: CurrentUser, svc: ProjectSvc) -
 
 # ── Runtime profiles ──────────────────────────────────────────────────────────
 
+
 class RuntimeProfileRead(BaseModel):
     profile: str | None
     valid_profiles: list[str]
 
 
 class RuntimeProfileApply(BaseModel):
-    profile: Literal["test", "production"]
+    profile: Literal[
+        "test",
+        "test-2",
+        "test-minimal-paid",
+        "test-jam",
+        "test-local-free-24x7-safe",
+        "production",
+    ]
 
 
 @router.get("/projects/{project_id}/runtime-profile", response_model=RuntimeProfileRead)
 async def get_runtime_profile(
-    project_id: UUID, user: CurrentUser, project_svc: ProjectSvc, settings_svc: AppSettingSvc,
+    project_id: UUID,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    settings_svc: AppSettingSvc,
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.PROJECT_VIEW)
     from app.services.runtime_profiles import VALID_PROFILES
+
     key = f"project.{project_id}.runtime_profile"
     active = await settings_svc.get(key, default="")
     return RuntimeProfileRead(
@@ -137,26 +162,39 @@ async def apply_runtime_profile(
 
     await db.flush()
     await settings_svc.set(f"project.{project_id}.runtime_profile", body.profile)
+    await db.commit()
 
     return RuntimeProfileRead(profile=body.profile, valid_profiles=list(VALID_PROFILES))
 
 
 # ── AgentConfigs ──────────────────────────────────────────────────────────────
 
+
 @router.get("/projects/{project_id}/agents", response_model=AgentConfigList)
 async def list_agents(
-    project_id: UUID, user: CurrentUser, project_svc: ProjectSvc, agent_svc: AgentConfigSvc,
-    skip: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=200),
+    project_id: UUID,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    agent_svc: AgentConfigSvc,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.AGENT_VIEW)
     items, total = await agent_svc.list(project_id, skip=skip, limit=limit)
     return AgentConfigList(items=items, total=total)
 
 
-@router.post("/projects/{project_id}/agents", response_model=AgentConfigRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/projects/{project_id}/agents",
+    response_model=AgentConfigRead,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_agent(
-    project_id: UUID, data: AgentConfigCreate, user: CurrentUser,
-    project_svc: ProjectSvc, agent_svc: AgentConfigSvc,
+    project_id: UUID,
+    data: AgentConfigCreate,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    agent_svc: AgentConfigSvc,
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.AGENT_EDIT)
     return await agent_svc.create(project_id, data)
@@ -164,17 +202,28 @@ async def create_agent(
 
 @router.patch("/projects/{project_id}/agents/{agent_id}", response_model=AgentConfigRead)
 async def update_agent(
-    project_id: UUID, agent_id: UUID, data: AgentConfigUpdate, user: CurrentUser,
-    project_svc: ProjectSvc, agent_svc: AgentConfigSvc,
+    project_id: UUID,
+    agent_id: UUID,
+    data: AgentConfigUpdate,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    agent_svc: AgentConfigSvc,
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.AGENT_EDIT)
     return await agent_svc.update(agent_id, project_id, data)
 
 
-@router.delete("/projects/{project_id}/agents/{agent_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+@router.delete(
+    "/projects/{project_id}/agents/{agent_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
 async def delete_agent(
-    project_id: UUID, agent_id: UUID, user: CurrentUser,
-    project_svc: ProjectSvc, agent_svc: AgentConfigSvc,
+    project_id: UUID,
+    agent_id: UUID,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    agent_svc: AgentConfigSvc,
 ) -> None:
     await project_svc.resolve_access(project_id, user, require=Permission.AGENT_EDIT)
     await agent_svc.delete(agent_id, project_id)
@@ -182,11 +231,15 @@ async def delete_agent(
 
 # ── Agent Direct Chat ─────────────────────────────────────────────────────────
 
+
 @router.post("/projects/{project_id}/agents/{agent_id}/chat", response_model=AgentChatResponse)
 async def chat_with_agent(
-    project_id: UUID, agent_id: UUID,
-    data: AgentChatRequest, user: CurrentUser,
-    project_svc: ProjectSvc, chat_svc: AgentChatSvc,
+    project_id: UUID,
+    agent_id: UUID,
+    data: AgentChatRequest,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    chat_svc: AgentChatSvc,
 ) -> Any:
     """Send a direct message to a specific agent and get a response."""
     await project_svc.resolve_access(project_id, user, require=Permission.RUN_EXECUTE)
@@ -200,11 +253,16 @@ async def chat_with_agent(
 
 # ── Per-Agent Knowledge ───────────────────────────────────────────────────────
 
+
 @router.get("/projects/{project_id}/agents/{agent_id}/knowledge", response_model=KnowledgeDocList)
 async def list_agent_knowledge(
-    project_id: UUID, agent_id: UUID, user: CurrentUser,
-    project_svc: ProjectSvc, knowledge_svc: KnowledgeSvc,
-    skip: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100),
+    project_id: UUID,
+    agent_id: UUID,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    knowledge_svc: KnowledgeSvc,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.KNOWLEDGE_VIEW)
     items, total = await knowledge_svc.list_by_agent(agent_id, project_id, skip=skip, limit=limit)
@@ -217,8 +275,12 @@ async def list_agent_knowledge(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_agent_knowledge(
-    project_id: UUID, agent_id: UUID, data: KnowledgeDocCreate,
-    user: CurrentUser, project_svc: ProjectSvc, knowledge_svc: KnowledgeSvc,
+    project_id: UUID,
+    agent_id: UUID,
+    data: KnowledgeDocCreate,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    knowledge_svc: KnowledgeSvc,
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.KNOWLEDGE_EDIT)
     return await knowledge_svc.create(project_id, data, agent_config_id=agent_id)
@@ -230,7 +292,8 @@ async def create_agent_knowledge(
     status_code=status.HTTP_201_CREATED,
 )
 async def upload_agent_knowledge(
-    project_id: UUID, agent_id: UUID,
+    project_id: UUID,
+    agent_id: UUID,
     file: UploadFile = File(...),
     user: CurrentUser = ...,
     project_svc: ProjectSvc = ...,
@@ -262,10 +325,15 @@ async def upload_agent_knowledge(
 
 # ── Project-level Knowledge (existing) ───────────────────────────────────────
 
+
 @router.get("/projects/{project_id}/knowledge", response_model=KnowledgeDocList)
 async def list_knowledge(
-    project_id: UUID, user: CurrentUser, project_svc: ProjectSvc, knowledge_svc: KnowledgeSvc,
-    skip: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100),
+    project_id: UUID,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    knowledge_svc: KnowledgeSvc,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     search: str | None = Query(None),
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.KNOWLEDGE_VIEW)
@@ -273,10 +341,17 @@ async def list_knowledge(
     return KnowledgeDocList(items=items, total=total)
 
 
-@router.post("/projects/{project_id}/knowledge", response_model=KnowledgeDocRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/projects/{project_id}/knowledge",
+    response_model=KnowledgeDocRead,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_knowledge(
-    project_id: UUID, data: KnowledgeDocCreate, user: CurrentUser,
-    project_svc: ProjectSvc, knowledge_svc: KnowledgeSvc,
+    project_id: UUID,
+    data: KnowledgeDocCreate,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    knowledge_svc: KnowledgeSvc,
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.KNOWLEDGE_EDIT)
     return await knowledge_svc.create(project_id, data)
@@ -304,29 +379,43 @@ async def upload_knowledge_file(
         if stripped.startswith("# "):
             title = stripped[2:].strip()
             break
-    data = KnowledgeDocCreate(title=title, content=content, tags=[], source_url=file.filename, source_type="upload")
+    data = KnowledgeDocCreate(
+        title=title, content=content, tags=[], source_url=file.filename, source_type="upload"
+    )
     return await knowledge_svc.create(project_id, data)
 
 
 @router.patch("/projects/{project_id}/knowledge/{doc_id}", response_model=KnowledgeDocRead)
 async def update_knowledge(
-    project_id: UUID, doc_id: UUID, data: KnowledgeDocUpdate, user: CurrentUser,
-    project_svc: ProjectSvc, knowledge_svc: KnowledgeSvc,
+    project_id: UUID,
+    doc_id: UUID,
+    data: KnowledgeDocUpdate,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    knowledge_svc: KnowledgeSvc,
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.KNOWLEDGE_EDIT)
     return await knowledge_svc.update(doc_id, project_id, data)
 
 
-@router.delete("/projects/{project_id}/knowledge/{doc_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+@router.delete(
+    "/projects/{project_id}/knowledge/{doc_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
 async def delete_knowledge(
-    project_id: UUID, doc_id: UUID, user: CurrentUser,
-    project_svc: ProjectSvc, knowledge_svc: KnowledgeSvc,
+    project_id: UUID,
+    doc_id: UUID,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    knowledge_svc: KnowledgeSvc,
 ) -> None:
     await project_svc.resolve_access(project_id, user, require=Permission.KNOWLEDGE_EDIT)
     await knowledge_svc.delete(doc_id, project_id)
 
 
 # ── Obsidian Vault Sync ───────────────────────────────────────────────────────
+
 
 @router.post("/projects/{project_id}/vault/sync")
 async def sync_obsidian_vault(

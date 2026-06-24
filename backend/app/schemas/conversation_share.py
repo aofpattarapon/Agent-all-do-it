@@ -1,4 +1,3 @@
-
 """Conversation sharing schemas."""
 
 from datetime import datetime
@@ -12,13 +11,17 @@ from app.schemas.base import BaseSchema
 
 class ConversationShareCreate(BaseSchema):
     """Schema for creating a conversation share."""
-    shared_with: UUID | None = Field(default=None, description="User ID to share with (omit for link sharing)")
+
+    shared_with: UUID | None = Field(
+        default=None, description="User ID to share with (omit for link sharing)"
+    )
     permission: Literal["view", "edit"] = Field(default="view", description="Access level")
     generate_link: bool = Field(default=False, description="Generate a public share link")
 
 
 class ConversationShareRead(BaseSchema):
     """Schema for reading a conversation share."""
+
     id: UUID
     conversation_id: UUID
     shared_by: UUID
@@ -42,6 +45,7 @@ class ConversationShareList(BaseSchema):
 
 class AdminConversationRead(BaseSchema):
     """Admin view of a conversation — includes owner email."""
+
     id: UUID
     user_id: UUID | None = None
     title: str | None = None
@@ -61,6 +65,7 @@ class AdminConversationList(BaseSchema):
 
 class AdminUserRead(BaseSchema):
     """Minimal user info for admin endpoints."""
+
     id: UUID
     email: str
     full_name: str | None = None

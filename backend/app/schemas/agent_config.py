@@ -8,7 +8,9 @@ from pydantic import Field
 
 from app.schemas.base import BaseSchema
 
-ToolPermission = Literal["web_search", "code_exec", "file_read", "file_write", "api_call", "db_query"]
+ToolPermission = Literal[
+    "web_search", "code_exec", "file_read", "file_write", "api_call", "db_query"
+]
 MemoryType = Literal["none", "short_term", "long_term"]
 
 

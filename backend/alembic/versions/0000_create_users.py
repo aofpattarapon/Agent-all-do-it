@@ -1,4 +1,3 @@
-
 """create users table
 
 Revision ID: 0000_users

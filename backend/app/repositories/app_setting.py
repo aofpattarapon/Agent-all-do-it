@@ -20,12 +20,16 @@ async def list_all(db: AsyncSession) -> list[AppSetting]:
     return list(result.scalars().all())
 
 
-async def upsert(db: AsyncSession, *, key: str, value: str) -> AppSetting:
+async def upsert(
+    db: AsyncSession, *, key: str, value: str, description: str | None = None
+) -> AppSetting:
     row = await db.get(AppSetting, key)
     if row:
         row.value = value
+        if description is not None:
+            row.description = description
     else:
-        row = AppSetting(key=key, value=value)
+        row = AppSetting(key=key, value=value, description=description or "")
         db.add(row)
     await db.flush()
     await db.refresh(row)

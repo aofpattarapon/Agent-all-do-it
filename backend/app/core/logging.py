@@ -20,13 +20,22 @@ class PiiRedactionFilter(logging.Filter):
         # Email addresses
         (re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"), "[EMAIL_REDACTED]"),
         # JWT tokens (header.payload.signature)
-        (re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+"), "[JWT_REDACTED]"),
+        (
+            re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+"),
+            "[JWT_REDACTED]",
+        ),
         # OpenAI API keys
         (re.compile(r"sk-[a-zA-Z0-9]{20,}"), "[API_KEY_REDACTED]"),
         # Anthropic API keys
         (re.compile(r"sk-ant-[a-zA-Z0-9_-]{20,}"), "[API_KEY_REDACTED]"),
         # Generic long hex/base64 secrets (40+ chars, likely tokens)
-        (re.compile(r"(?:token|key|secret|password|authorization)[=: ]+['\"]?([A-Za-z0-9_/+=.-]{40,})", re.IGNORECASE), "[SECRET_REDACTED]"),
+        (
+            re.compile(
+                r"(?:token|key|secret|password|authorization)[=: ]+['\"]?([A-Za-z0-9_/+=.-]{40,})",
+                re.IGNORECASE,
+            ),
+            "[SECRET_REDACTED]",
+        ),
         # Bearer tokens in headers
         (re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{10,}"), "Bearer [TOKEN_REDACTED]"),
         # Password/secret in key=value or key: value patterns
@@ -46,9 +55,13 @@ class PiiRedactionFilter(logging.Filter):
             record.msg = self._redact(record.msg)
         if record.args:
             if isinstance(record.args, dict):
-                record.args = {k: self._redact(v) if isinstance(v, str) else v for k, v in record.args.items()}
+                record.args = {
+                    k: self._redact(v) if isinstance(v, str) else v for k, v in record.args.items()
+                }
             elif isinstance(record.args, tuple):
-                record.args = tuple(self._redact(a) if isinstance(a, str) else a for a in record.args)
+                record.args = tuple(
+                    self._redact(a) if isinstance(a, str) else a for a in record.args
+                )
         return True
 
     def _redact(self, value: str) -> str:

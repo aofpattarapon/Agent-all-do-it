@@ -1,4 +1,3 @@
-
 """add active_knowledge_base_ids to conversations — skipped (enable_teams/enable_rag/use_jwt=false or no SQL DB)
 
 Revision ID: 0009_conv_active_kb_ids

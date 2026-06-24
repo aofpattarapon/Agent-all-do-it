@@ -11,6 +11,7 @@ The endpoints are:
 - POST /conversations/{id}/messages - Add a message to conversation
 - GET /conversations/{id}/messages - List messages in conversation
 """
+
 from typing import Any
 from uuid import UUID
 
@@ -57,8 +58,12 @@ async def export_conversations(
 ) -> Any:
     """Export all conversations with messages and tool calls (admin only)."""
     export_data = await conversation_service.export_all()
-    return JSONResponse(content={"conversations": export_data, "total": len(export_data)},
-        headers={"Content-Disposition": 'attachment; filename="conversations_export.json"'})
+    return JSONResponse(
+        content={"conversations": export_data, "total": len(export_data)},
+        headers={"Content-Disposition": 'attachment; filename="conversations_export.json"'},
+    )
+
+
 @router.get("/admin-list", response_model=ConversationAdminList)
 async def list_conversations_admin(
     conversation_service: ConversationSvc,
@@ -121,7 +126,9 @@ async def create_conversation(
     if data is None:
         data = ConversationCreate()
     if data.project_id is not None:
-        await project_svc.resolve_access(data.project_id, current_user, require=Permission.PROJECT_VIEW)
+        await project_svc.resolve_access(
+            data.project_id, current_user, require=Permission.PROJECT_VIEW
+        )
     data = data.model_copy(update={"user_id": current_user.id})
     return await conversation_service.create_conversation(data)
 
@@ -138,7 +145,8 @@ async def get_conversation(
     """
     uid = None if current_user.role == "admin" else current_user.id
     return await conversation_service.get_conversation(
-        conversation_id, include_messages=True,
+        conversation_id,
+        include_messages=True,
         user_id=uid,
     )
 
@@ -155,7 +163,8 @@ async def update_conversation(
     Raises 404 if the conversation does not exist.
     """
     return await conversation_service.update_conversation(
-        conversation_id, data,
+        conversation_id,
+        data,
         user_id=current_user.id,
     )
 
@@ -309,7 +318,11 @@ async def list_shared_with_me(
     return ConversationList(items=items, total=total)
 
 
-@router.post("/{conversation_id}/shares", response_model=ConversationShareRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{conversation_id}/shares",
+    response_model=ConversationShareRead,
+    status_code=status.HTTP_201_CREATED,
+)
 async def share_conversation(
     conversation_id: UUID,
     data: ConversationShareCreate,
@@ -338,7 +351,11 @@ async def list_shares(
     return ConversationShareList(items=shares, total=len(shares))
 
 
-@router.delete("/{conversation_id}/shares/{share_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+@router.delete(
+    "/{conversation_id}/shares/{share_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
 async def revoke_share(
     conversation_id: UUID,
     share_id: UUID,

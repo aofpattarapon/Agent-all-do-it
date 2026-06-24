@@ -47,7 +47,15 @@ async def run_agent(
         )
 
     full_prompt = combine_prompts(system_prompt, prompt)
-    args = [BINARY, "--data-dir", data_dir, "--print", "--output-format", "json", "--dangerously-skip-permissions"]
+    args = [
+        BINARY,
+        "--data-dir",
+        data_dir,
+        "--print",
+        "--output-format",
+        "json",
+        "--dangerously-skip-permissions",
+    ]
     if model:
         args += ["--model", model]
     args.append(full_prompt)

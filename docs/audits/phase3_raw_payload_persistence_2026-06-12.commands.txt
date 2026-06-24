@@ -1,0 +1,36 @@
+rg -n "news_events|market_snapshots|trade_proposals|trade_executions|trade_journal|raw_response|raw_data|raw_payload|proposal" /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/tests
+sed -n '1,260p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/crypto_persistence.py
+sed -n '1,260p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/db/models/crypto_trading.py
+sed -n '1,260p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/crypto/services/position_monitor.py
+sed -n '1,260p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/agents/tools/exchange_tool.py
+rg -n "market_data|fetch_market_data|news_scan|source_check|market_regime|compile_proposal|journal_entry|execute_trade|TradeProposal\\(|TradeExecution\\(|TradeJournal\\(" /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/run_executor.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/commands/seed_crypto_workflow.py
+sed -n '260,430p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/crypto_persistence.py
+sed -n '1600,1705p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/run_executor.py
+sed -n '1800,1905p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/run_executor.py
+sed -n '150,360p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/tests/integration/test_crypto_persistence.py
+rg -n "alembic|versions|migration" /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend
+rg -n "persist_agent_output\\(|CryptoPersistenceService\\(|save_trade_proposal\\(|save_news_events\\(|save_market_snapshot\\(|save_agent_vote\\(" /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/run_executor.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/crypto_persistence.py
+sed -n '430,520p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/run_executor.py
+ls -1 /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/alembic/versions | tail -n 10
+sed -n '1,220p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/alembic/versions/2026-06-06_add_crypto_extended_tables.py
+sed -n '1,170p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/tests/integration/test_crypto_persistence.py
+sed -n '1,220p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/tests/conftest.py
+sed -n '1,220p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/db/base.py
+rg -n "TradeJournal\\(|raw_response=|raw_facts|full_proposal_md|original_thesis=.*news_summary" /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app
+sed -n '180,270p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/api/routes/v1/trading.py
+sed -n '1,220p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/crypto/services/execution_service.py
+sed -n '220,330p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/crypto/services/execution_service.py
+sed -n '1,80p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/api/routes/v1/trading.py
+sed -n '1,60p' /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/run_executor.py
+python3 -m py_compile /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/db/models/crypto_trading.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/crypto_persistence.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/run_executor.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/api/routes/v1/trading.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/crypto/services/execution_service.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/tests/test_crypto_raw_payloads.py
+/Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/.venv/bin/pytest -q /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/tests/test_handoff_contracts.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/tests/test_crypto_raw_payloads.py
+git -C /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent diff -- backend/app/db/models/crypto_trading.py backend/app/db/models/__init__.py backend/app/services/crypto_persistence.py backend/app/services/run_executor.py backend/app/api/routes/v1/trading.py backend/app/crypto/services/execution_service.py backend/tests/test_crypto_raw_payloads.py backend/alembic/versions/2026-06-12_add_crypto_raw_payloads.py
+nl -ba /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/db/models/crypto_trading.py | sed -n '1,240p'
+nl -ba /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/crypto_persistence.py | sed -n '1,220p'
+nl -ba /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/run_executor.py | sed -n '480,498p'
+nl -ba /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/run_executor.py | sed -n '1675,1915p'
+nl -ba /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/crypto/services/execution_service.py | sed -n '170,320p'
+nl -ba /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/api/routes/v1/trading.py | sed -n '200,270p'
+nl -ba /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/tests/test_crypto_raw_payloads.py | sed -n '1,220p'
+nl -ba /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/alembic/versions/2026-06-12_add_crypto_raw_payloads.py | sed -n '1,220p'
+rg -n "raw_payload|raw_facts|store_raw_payload|build_trade_journal_raw_facts|payload_kind=\\\"market_data\\\"" /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/crypto_persistence.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/services/run_executor.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/crypto/services/execution_service.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/api/routes/v1/trading.py /Users/socket9companylimited/Desktop/Web-app-agent-Kimi/pixel_dream_agent/backend/app/db/models/crypto_trading.py

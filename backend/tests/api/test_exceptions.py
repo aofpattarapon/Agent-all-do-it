@@ -1,5 +1,5 @@
 """Exception handler tests."""
-# ruff: noqa: I001, E402 - Imports structured for Jinja2 template conditionals
+# ruff: noqa: I001 - Imports structured for Jinja2 template conditionals
 
 import pytest
 from httpx import AsyncClient
@@ -14,7 +14,9 @@ async def test_not_found_error_format(client: AsyncClient):
     assert response.status_code == 404
     # FastAPI returns 404 for unknown routes
 
+
 from unittest.mock import AsyncMock, MagicMock
+
 ServiceMock = AsyncMock
 
 from httpx import ASGITransport

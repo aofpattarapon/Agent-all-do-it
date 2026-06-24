@@ -8,8 +8,9 @@ Create Date: 2026-06-10
 from __future__ import annotations
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+
+from alembic import op
 
 revision = "d2e3f4a5b6c7"
 down_revision = "c1d2e3f4a5b6"
@@ -20,7 +21,9 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "backtest_results",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        ),
         sa.Column(
             "project_id",
             UUID(as_uuid=True),
@@ -41,7 +44,12 @@ def upgrade() -> None:
         sa.Column("best_trade_pct", sa.Float, nullable=False, server_default="0"),
         sa.Column("worst_trade_pct", sa.Float, nullable=False, server_default="0"),
         sa.Column("trade_records", JSONB, nullable=False, server_default="[]"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
     )
 

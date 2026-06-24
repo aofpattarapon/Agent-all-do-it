@@ -164,14 +164,19 @@ async def create_room_message(
     await project_svc.resolve_access(project_id, user, require=Permission.PROJECT_VIEW)
     msg = await room_svc.create_message(room_id, project_id, data)
     # Broadcast to all WS clients in this room
-    await room_hub.broadcast(str(room_id), {
-        "type": "room_message",
-        "id": str(msg.id),
-        "sender": data.sender_name or user.email,
-        "sender_type": data.sender_type,
-        "message": data.content,
-        "timestamp": msg.created_at.isoformat() if hasattr(msg.created_at, "isoformat") else str(msg.created_at),
-    })
+    await room_hub.broadcast(
+        str(room_id),
+        {
+            "type": "room_message",
+            "id": str(msg.id),
+            "sender": data.sender_name or user.email,
+            "sender_type": data.sender_type,
+            "message": data.content,
+            "timestamp": msg.created_at.isoformat()
+            if hasattr(msg.created_at, "isoformat")
+            else str(msg.created_at),
+        },
+    )
     return msg
 
 
@@ -213,7 +218,10 @@ async def room_ws(
             room = next((r for r in items if r.name.lower() == room_key.lower()), None)
             if room is None:
                 from app.schemas.room import RoomCreate as _RC
-                room = await room_svc.create(project_id, _RC(name=room_key.capitalize(), purpose="Main collaboration room"))
+
+                room = await room_svc.create(
+                    project_id, _RC(name=room_key.capitalize(), purpose="Main collaboration room")
+                )
 
         room_id = str(room.id)
         project_id_str = str(project_id)
@@ -227,22 +235,28 @@ async def room_ws(
     logger.info("Room WS joined: project=%s room=%s user=%s", project_id, room_id, user.email)
 
     try:
-        await websocket.send_json({
-            "type": "connected",
-            "room_id": room_id,
-            "room_name": room.name,
-        })
+        await websocket.send_json(
+            {
+                "type": "connected",
+                "room_id": room_id,
+                "room_name": room.name,
+            }
+        )
 
         # Send history
         for h in hist_items:
-            await websocket.send_json({
-                "type": "history",
-                "id": str(h.id),
-                "sender": h.sender_name or str(h.sender_id or ""),
-                "sender_type": h.sender_type,
-                "message": h.content,
-                "timestamp": h.created_at.isoformat() if hasattr(h.created_at, "isoformat") else str(h.created_at),
-            })
+            await websocket.send_json(
+                {
+                    "type": "history",
+                    "id": str(h.id),
+                    "sender": h.sender_name or str(h.sender_id or ""),
+                    "sender_type": h.sender_type,
+                    "message": h.content,
+                    "timestamp": h.created_at.isoformat()
+                    if hasattr(h.created_at, "isoformat")
+                    else str(h.created_at),
+                }
+            )
 
         while True:
             try:
@@ -269,7 +283,10 @@ async def room_ws(
 
                 # Result from broadcast queue → forward to client
                 if isinstance(result, dict) and result.get("type") in (
-                    "room_message", "agent_message", "agent_typing", "system",
+                    "room_message",
+                    "agent_message",
+                    "agent_typing",
+                    "system",
                 ):
                     await websocket.send_json(result)
 
@@ -281,6 +298,7 @@ async def room_ws(
                     async with get_db_context() as db2:
                         room_svc2 = RoomService(db2)
                         from app.schemas.room import RoomMessageCreate as _RMC
+
                         msg = await room_svc2.create_message(
                             room.id,
                             project_id,
@@ -291,14 +309,19 @@ async def room_ws(
                                 content=content,
                             ),
                         )
-                    await room_hub.broadcast(room_id, {
-                        "type": "room_message",
-                        "id": str(msg.id),
-                        "sender": user.email,
-                        "sender_type": "user",
-                        "message": content,
-                        "timestamp": msg.created_at.isoformat() if hasattr(msg.created_at, "isoformat") else str(msg.created_at),
-                    })
+                    await room_hub.broadcast(
+                        room_id,
+                        {
+                            "type": "room_message",
+                            "id": str(msg.id),
+                            "sender": user.email,
+                            "sender_type": "user",
+                            "message": content,
+                            "timestamp": msg.created_at.isoformat()
+                            if hasattr(msg.created_at, "isoformat")
+                            else str(msg.created_at),
+                        },
+                    )
 
             except TimeoutError:
                 await websocket.send_json({"type": "ping"})

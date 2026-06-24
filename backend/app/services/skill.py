@@ -53,9 +53,8 @@ class SkillService:
 
     async def list_categories(self) -> list[str]:
         from sqlalchemy import distinct, select
+
         result = await self.db.execute(
-            select(distinct(Skill.category))
-            .where(Skill.is_active == True)
-            .order_by(Skill.category)
+            select(distinct(Skill.category)).where(Skill.is_active == True).order_by(Skill.category)
         )
         return [row[0] for row in result.all() if row[0]]

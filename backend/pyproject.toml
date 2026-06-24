@@ -20,8 +20,10 @@ dependencies = [
     "psycopg2-binary>=2.9.0",
     "alembic>=1.18.0",
     "greenlet>=3.2.0",
-    # HMAC HS256 only — no asymmetric keys, no `cryptography` extra.
+    # HMAC HS256 only for JWT — no asymmetric keys.
     "pyjwt>=2.9.0",
+    # Fernet symmetric encryption for the at-rest secret store (app/core/secret_crypto.py).
+    "cryptography>=42.0.0",
     "bcrypt>=4.0.0",
     "python-multipart>=0.0.12",
     "redis>=5.2.0",

@@ -28,7 +28,13 @@ ACADEMIC_TEMPLATES: list[dict] = [
             "4. Complexity over romanticism — pre-industrial societies are adaptive systems with internal politics.\n"
             "5. Name your sources — ground analysis in documented ethnographic examples."
         ),
-        "skills": ["cultural-analysis", "ethnography", "anthropology", "world-building", "social-systems"],
+        "skills": [
+            "cultural-analysis",
+            "ethnography",
+            "anthropology",
+            "world-building",
+            "social-systems",
+        ],
         "tags": ["academic", "culture", "anthropology", "research"],
         "popularity": 62,
     },
@@ -79,7 +85,13 @@ ACADEMIC_TEMPLATES: list[dict] = [
             "Period authenticity reports covering material culture (food, technology, economy, disease), "
             "social structure (class, gender, legal systems), and corrected common myths with sources."
         ),
-        "skills": ["history", "historical-research", "period-authenticity", "world-building", "anachronism-detection"],
+        "skills": [
+            "history",
+            "historical-research",
+            "period-authenticity",
+            "world-building",
+            "anachronism-detection",
+        ],
         "tags": ["academic", "history", "research", "world-building"],
         "popularity": 64,
     },
@@ -106,7 +118,13 @@ ACADEMIC_TEMPLATES: list[dict] = [
             "4. Think systemically — fixing Act 1 means tracing consequences through Acts 2 and 3.\n"
             "5. Story vs narrative is foundational — *fabula* (chronological events) ≠ *sjuzhet* (how events are told)."
         ),
-        "skills": ["narrative-theory", "story-structure", "screenwriting", "literary-analysis", "character-arcs"],
+        "skills": [
+            "narrative-theory",
+            "story-structure",
+            "screenwriting",
+            "literary-analysis",
+            "character-arcs",
+        ],
         "tags": ["academic", "narrative", "writing", "story-structure"],
         "popularity": 66,
     },
@@ -132,7 +150,13 @@ ACADEMIC_TEMPLATES: list[dict] = [
             "4. Cultural humility — Big Five was developed in WEIRD populations; flag cross-cultural applications.\n"
             "5. Function over pathology — ask what the behavior serves before labeling it disordered."
         ),
-        "skills": ["psychology", "character-analysis", "attachment-theory", "big-five", "behavioral-analysis"],
+        "skills": [
+            "psychology",
+            "character-analysis",
+            "attachment-theory",
+            "big-five",
+            "behavioral-analysis",
+        ],
         "tags": ["academic", "psychology", "character", "behavior"],
         "popularity": 68,
     },
@@ -216,7 +240,15 @@ DESIGN_TEMPLATES: list[dict] = [
             "Every component: dimensions, spacing, color tokens, font specs, interaction states, "
             "accessibility requirements, and copy tone guidelines."
         ),
-        "skills": ["figma", "design-systems", "typography", "color-theory", "accessibility", "tokens", "components"],
+        "skills": [
+            "figma",
+            "design-systems",
+            "typography",
+            "color-theory",
+            "accessibility",
+            "tokens",
+            "components",
+        ],
         "tags": ["design", "ui", "visual", "components", "accessibility"],
         "popularity": 82,
     },
@@ -244,7 +276,14 @@ DESIGN_TEMPLATES: list[dict] = [
             "## Success Metric\n"
             "80%+ adoption of research recommendations by design and product teams."
         ),
-        "skills": ["usability-testing", "interviews", "analytics", "journey-mapping", "a-b-testing", "surveys"],
+        "skills": [
+            "usability-testing",
+            "interviews",
+            "analytics",
+            "journey-mapping",
+            "a-b-testing",
+            "surveys",
+        ],
         "tags": ["research", "ux", "user-testing", "insights", "design"],
         "popularity": 76,
     },
@@ -272,7 +311,14 @@ DESIGN_TEMPLATES: list[dict] = [
             "Captions on all video. Alt text for all images. Color-blind safe palettes. "
             "Audio descriptions for data-heavy visuals."
         ),
-        "skills": ["video", "animation", "data-visualization", "storytelling", "motion-graphics", "content"],
+        "skills": [
+            "video",
+            "animation",
+            "data-visualization",
+            "storytelling",
+            "motion-graphics",
+            "content",
+        ],
         "tags": ["visual", "storytelling", "video", "content", "design"],
         "popularity": 72,
     },
@@ -306,7 +352,14 @@ FINANCE_TEMPLATES: list[dict] = [
             "## Success Metrics\n"
             "Zero material audit adjustments. All BS accounts reconciled within 5 business days of month-end."
         ),
-        "skills": ["accounting", "month-end-close", "sox", "reconciliation", "gaap", "financial-reporting"],
+        "skills": [
+            "accounting",
+            "month-end-close",
+            "sox",
+            "reconciliation",
+            "gaap",
+            "financial-reporting",
+        ],
         "tags": ["finance", "accounting", "controller", "audit"],
         "popularity": 68,
     },
@@ -335,7 +388,14 @@ FINANCE_TEMPLATES: list[dict] = [
             "Board-ready financial models, department performance variance reports, "
             "headcount plans by function, scenario analysis (base/bull/bear), rolling 12-month P&L forecast."
         ),
-        "skills": ["financial-modeling", "forecasting", "excel", "sql", "variance-analysis", "budgeting"],
+        "skills": [
+            "financial-modeling",
+            "forecasting",
+            "excel",
+            "sql",
+            "variance-analysis",
+            "budgeting",
+        ],
         "tags": ["finance", "fpa", "forecasting", "planning", "analytics"],
         "popularity": 74,
     },
@@ -363,7 +423,14 @@ FINANCE_TEMPLATES: list[dict] = [
             "## Lead With\n"
             "Variant perception — what do I believe that consensus doesn't, and why am I right?"
         ),
-        "skills": ["equity-research", "valuation", "dcf", "portfolio-analysis", "macro", "due-diligence"],
+        "skills": [
+            "equity-research",
+            "valuation",
+            "dcf",
+            "portfolio-analysis",
+            "macro",
+            "due-diligence",
+        ],
         "tags": ["investment", "research", "valuation", "portfolio", "finance"],
         "popularity": 64,
     },
@@ -393,7 +460,13 @@ FINANCE_TEMPLATES: list[dict] = [
             "4. Always recommend qualified legal/tax counsel for material transactions.\n"
             "5. Industry-median ETR is the benchmark — not zero."
         ),
-        "skills": ["tax-planning", "international-tax", "transfer-pricing", "compliance", "entity-structuring"],
+        "skills": [
+            "tax-planning",
+            "international-tax",
+            "transfer-pricing",
+            "compliance",
+            "entity-structuring",
+        ],
         "tags": ["tax", "finance", "compliance", "planning", "strategy"],
         "popularity": 67,
     },
@@ -423,7 +496,13 @@ PRODUCT_TEMPLATES: list[dict] = [
             "No overwhelming task dumps. No tone-deaf interruptions during low-engagement periods. "
             "No manipulative urgency (false scarcity, fake deadlines)."
         ),
-        "skills": ["behavioral-psychology", "engagement", "personalization", "nudge-theory", "product"],
+        "skills": [
+            "behavioral-psychology",
+            "engagement",
+            "personalization",
+            "nudge-theory",
+            "product",
+        ],
         "tags": ["product", "engagement", "psychology", "growth", "ux"],
         "popularity": 70,
     },
@@ -450,7 +529,13 @@ PRODUCT_TEMPLATES: list[dict] = [
             "## Success Metrics\n"
             "< 24 hours for critical issue synthesis. 90%+ theme accuracy validated by product team."
         ),
-        "skills": ["user-research", "sentiment-analysis", "thematic-coding", "rice", "product-discovery"],
+        "skills": [
+            "user-research",
+            "sentiment-analysis",
+            "thematic-coding",
+            "rice",
+            "product-discovery",
+        ],
         "tags": ["product", "feedback", "research", "insights", "analytics"],
         "popularity": 72,
     },
@@ -479,7 +564,15 @@ PRODUCT_TEMPLATES: list[dict] = [
             "Problem statement → User research evidence → Success metrics → "
             "Scope (in/out of scope) → User stories → Acceptance criteria → Launch plan."
         ),
-        "skills": ["product-strategy", "prd", "roadmap", "rice", "user-research", "gtm", "prioritization"],
+        "skills": [
+            "product-strategy",
+            "prd",
+            "roadmap",
+            "rice",
+            "user-research",
+            "gtm",
+            "prioritization",
+        ],
         "tags": ["product", "pm", "strategy", "roadmap", "discovery"],
         "popularity": 89,
     },
@@ -506,7 +599,15 @@ PRODUCT_TEMPLATES: list[dict] = [
             "## Success Targets\n"
             "90%+ committed story points delivered. ±10% timeline variance. Technical debt < 20% of sprint capacity."
         ),
-        "skills": ["agile", "scrum", "rice", "moscow", "kano", "sprint-planning", "backlog-management"],
+        "skills": [
+            "agile",
+            "scrum",
+            "rice",
+            "moscow",
+            "kano",
+            "sprint-planning",
+            "backlog-management",
+        ],
         "tags": ["product", "agile", "scrum", "sprint", "prioritization"],
         "popularity": 74,
     },
@@ -534,7 +635,13 @@ PRODUCT_TEMPLATES: list[dict] = [
             "## Success Metrics\n"
             "80%+ accuracy for 6-month trend forecasts. 3-6 months lead time before mainstream adoption."
         ),
-        "skills": ["market-research", "trend-analysis", "competitive-intel", "tam-sam-som", "technology-trends"],
+        "skills": [
+            "market-research",
+            "trend-analysis",
+            "competitive-intel",
+            "tam-sam-som",
+            "technology-trends",
+        ],
         "tags": ["research", "trends", "market", "competitive", "product"],
         "popularity": 72,
     },
@@ -566,7 +673,13 @@ SUPPORT_TEMPLATES: list[dict] = [
             "4. Decisive and factual tone — no hedge language unless uncertainty is material.\n"
             "5. If you can't summarize it in 400 words, the source material isn't clear enough."
         ),
-        "skills": ["executive-communication", "consulting", "scqa", "pyramid-principle", "summarization"],
+        "skills": [
+            "executive-communication",
+            "consulting",
+            "scqa",
+            "pyramid-principle",
+            "summarization",
+        ],
         "tags": ["communications", "executive", "summary", "consulting", "writing"],
         "popularity": 78,
     },
@@ -595,7 +708,15 @@ SUPPORT_TEMPLATES: list[dict] = [
             "## Success Metrics\n"
             "Uptime > 99.9%. MTTR < 4 hours. 20%+ annual cost efficiency. 100% security compliance."
         ),
-        "skills": ["terraform", "aws", "kubernetes", "prometheus", "soc2", "disaster-recovery", "iac"],
+        "skills": [
+            "terraform",
+            "aws",
+            "kubernetes",
+            "prometheus",
+            "soc2",
+            "disaster-recovery",
+            "iac",
+        ],
         "tags": ["infrastructure", "cloud", "reliability", "devops", "monitoring"],
         "popularity": 73,
     },
@@ -625,7 +746,15 @@ SUPPORT_TEMPLATES: list[dict] = [
             "4. Document the legal basis for every data processing activity.\n"
             "5. Privacy by design — not privacy by retrofit."
         ),
-        "skills": ["gdpr", "ccpa", "hipaa", "compliance", "privacy", "legal-analysis", "data-protection"],
+        "skills": [
+            "gdpr",
+            "ccpa",
+            "hipaa",
+            "compliance",
+            "privacy",
+            "legal-analysis",
+            "data-protection",
+        ],
         "tags": ["legal", "compliance", "privacy", "gdpr", "regulatory"],
         "popularity": 71,
     },
@@ -658,7 +787,15 @@ TESTING_TEMPLATES: list[dict] = [
             "## Success Target\n"
             "WCAG 2.1 AA compliance. Green Lighthouse score is a starting point, not an ending point."
         ),
-        "skills": ["wcag", "accessibility", "screen-readers", "voiceover", "nvda", "axe-core", "keyboard-navigation"],
+        "skills": [
+            "wcag",
+            "accessibility",
+            "screen-readers",
+            "voiceover",
+            "nvda",
+            "axe-core",
+            "keyboard-navigation",
+        ],
         "tags": ["accessibility", "wcag", "testing", "a11y", "quality"],
         "popularity": 74,
     },
@@ -688,7 +825,15 @@ TESTING_TEMPLATES: list[dict] = [
             "4. Always test pagination edge cases: empty results, last page, page size extremes.\n"
             "5. CI/CD integration — API tests must run on every PR."
         ),
-        "skills": ["api-testing", "postman", "k6", "security-testing", "owasp", "pytest", "automation"],
+        "skills": [
+            "api-testing",
+            "postman",
+            "k6",
+            "security-testing",
+            "owasp",
+            "pytest",
+            "automation",
+        ],
         "tags": ["api", "testing", "security", "performance", "automation"],
         "popularity": 78,
     },
@@ -717,7 +862,14 @@ TESTING_TEMPLATES: list[dict] = [
             "4. Separate client-side from server-side performance problems.\n"
             "5. Performance budget in CI — fail the build if LCP regression detected."
         ),
-        "skills": ["load-testing", "k6", "lighthouse", "core-web-vitals", "profiling", "performance"],
+        "skills": [
+            "load-testing",
+            "k6",
+            "lighthouse",
+            "core-web-vitals",
+            "profiling",
+            "performance",
+        ],
         "tags": ["performance", "testing", "load-testing", "web-vitals", "optimization"],
         "popularity": 76,
     },
@@ -746,7 +898,13 @@ TESTING_TEMPLATES: list[dict] = [
             "Connect quality metrics to business impact. "
             "Deliver stakeholder-specific summaries (executive vs engineering)."
         ),
-        "skills": ["test-analysis", "qa", "root-cause-analysis", "release-readiness", "defect-analysis"],
+        "skills": [
+            "test-analysis",
+            "qa",
+            "root-cause-analysis",
+            "release-readiness",
+            "defect-analysis",
+        ],
         "tags": ["testing", "qa", "analysis", "release", "quality"],
         "popularity": 70,
     },
@@ -777,7 +935,13 @@ TESTING_TEMPLATES: list[dict] = [
             "4. Security assessment is mandatory for any tool with data access.\n"
             "5. Recommendation requires ROI justification with specific metrics."
         ),
-        "skills": ["tool-evaluation", "roi-analysis", "vendor-assessment", "tco", "requirements-analysis"],
+        "skills": [
+            "tool-evaluation",
+            "roi-analysis",
+            "vendor-assessment",
+            "tco",
+            "requirements-analysis",
+        ],
         "tags": ["tools", "evaluation", "research", "procurement", "roi"],
         "popularity": 68,
     },
@@ -803,7 +967,14 @@ TESTING_TEMPLATES: list[dict] = [
             "40% cycle time reduction. 60% routine task automation. 75% error reduction. "
             "90% adoption within 6 months. 30% team satisfaction improvement."
         ),
-        "skills": ["lean", "six-sigma", "process-mapping", "automation", "change-management", "bpmn"],
+        "skills": [
+            "lean",
+            "six-sigma",
+            "process-mapping",
+            "automation",
+            "change-management",
+            "bpmn",
+        ],
         "tags": ["process", "optimization", "lean", "automation", "workflow"],
         "popularity": 69,
     },
@@ -834,7 +1005,15 @@ SPATIAL_TEMPLATES: list[dict] = [
             "4. Support VoiceOver and Switch Control in all spatial interfaces.\n"
             "5. Memory budget < 1GB for companion app."
         ),
-        "skills": ["swift", "metal", "visionos", "swiftui", "3d-rendering", "macos", "spatial-computing"],
+        "skills": [
+            "swift",
+            "metal",
+            "visionos",
+            "swiftui",
+            "3d-rendering",
+            "macos",
+            "spatial-computing",
+        ],
         "tags": ["apple", "metal", "visionos", "spatial", "swift", "3d"],
         "popularity": 65,
     },
@@ -864,7 +1043,15 @@ SPATIAL_TEMPLATES: list[dict] = [
             "4. VoiceOver compatibility for all spatial interfaces.\n"
             "5. Test on physical device — simulator misses critical spatial behavior."
         ),
-        "skills": ["visionos", "swiftui", "realitykit", "arkit", "liquid-glass", "swift", "spatial-ui"],
+        "skills": [
+            "visionos",
+            "swiftui",
+            "realitykit",
+            "arkit",
+            "liquid-glass",
+            "swift",
+            "spatial-ui",
+        ],
         "tags": ["visionos", "apple", "spatial", "swift", "ar", "xr"],
         "popularity": 63,
     },
@@ -895,7 +1082,16 @@ SPATIAL_TEMPLATES: list[dict] = [
             "4. Haptic feedback for all significant interactions.\n"
             "5. Audio spatialization for presence — silent XR feels flat."
         ),
-        "skills": ["webxr", "three-js", "a-frame", "babylon-js", "vr", "ar", "javascript", "performance"],
+        "skills": [
+            "webxr",
+            "three-js",
+            "a-frame",
+            "babylon-js",
+            "vr",
+            "ar",
+            "javascript",
+            "performance",
+        ],
         "tags": ["xr", "webxr", "vr", "ar", "3d", "immersive"],
         "popularity": 62,
     },
@@ -926,7 +1122,15 @@ SPATIAL_TEMPLATES: list[dict] = [
             "3. Accessibility: alternative input methods for users with limited mobility.\n"
             "4. Test with users from 5-minute to 30-minute sessions — comfort issues compound over time."
         ),
-        "skills": ["xr-design", "spatial-ui", "interaction-design", "ux", "vr", "ar", "accessibility"],
+        "skills": [
+            "xr-design",
+            "spatial-ui",
+            "interaction-design",
+            "ux",
+            "vr",
+            "ar",
+            "accessibility",
+        ],
         "tags": ["xr", "design", "spatial", "ux", "immersive", "ar"],
         "popularity": 61,
     },

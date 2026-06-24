@@ -1,7 +1,6 @@
-
 """Tests for repository layer."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 

@@ -1,4 +1,3 @@
-
 """User-scoped slash command settings.
 
 Routes are nested under ``/me/slash-commands`` because they're always
@@ -75,9 +74,7 @@ async def update_slash_command(
     return UserSlashCommandRead.model_validate(db_cmd)
 
 
-@router.delete(
-    "/{command_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None
-)
+@router.delete("/{command_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_slash_command(
     command_id: UUID,
     service: UserSlashCommandSvc,

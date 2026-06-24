@@ -55,6 +55,12 @@ coverage.xml
 .env
 .env.local
 .env.*.local
+
+# Local API token / secret files (Phase 6.14.W1-secret-store) — never commit
+backend/.env.w1auth
+backend/.env.local.secrets
+.env.w1auth
+*.local.secrets
 .venv
 env/
 venv/

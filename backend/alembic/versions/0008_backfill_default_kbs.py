@@ -1,4 +1,3 @@
-
 """backfill default KBs — skipped (enable_teams/enable_rag/use_jwt=false or no SQL DB)
 
 Revision ID: 0008_backfill_default_kbs

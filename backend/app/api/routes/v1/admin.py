@@ -31,9 +31,7 @@ async def seed_crypto(
     2. If not, creates the project and instantiates the full 12-agent pipeline.
     3. Returns the project_id so the frontend wizard can proceed to budget/API-key steps.
     """
-    result = await db.execute(
-        select(Project).where(Project.name == PIPELINE_PROJECT_NAME)
-    )
+    result = await db.execute(select(Project).where(Project.name == PIPELINE_PROJECT_NAME))
     existing = result.scalar_one_or_none()
     if existing:
         return {
@@ -58,9 +56,7 @@ async def seed_crypto(
         await _seed(clear=False, project_id=str(project.id), clear_project=False)
     except Exception as exc:
         logger.exception("seed-crypto project instantiation failed")
-        raise BadRequestError(
-            message=f"Pipeline instantiation failed: {exc}", details={}
-        ) from exc
+        raise BadRequestError(message=f"Pipeline instantiation failed: {exc}", details={}) from exc
 
     return {
         "ok": True,

@@ -1,4 +1,3 @@
-
 """User-scoped slash command overrides + custom prompts.
 
 Each row is either:
@@ -31,9 +30,7 @@ class UserSlashCommand(Base, TimestampMixin):
     """A custom or overridden slash command, scoped to one user."""
 
     __tablename__ = "user_slash_commands"
-    __table_args__ = (
-        UniqueConstraint("user_id", "name", name="uq_user_slash_commands_user_name"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_user_slash_commands_user_name"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(

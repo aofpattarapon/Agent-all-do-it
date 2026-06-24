@@ -30,8 +30,10 @@ if TYPE_CHECKING:
 
 class UserService:
     """Service for user-related business logic."""
+
     def __init__(self, db: AsyncSession):
         self.db = db
+
     async def _repo(self, func, /, *args, **kwargs):
         """Invoke an async PostgreSQL repo function with the session."""
         return await func(self.db, *args, **kwargs)
@@ -134,12 +136,17 @@ class UserService:
         is_first_user = existing_count == 0
 
         hashed_password = get_password_hash(user_in.password)
+        # SECURITY: public registration NEVER honors a client-supplied role — otherwise an
+        # attacker could POST role="admin" and self-promote to global admin. The only
+        # privileged case is the very first user (deployment bootstrap). Role changes for
+        # everyone else go through the admin-protected update path.
+        role = UserRole.ADMIN.value if is_first_user else UserRole.USER.value
         user = await self._repo(
             user_repo.create,
             email=user_in.email,
             hashed_password=hashed_password,
             full_name=user_in.full_name,
-            role=UserRole.ADMIN.value if is_first_user else user_in.role.value,
+            role=role,
             is_app_admin=is_first_user,
         )
         return user
@@ -203,7 +210,9 @@ class UserService:
 
         # Save new avatar
         storage_path = await storage.save(f"avatars/{user_id}", filename, file_data)
-        return await self._repo(user_repo.update, db_user=user, update_data={"avatar_url": storage_path})
+        return await self._repo(
+            user_repo.update, db_user=user, update_data={"avatar_url": storage_path}
+        )
 
     async def delete(self, user_id: UUID) -> User:
         """Delete user.
@@ -251,9 +260,7 @@ class UserService:
         try:
             user_id = UUID(str(payload["sub"]))
         except (TypeError, ValueError) as exc:
-            raise AuthenticationError(
-                message="Reset link is invalid or has expired"
-            ) from exc
+            raise AuthenticationError(message="Reset link is invalid or has expired") from exc
 
         user = await self.get_by_id(user_id)
         if not user.is_active:
@@ -287,9 +294,7 @@ class UserService:
         try:
             user_id = UUID(str(payload["sub"]))
         except (TypeError, ValueError) as exc:
-            raise AuthenticationError(
-                message="Magic link is invalid or has expired"
-            ) from exc
+            raise AuthenticationError(message="Magic link is invalid or has expired") from exc
 
         user = await self.get_by_id(user_id)
         if not user.is_active:

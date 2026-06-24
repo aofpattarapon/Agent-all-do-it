@@ -72,9 +72,15 @@ class AgentConfig(Base, TimestampMixin):
     # skill_ids: list of Skill UUIDs attached to this agent
     skill_ids: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     max_tokens: Mapped[int] = mapped_column(Integer, default=2048, nullable=False)
-    temperature: Mapped[int] = mapped_column(Integer, default=70, nullable=False)  # stored x100 (0-200), divide by 100
-    memory_type: Mapped[str] = mapped_column(String(32), default="none", nullable=False)  # none | short_term | long_term
-    context_window_size: Mapped[int] = mapped_column(Integer, default=10, nullable=False)  # # of prior messages to keep
+    temperature: Mapped[int] = mapped_column(
+        Integer, default=70, nullable=False
+    )  # stored x100 (0-200), divide by 100
+    memory_type: Mapped[str] = mapped_column(
+        String(32), default="none", nullable=False
+    )  # none | short_term | long_term
+    context_window_size: Mapped[int] = mapped_column(
+        Integer, default=10, nullable=False
+    )  # # of prior messages to keep
 
     project: Mapped["Project"] = relationship("Project", back_populates="agents")
     knowledge_documents: Mapped[list["KnowledgeDocument"]] = relationship(
@@ -116,7 +122,9 @@ class KnowledgeDocument(Base, TimestampMixin):
     negative_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     project: Mapped["Project"] = relationship("Project", back_populates="knowledge_docs")
-    agent_config: Mapped["AgentConfig | None"] = relationship("AgentConfig", back_populates="knowledge_documents")
+    agent_config: Mapped["AgentConfig | None"] = relationship(
+        "AgentConfig", back_populates="knowledge_documents"
+    )
 
     def __repr__(self) -> str:
         return f"<KnowledgeDocument(id={self.id}, title={self.title})>"

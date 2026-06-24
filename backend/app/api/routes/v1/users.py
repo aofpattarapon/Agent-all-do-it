@@ -1,4 +1,3 @@
-
 # ruff: noqa: I001 - Imports structured for Jinja2 template conditionals
 """User management routes."""
 
@@ -6,7 +5,7 @@ from typing import Any
 
 from uuid import UUID
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from fastapi_pagination import Page
 

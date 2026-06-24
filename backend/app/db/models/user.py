@@ -1,4 +1,3 @@
-
 """User database model."""
 
 import uuid

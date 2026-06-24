@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Bot, BookOpen, Play, Pencil, Trash2, ChevronLeft, Users, Workflow, Clock, History, Upload, FolderSync, ChevronDown, Check, X, RotateCcw, Copy, Search, Sparkles, ArrowLeftRight, KeyRound, Plug, BookOpenText, Settings2, CandlestickChart, LayoutDashboard, AlertTriangle } from "lucide-react";
+import { Plus, Bot, BookOpen, Play, Pencil, Trash2, ChevronLeft, Users, Workflow, Clock, History, Upload, ChevronDown, Check, X, RotateCcw, Copy, Search, Sparkles, ArrowLeftRight, KeyRound, Plug, BookOpenText, Settings2, CandlestickChart, LayoutDashboard, AlertTriangle, LayoutGrid, Ban, Shield, BarChart3, GraduationCap, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
@@ -21,7 +21,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui";
-import { PixelFrame, PixelButton, PixelNavButton, SectionLabel } from "@/components/pixel-ui";
+import { PixelFrame, PixelButton, PixelNavButton } from "@/components/pixel-ui";
+import { OverviewView } from "@/components/projects/overview-view";
+import { ReadinessBadge } from "@/components/projects/readiness-badge";
+import { AgentQualityMetrics, AgentsQualityNote, QualityRatePill, useAgentQuality, type AgentQuality } from "@/components/projects/agents-quality-view";
+import { SettingsView } from "@/components/projects/settings-view";
+import { TradesView } from "@/components/projects/trades-view";
+import { RejectedView } from "@/components/projects/rejected-view";
+import { LimitsView } from "@/components/projects/limits-view";
+import { ErrorsView } from "@/components/projects/errors-view";
+import { PerformanceView } from "@/components/projects/performance-view";
+import { LearningView } from "@/components/projects/learning-view";
+import { AGENTS_SUBTABS, barParentOf, DEFAULT_TAB, PRIMARY_MENU, resolveTabHash, RUNS_SUBTABS, SETTINGS_SUBTABS, tabToHash, TRADES_SUBTABS, type DetailTab } from "@/lib/project-tabs";
 import { PixelAvatar } from "@/components/pixel";
 import type { SpriteId } from "@/components/pixel";
 import { CharacterCreator } from "@/components/pixel-room/character-creator";
@@ -39,6 +50,14 @@ import ProjectSecretsView from "@/components/projects/project-secrets-view";
 import ProjectVaultView from "@/components/projects/project-vault-view";
 import ProjectTradeFloorView from "@/components/projects/project-trade-floor-view";
 import { RuntimeProfileBadge } from "@/components/projects/runtime-profile-badge";
+import { RunBlockDetail } from "@/components/projects/run-block-detail";
+import { StatusBadge } from "@/components/run-status/StatusBadge";
+import type { TradeOutcome, RunDisplayFields, WorkflowCategory, DisplayStatus } from "@/lib/run-status";
+import {
+  workflowCategoryOf,
+  displayStatusOf,
+  isErrorRun,
+} from "@/lib/run-status";
 import { WorkboardPage } from "@/components/workboard/WorkboardPage";
 
 interface Project { id: string; name: string; description: string | null; status: string; }
@@ -65,7 +84,7 @@ interface KnowledgeDoc { id: string; title: string; content: string; tags: strin
 interface KnowledgeList { items: KnowledgeDoc[]; total: number; }
 interface WorkflowItem { id: string; key: string; name: string; description: string | null; trigger_kind: string; is_enabled: boolean; }
 interface WorkflowList { items: WorkflowItem[]; total: number; }
-interface RunItem { id: string; status: string; trigger: string; started_at: string | null; finished_at: string | null; output_text: string; error_text?: string; workflow_name?: string; pause_reason?: string; }
+interface RunItem extends RunDisplayFields { id: string; status: string; trigger: string; started_at: string | null; finished_at: string | null; output_text: string; error_text?: string; workflow_name?: string; pause_reason?: string; trade_outcome?: TradeOutcome | null; }
 interface RunList { items: RunItem[]; total: number; }
 interface ScheduleItem { id: string; workflow_id: string; input_payload_json: Record<string, unknown>; enabled: boolean; }
 interface ScheduleList { items: ScheduleItem[]; total: number; }
@@ -127,13 +146,35 @@ const DEFAULT_CHAR_CONFIG: CharacterConfig = {
   pantsColor: "#1a202c",
 };
 
-const DETAIL_TABS = ["agents", "knowledge", "workflows", "schedules", "runs", "error-log", "trade-floor", "workboard", "office", "handoffs", "integrations", "secrets", "vault"] as const;
-type DetailTab = (typeof DETAIL_TABS)[number];
+// Icon per tab — labels/order/routing live in @/lib/project-tabs (single source of truth).
+
+const TAB_ICONS: Record<DetailTab, ReactNode> = {
+  overview: <LayoutGrid className="h-4 w-4" />,
+  runs: <History className="h-4 w-4" />,
+  trades: <CandlestickChart className="h-4 w-4" />,
+  rejected: <Ban className="h-4 w-4" />,
+  "limits-safety": <Shield className="h-4 w-4" />,
+  errors: <AlertTriangle className="h-4 w-4" />,
+  performance: <BarChart3 className="h-4 w-4" />,
+  learning: <GraduationCap className="h-4 w-4" />,
+  agents: <Bot className="h-4 w-4" />,
+  settings: <Settings className="h-4 w-4" />,
+  knowledge: <BookOpen className="h-4 w-4" />,
+  workflows: <Workflow className="h-4 w-4" />,
+  schedules: <Clock className="h-4 w-4" />,
+  "trade-floor": <CandlestickChart className="h-4 w-4" />,
+  workboard: <LayoutDashboard className="h-4 w-4" />,
+  office: <Users className="h-4 w-4" />,
+  handoffs: <ArrowLeftRight className="h-4 w-4" />,
+  integrations: <Plug className="h-4 w-4" />,
+  secrets: <KeyRound className="h-4 w-4" />,
+  vault: <BookOpenText className="h-4 w-4" />,
+  "error-log": <AlertTriangle className="h-4 w-4" />,
+};
 
 function readTabHash(): DetailTab {
-  if (typeof window === "undefined") return "agents";
-  const raw = window.location.hash.replace(/^#/, "");
-  return DETAIL_TABS.includes(raw as DetailTab) ? (raw as DetailTab) : "agents";
+  if (typeof window === "undefined") return DEFAULT_TAB;
+  return resolveTabHash(window.location.hash);
 }
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -141,7 +182,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [tab, setTab] = useState<DetailTab>("agents");
+  const [tab, setTab] = useState<DetailTab>(DEFAULT_TAB);
   const [agentDialog, setAgentDialog] = useState<{ open: boolean; editing: AgentConfig | null }>({ open: false, editing: null });
   const [agentForm, setAgentForm] = useState(EMPTY_AGENT);
   const [charConfig, setCharConfig] = useState<CharacterConfig>(DEFAULT_CHAR_CONFIG);
@@ -176,7 +217,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [loadingTemplateId, setLoadingTemplateId] = useState<string | null>(null);
   const [skillDropdownOpen, setSkillDropdownOpen] = useState(false);
   const [catalogDialog, setCatalogDialog] = useState(false);
-  const [runFilter, setRunFilter] = useState<"all" | "active" | "completed" | "blocked" | "failed">("active");
+  const [runGroup, setRunGroup] = useState<DisplayStatus | "all">("all");
+  const [runCategory, setRunCategory] = useState<WorkflowCategory>("trade");
+  const [runPage, setRunPage] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mdImportRef = useRef<HTMLInputElement>(null);
   const skillDropdownRef = useRef<HTMLDivElement>(null);
@@ -184,9 +227,26 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const selectTab = (nextTab: DetailTab) => {
     setTab(nextTab);
     if (typeof window !== "undefined") {
-      const nextHash = nextTab === "agents" ? "" : `#${nextTab}`;
-      const nextUrl = `${window.location.pathname}${nextHash}`;
+      const nextUrl = `${window.location.pathname}${tabToHash(nextTab)}`;
       window.history.replaceState(null, "", nextUrl);
+    }
+  };
+
+  // Count badge for a menu tab (called during render, after the queries below resolve).
+  const tabBadge = (t: DetailTab): number | undefined => {
+    switch (t) {
+      case "agents":
+        return agents?.total ?? undefined;
+      case "knowledge":
+        return docs?.total ?? undefined;
+      case "workflows":
+        return workflows?.total ?? undefined;
+      case "runs":
+        return runs?.total ?? undefined;
+      case "errors":
+        return (runs?.items ?? []).filter((r) => isErrorRun(r)).length || undefined;
+      default:
+        return undefined;
     }
   };
 
@@ -238,6 +298,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     queryFn: () => apiClient.get<AgentList>(`/projects/${id}/agents`),
   });
 
+  // Per-agent quality metrics, merged into each roster card (keyed by agent id).
+  const { data: agentQuality, isError: agentQualityError } = useAgentQuality(id);
+  const agentQualityById = useMemo(() => {
+    const map = new Map<string, AgentQuality>();
+    for (const q of agentQuality?.items ?? []) map.set(q.agent_id, q);
+    return map;
+  }, [agentQuality]);
+
   const { data: runtimeHealth } = useQuery<{ runtimes: { kind: string; available: boolean; detail: string }[] }>({
     queryKey: ["runtime-health"],
     queryFn: () => apiClient.get<{ runtimes: { kind: string; available: boolean; detail: string }[] }>("/health/runtimes"),
@@ -250,6 +318,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     queryFn: () => apiClient.get("/health/ollama-models"),
     staleTime: 60_000,
   });
+  const staticOllamaModelOptions = MODEL_OPTIONS.ollama ?? [];
+  const liveOllamaModelOptions = (ollamaModels?.models ?? []).map((model) => ({
+    value: model,
+    label: model,
+  }));
+  const ollamaModelOptions = [
+    ...staticOllamaModelOptions,
+    ...liveOllamaModelOptions.filter(
+      (live) => !staticOllamaModelOptions.some((known) => known.value === live.value),
+    ),
+  ];
 
   const { data: docs } = useQuery<KnowledgeList>({
     queryKey: ["knowledge", id, search],
@@ -266,9 +345,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     queryFn: () => apiClient.get<ScheduleList>(`/projects/${id}/schedules?limit=100`),
   });
 
+  const RUN_PAGE_SIZE = 100;
   const { data: runs } = useQuery<RunList>({
-    queryKey: ["runs", id],
-    queryFn: () => apiClient.get<RunList>(`/projects/${id}/runs?limit=100`),
+    queryKey: ["runs", id, runPage],
+    queryFn: () => apiClient.get<RunList>(`/projects/${id}/runs?limit=${RUN_PAGE_SIZE}&skip=${(runPage - 1) * RUN_PAGE_SIZE}`),
     refetchInterval: (query) => {
       const items = query.state.data?.items ?? [];
       const hasActive = items.some(r => ["running", "pending", "queued"].includes(r.status));
@@ -723,26 +803,108 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <h2>{project?.name ?? "…"}</h2>
             {project?.description && <p className="pix-row-sub" style={{ marginTop: 4 }}>{project.description}</p>}
           </div>
-          {project && <RuntimeProfileBadge projectId={project.id} />}
+          <div className="flex flex-col items-end gap-2">
+            {project && <RuntimeProfileBadge projectId={project.id} />}
+            {project && <ReadinessBadge projectId={project.id} />}
+          </div>
         </div>
       </PixelFrame>
 
-      {/* Tab strip */}
+      {/* Primary menu (Phase C) */}
       <div className="pix-tabs">
-        <PixelNavButton icon={<Bot className="h-4 w-4" />} label="Agents" badge={agents?.total ?? 0} active={tab === "agents"} onClick={() => selectTab("agents")} />
-        <PixelNavButton icon={<BookOpen className="h-4 w-4" />} label="Knowledge" badge={docs?.total ?? 0} active={tab === "knowledge"} onClick={() => selectTab("knowledge")} />
-        <PixelNavButton icon={<Workflow className="h-4 w-4" />} label="Workflows" badge={workflows?.total ?? 0} active={tab === "workflows"} onClick={() => selectTab("workflows")} />
-        <PixelNavButton icon={<Clock className="h-4 w-4" />} label="Schedules" active={tab === "schedules"} onClick={() => selectTab("schedules")} />
-        <PixelNavButton icon={<History className="h-4 w-4" />} label="Runs" badge={runs?.total ?? 0} active={tab === "runs"} onClick={() => selectTab("runs")} />
-        <PixelNavButton icon={<AlertTriangle className="h-4 w-4" />} label="Error Log" badge={(runs?.items ?? []).filter(r => ["paused","blocked","failed","cancelled"].includes(r.status)).length || undefined} active={tab === "error-log"} onClick={() => selectTab("error-log")} />
-        <PixelNavButton icon={<CandlestickChart className="h-4 w-4" />} label="Trade Floor" active={tab === "trade-floor"} onClick={() => selectTab("trade-floor")} />
-        <PixelNavButton icon={<LayoutDashboard className="h-4 w-4" />} label="Workboard" active={tab === "workboard"} onClick={() => selectTab("workboard")} />
-        <PixelNavButton icon={<Users className="h-4 w-4" />} label="Office" active={tab === "office"} onClick={() => selectTab("office")} />
-        <PixelNavButton icon={<ArrowLeftRight className="h-4 w-4" />} label="Handoffs" active={tab === "handoffs"} onClick={() => selectTab("handoffs")} />
-        <PixelNavButton icon={<Plug className="h-4 w-4" />} label="Integrations" active={tab === "integrations"} onClick={() => selectTab("integrations")} />
-        <PixelNavButton icon={<KeyRound className="h-4 w-4" />} label="Secrets" active={tab === "secrets"} onClick={() => selectTab("secrets")} />
-        <PixelNavButton icon={<BookOpenText className="h-4 w-4" />} label="Vault" active={tab === "vault"} onClick={() => selectTab("vault")} />
+        {PRIMARY_MENU.map((item) => (
+          <PixelNavButton
+            key={item.tab}
+            icon={TAB_ICONS[item.tab]}
+            label={item.label}
+            badge={tabBadge(item.tab)}
+            active={barParentOf(tab) === item.tab}
+            onClick={() => selectTab(item.tab)}
+          />
+        ))}
       </div>
+
+      {/* Runs sub-menu (themed) — All Runs / Rejected / Limits & Safety */}
+      {barParentOf(tab) === "runs" && (
+        <div className="pix-tabs" style={{ marginTop: -2 }}>
+          {RUNS_SUBTABS.map((s) => (
+            <PixelNavButton
+              key={s.tab}
+              icon={TAB_ICONS[s.tab]}
+              label={s.label}
+              badge={tabBadge(s.tab)}
+              active={tab === s.tab}
+              onClick={() => selectTab(s.tab)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Trades sub-menu (themed) — executed orders only / Trade Floor */}
+      {barParentOf(tab) === "trades" && (
+        <div className="pix-tabs" style={{ marginTop: -2 }}>
+          {TRADES_SUBTABS.map((s) => (
+            <PixelNavButton
+              key={s.tab}
+              icon={TAB_ICONS[s.tab]}
+              label={s.label}
+              active={tab === s.tab}
+              onClick={() => selectTab(s.tab)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Agents sub-menu (themed) — Agents / Handoff Center */}
+      {barParentOf(tab) === "agents" && (
+        <div className="pix-tabs" style={{ marginTop: -2 }}>
+          {AGENTS_SUBTABS.map((s) => (
+            <PixelNavButton
+              key={s.tab}
+              icon={TAB_ICONS[s.tab]}
+              label={s.label}
+              badge={tabBadge(s.tab)}
+              active={tab === s.tab}
+              onClick={() => selectTab(s.tab)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Settings sub-menu (themed) — Settings / Workflows / Integrations / Secrets / Vault */}
+      {barParentOf(tab) === "settings" && (
+        <div className="pix-tabs" style={{ marginTop: -2 }}>
+          {SETTINGS_SUBTABS.map((s) => (
+            <PixelNavButton
+              key={s.tab}
+              icon={TAB_ICONS[s.tab]}
+              label={s.label}
+              active={tab === s.tab}
+              onClick={() => selectTab(s.tab)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Overview Tab (Phase C, default) ─────────────────── */}
+      {tab === "overview" && (
+        <OverviewView projectId={id} runs={runs?.items ?? []} />
+      )}
+
+      {/* ── Focused views (Phase D) ─────────────────────────── */}
+      {tab === "trades" && <TradesView projectId={id} runs={runs?.items ?? []} />}
+      {tab === "rejected" && <RejectedView projectId={id} runs={runs?.items ?? []} />}
+      {tab === "limits-safety" && <LimitsView projectId={id} runs={runs?.items ?? []} />}
+      {tab === "performance" && <PerformanceView projectId={id} />}
+
+      {/* ── Settings (Phase E) ─────────────────────────────── */}
+      {tab === "settings" && <SettingsView projectId={id} />}
+
+      {/* ── Learning (Phase F / W30D) ──────────────────────── */}
+      {/* The Learning tab shows a read-only Trade Lessons panel (LearningView,
+         mounted at the top of the tab below) above the editable Knowledge Base
+         block (Search / Upload / Browse / Add / Vault). The lessons panel is
+         advisory-only and carries no order/approval/validation_only controls. */}
 
       {/* ── Agents Tab ─────────────────────────────────────── */}
       {tab === "agents" && (
@@ -752,6 +914,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <Plus className="h-4 w-4" /> Add Agent
             </PixelButton>
           </div>
+
+          {/* Read-only quality note; per-agent metrics are merged into each card below. */}
+          <AgentsQualityNote />
+          {agentQualityError && (
+            <PixelFrame tight>
+              <div className="pix-empty" style={{ fontFamily: '"VT323", monospace', color: "var(--pix-danger)" }} data-testid="agents-quality-unavailable">
+                Agent quality metrics are currently unavailable. The agent roster below remains functional.
+              </div>
+            </PixelFrame>
+          )}
 
           {agents?.items.length === 0 && (
             <PixelFrame>
@@ -770,9 +942,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               const runtimeLabel =
                 runtimeKind === "anthropic-api"
                   ? "API"
+                  : runtimeKind === "groq-api"
+                    ? "Groq"
+                    : runtimeKind === "openrouter-api"
+                      ? "OpenRouter"
                   : runtimeKind === "openai-api"
                     ? "OpenAI"
-                    : runtimeKind === "ollama"
+                  : runtimeKind === "ollama"
                       ? "Ollama"
                       : runtimeKind === "kimi-cli"
                         ? "Kimi"
@@ -784,15 +960,20 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               const runtimePillClass =
                 runtimeKind === "anthropic-api"
                   ? "pix-pill pix-api"
+                  : runtimeKind === "groq-api"
+                    ? "pix-pill pix-green-pill"
+                    : runtimeKind === "openrouter-api"
+                      ? "pix-pill pix-gold"
                   : runtimeKind === "openai-api"
                     ? "pix-pill pix-green-pill"
-                    : runtimeKind === "ollama"
+                  : runtimeKind === "ollama"
                       ? "pix-pill"
                       : runtimeKind === "kimi-cli"
                         ? "pix-pill pix-kimi"
                         : runtimeKind === "kimi-api"
                           ? "pix-pill pix-kimi"
                           : "pix-pill pix-green-pill";
+              const quality = agentQualityById.get(agent.id);
               return (
                 <PixelFrame key={agent.id} tight>
                   <div className="pix-row">
@@ -806,6 +987,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                           <span className="pix-pill pix-gold">{agent.role}</span>
                           <span className={runtimePillClass}>{runtimeLabel}</span>
                           {!agent.is_active && <span className="pix-pill">inactive</span>}
+                          {quality && <QualityRatePill rate={quality.quality_rate} />}
                         </div>
                         <p className="pix-row-sub line-clamp-2">{agent.system_prompt}</p>
                       </div>
@@ -829,6 +1011,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       </button>
                     </div>
                   </div>
+                  {quality && (
+                    <div className="mt-2 border-t pt-2" style={{ borderColor: "var(--pix-wood-dark)" }}>
+                      <AgentQualityMetrics agent={quality} />
+                    </div>
+                  )}
                 </PixelFrame>
               );
             })}
@@ -837,9 +1024,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {/* ── Knowledge Tab ───────────────────────────────────── */}
-      {tab === "knowledge" && (
+      {/* ── Learning / Knowledge Base ──────────────────────── */}
+      {tab === "learning" && (
         <div className="space-y-4">
+          {/* Read-only Trade Lessons panel (W30D) — advisory only, no controls. */}
+          <LearningView projectId={id} />
+
           {/* Hidden file input for upload button */}
           <input
             ref={fileInputRef}
@@ -974,7 +1164,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {/* ── Workflows Tab ─────────────────────────────────── */}
+      {/* ── Workflows Tab (Settings sub-menu) ─────────────── */}
       {tab === "workflows" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1097,7 +1287,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {/* ── Schedules Tab ─────────────────────────────────── */}
+      {/* ── Schedules Tab (top-level) ─────────────────────── */}
       {tab === "schedules" && (
         <ScheduleManager
           projectId={id}
@@ -1107,61 +1297,105 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
       {/* ── Runs Tab ──────────────────────────────────────── */}
       {tab === "runs" && (() => {
-        const RUN_FILTERS = [
-          { key: "active", label: "Active" },
-          { key: "completed", label: "Done" },
-          { key: "blocked", label: "Blocked" },
-          { key: "failed", label: "Errors" },
-          { key: "all", label: "All" },
-        ] as const;
+        const classifyRun = (r: RunItem): WorkflowCategory => workflowCategoryOf(r);
 
-        const displayedRuns = (runs?.items ?? []).filter(r => {
-          if (runFilter === "active") return ["queued", "running", "waiting_approval"].includes(r.status);
-          if (runFilter === "completed") return r.status === "completed";
-          if (runFilter === "blocked") return r.status === "blocked";
-          if (runFilter === "failed") return ["failed", "paused", "cancelled"].includes(r.status);
-          return true; // "all"
-        });
+        const matchGroup = (r: RunItem, key: DisplayStatus | "all"): boolean => {
+          if (key === "all") return true;
+          return displayStatusOf(r) === key;
+        };
+
+        const switchCategory = (cat: WorkflowCategory) => {
+          setRunCategory(cat);
+          setRunGroup("all");
+          setRunPage(1);
+        };
+
+        const categoryRuns = (runs?.items ?? []).filter(r => classifyRun(r) === runCategory);
+        const displayedRuns = categoryRuns.filter(r => matchGroup(r, runGroup));
+
+        const CATEGORY_TABS: { key: WorkflowCategory; label: string }[] = [
+          { key: "trade", label: "Trade" },
+          { key: "monitor", label: "Monitor" },
+          { key: "research", label: "Research" },
+          { key: "screener", label: "Screener" },
+        ];
 
         return (
           <div className="space-y-4">
-            {/* Status filter bar */}
-            <div className="flex flex-wrap items-center gap-2">
-              {RUN_FILTERS.map(f => (
-                <button
-                  key={f.key}
-                  type="button"
-                  onClick={() => setRunFilter(f.key)}
-                  className={`rounded px-3 py-1 text-sm transition-colors ${runFilter === f.key ? "font-bold" : "opacity-60 hover:opacity-100"}`}
-                  style={{
-                    fontFamily: '"VT323", monospace',
-                    fontSize: 14,
-                    background: runFilter === f.key ? "var(--pix-wood-dark)" : "transparent",
-                    color: runFilter === f.key ? "var(--pix-gold)" : "var(--pix-ink)",
-                    border: `1px solid ${runFilter === f.key ? "var(--pix-gold)" : "var(--pix-border)"}`,
-                  }}
-                >
-                  {f.label}
-                  {f.key !== "all" && (
-                    <span className="ml-1 opacity-60">
-                      ({(runs?.items ?? []).filter(r => {
-                        if (f.key === "active") return ["queued", "running", "waiting_approval"].includes(r.status);
-                        if (f.key === "completed") return r.status === "completed";
-                        if (f.key === "blocked") return r.status === "blocked";
-                        if (f.key === "failed") return ["failed", "paused", "cancelled"].includes(r.status);
-                        return true;
-                      }).length})
-                    </span>
-                  )}
-                </button>
-              ))}
+            {/* Category toggle: Trade vs Monitor & Screener (pixel-themed) */}
+            <div className="pix-tabs">
+              {CATEGORY_TABS.map(c => {
+                const count = (runs?.items ?? []).filter(r => classifyRun(r) === c.key).length;
+                return (
+                  <PixelNavButton
+                    key={c.key}
+                    icon={null}
+                    label={c.label}
+                    badge={count}
+                    active={runCategory === c.key}
+                    onClick={() => switchCategory(c.key)}
+                  />
+                );
+              })}
             </div>
+
+            {/* Status group filter bar, scoped to active category (pixel-themed).
+               Rejected & Limit live as their own Runs sub-tabs (RejectedView /
+               LimitsView), so they're omitted here to avoid duplicate surfaces. */}
+            <div className="pix-tabs">
+              {(["all", "active", "complete-trade", "error"] as const).map(key => {
+                const label =
+                  key === "all" ? "All"
+                  : key === "active" ? "Active"
+                  : key === "complete-trade" ? "Trade"
+                  : "Error";
+                return (
+                  <PixelNavButton
+                    key={key}
+                    icon={null}
+                    label={label}
+                    badge={key === "all" ? undefined : categoryRuns.filter(r => matchGroup(r, key)).length}
+                    active={runGroup === key}
+                    onClick={() => { setRunGroup(key); setRunPage(1); }}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Pagination info */}
+            {(runs?.total ?? 0) > RUN_PAGE_SIZE && (
+              <div className="flex items-center justify-between" style={{ fontFamily: '"VT323", monospace', fontSize: 14, color: "var(--pix-ink)" }}>
+                <span className="opacity-60">
+                  Page {runPage} of {Math.ceil((runs?.total ?? 0) / RUN_PAGE_SIZE)} · {runs?.total} total runs
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={runPage <= 1}
+                    onClick={() => setRunPage(p => p - 1)}
+                    className="rounded px-3 py-1 text-sm transition-colors disabled:opacity-30"
+                    style={{ fontFamily: '"VT323", monospace', fontSize: 14, background: "var(--pix-wood-dark)", color: "var(--pix-gold)", border: "1px solid var(--pix-border)" }}
+                  >
+                    ← Prev
+                  </button>
+                  <button
+                    type="button"
+                    disabled={runPage >= Math.ceil((runs?.total ?? 0) / RUN_PAGE_SIZE)}
+                    onClick={() => setRunPage(p => p + 1)}
+                    className="rounded px-3 py-1 text-sm transition-colors disabled:opacity-30"
+                    style={{ fontFamily: '"VT323", monospace', fontSize: 14, background: "var(--pix-wood-dark)", color: "var(--pix-gold)", border: "1px solid var(--pix-border)" }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
 
             {!displayedRuns.length ? (
               <PixelFrame>
                 <div className="pix-empty">
                   <History className="mx-auto mb-2 h-8 w-8" />
-                  {runs?.items.length ? `No ${runFilter} runs` : "No runs yet — run a workflow to see history here"}
+                  {runs?.items.length ? `No ${runGroup === "all" ? "" : runGroup.replace("complete-", "")} runs` : "No runs yet — run a workflow to see history here"}
                 </div>
               </PixelFrame>
             ) : (
@@ -1184,6 +1418,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   const pauseInfo = ["paused", "blocked", "failed"].includes(run.status)
                     ? (run.error_text || run.output_text || null)
                     : null;
+                  // For trade runs, surface a labelled, expandable block/error explanation.
+                  const isTradeRun = workflowCategoryOf(run) === "trade";
+                  const showBlockDetail =
+                    isTradeRun && ["blocked", "waiting_approval", "paused", "failed", "cancelled"].includes(run.status);
                   const shortId = run.id.slice(-8);
                   return (
                     <PixelFrame key={run.id} tight>
@@ -1194,13 +1432,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             <span className="ml-2 text-xs opacity-40">#{shortId}</span>
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={statusPill}>{run.status}</span>
+                            <StatusBadge run={run} />
+                            {/* Raw status retained for debugging/forensics. */}
+                            <span className={`${statusPill} opacity-40`} title="raw run status">{run.status}</span>
                             <span className="pix-pill">{run.trigger}</span>
                             <span className="pix-row-sub">
                               {run.started_at ? new Date(run.started_at).toLocaleString() : "not started"}
                             </span>
                           </div>
-                          {pauseInfo && run.pause_reason === "hawk_vote_no_majority" ? (
+                          {showBlockDetail ? (
+                            <RunBlockDetail
+                              projectId={id}
+                              runId={run.id}
+                              status={run.status}
+                              pauseReason={run.pause_reason}
+                              errorText={run.error_text}
+                              outputText={run.output_text}
+                            />
+                          ) : pauseInfo && run.pause_reason === "hawk_vote_no_majority" ? (
                             <div className="pix-row-sub space-y-0.5" style={{ fontFamily: '"VT323", monospace', fontSize: 13, color: "var(--pix-danger)" }}>
                               {pauseInfo.split("\n").map((line, i) => (
                                 <p key={i}>{i === 0 ? `⚠ ${line}` : line}</p>
@@ -1211,7 +1460,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                               ⚠ {pauseInfo.slice(0, 160)}{pauseInfo.length > 160 ? "…" : ""}
                             </p>
                           ) : null}
-                          {!pauseInfo && run.output_text && (
+                          {!showBlockDetail && !pauseInfo && run.output_text && (
                             <p className="pix-row-sub line-clamp-1">{run.output_text.slice(0, 100)}</p>
                           )}
                         </div>
@@ -1273,85 +1522,40 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         );
       })()}
 
-      {tab === "error-log" && (() => {
-        const errorRuns = (runs?.items ?? []).filter(r => ["paused", "blocked", "failed", "cancelled"].includes(r.status));
-        return (
-          <div className="space-y-3">
-            <PixelFrame tight>
-              <div className="px-4 py-2 flex items-center gap-2" style={{ fontFamily: '"VT323", monospace' }}>
-                <AlertTriangle className="h-4 w-4" style={{ color: "var(--pix-danger)" }} />
-                <span style={{ fontSize: 18 }}>Error Log</span>
-                <span className="ml-1 text-xs opacity-60">— paused, blocked, failed and cancelled runs</span>
-              </div>
-            </PixelFrame>
-            {errorRuns.length === 0 ? (
-              <PixelFrame>
-                <div className="pix-empty">No errors — all clear</div>
-              </PixelFrame>
-            ) : (
-              errorRuns.map(run => {
-                const shortId = run.id.slice(-8);
-                const ts = run.started_at ? new Date(run.started_at).toLocaleString() : "—";
-                const reason = run.error_text || run.output_text || "No details";
-                const statusColor = run.status === "paused" ? "var(--pix-gold)" : run.status === "blocked" ? "var(--pix-danger)" : run.status === "failed" ? "var(--pix-danger)" : "var(--pix-muted)";
-                return (
-                  <PixelFrame key={run.id} tight>
-                    <div className="px-4 py-3 space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap min-w-0">
-                          <span className="font-medium truncate" style={{ fontFamily: '"VT323", monospace', fontSize: 15 }}>
-                            {run.workflow_name || "Run"}
-                            <span className="ml-1 opacity-40 text-xs">#{shortId}</span>
-                          </span>
-                          <span className="pix-pill text-xs" style={{ color: statusColor, borderColor: statusColor }}>{run.status}</span>
-                          <span className="pix-pill text-xs">{run.trigger}</span>
-                          <span className="pix-row-sub text-xs">{ts}</span>
-                        </div>
-                        <div className="flex shrink-0 gap-2">
-                          <PixelButton disabled={runAction.isPending} onClick={() => runAction.mutate({ runId: run.id, action: "retry" })} className="text-xs">
-                            <RotateCcw className="h-3 w-3" /> Retry
-                          </PixelButton>
-                          <button type="button" className="pix-iconbtn pix-danger text-xs" title="Delete" onClick={async () => { try { await apiClient.delete(`/projects/${id}/runs/${run.id}`); queryClient.invalidateQueries({ queryKey: ["runs", id] }); toast.success("Run deleted"); } catch { toast.error("Delete failed"); } }}>
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                      </div>
-                      <pre className="text-xs whitespace-pre-wrap break-all opacity-70" style={{ fontFamily: '"VT323", monospace', color: "var(--pix-ink)", maxHeight: 80, overflowY: "auto" }}>
-                        {reason.slice(0, 400)}{reason.length > 400 ? "…" : ""}
-                      </pre>
-                    </div>
-                  </PixelFrame>
-                );
-              })
-            )}
-          </div>
-        );
-      })()}
+      {/* Errors — focused view (Phase D). Legacy #error-log aliases to this tab. */}
+      {tab === "errors" && <ErrorsView projectId={id} runs={runs?.items ?? []} />}
 
+      {/* Trade Floor — sub-tab under Trades */}
       {tab === "trade-floor" && (
         <ProjectTradeFloorView projectId={id} embedded />
       )}
 
+      {/* Workboard — top-level tab */}
       {tab === "workboard" && (
         <WorkboardPage projectId={id} />
       )}
 
+      {/* Office — top-level tab */}
       {tab === "office" && (
         <ProjectRoomView projectId={id} embedded />
       )}
 
+      {/* Handoff Center — Agents sub-menu */}
       {tab === "handoffs" && (
         <ProjectHandoffsView projectId={id} embedded />
       )}
 
+      {/* Integrations — Settings sub-menu */}
       {tab === "integrations" && (
         <ProjectIntegrationsView projectId={id} embedded />
       )}
 
+      {/* Secrets — Settings sub-menu */}
       {tab === "secrets" && (
         <ProjectSecretsView projectId={id} embedded />
       )}
 
+      {/* Vault — Settings sub-menu */}
       {tab === "vault" && (
         <ProjectVaultView projectId={id} embedded />
       )}
@@ -1617,11 +1821,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </SelectTrigger>
                 <SelectContent>
                   {agentForm.runtime_kind === "ollama"
-                    ? (ollamaModels?.models ?? []).length > 0
-                      ? (ollamaModels!.models).map((m) => (
-                          <SelectItem key={m} value={m}>{m}</SelectItem>
-                        ))
-                      : <SelectItem value="" disabled>No models — check Ollama URL in Admin → Settings</SelectItem>
+                    ? ollamaModelOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))
                     : (MODEL_OPTIONS[agentForm.runtime_kind || "claude-cli"] || []).map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                       ))
@@ -1722,9 +1924,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       </SelectTrigger>
                       <SelectContent>
                         {step.runtime_kind === "ollama"
-                          ? (ollamaModels?.models ?? []).length > 0
-                            ? (ollamaModels!.models).map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)
-                            : <SelectItem value="" disabled>No models — check Ollama URL</SelectItem>
+                          ? ollamaModelOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))
                           : (MODEL_OPTIONS[step.runtime_kind] || []).map((opt) => (
                               <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                             ))

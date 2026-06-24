@@ -17,7 +17,7 @@ os.environ.setdefault("BINANCE_ENVIRONMENT", "TESTNET")
 os.environ.setdefault("BINANCE_TESTNET_API_KEY", "test-key")
 os.environ.setdefault("BINANCE_TESTNET_API_SECRET", "test-secret")
 
-from app.crypto.services.execution_service import ExecutionError, ExecutionService  # noqa: E402
+from app.crypto.services.execution_service import ExecutionError, ExecutionService
 
 
 def _make_proposal(
@@ -79,8 +79,10 @@ async def test_execute_rejects_when_not_approved() -> None:
     db = _make_db(proposal=proposal)
     svc = ExecutionService(db)
 
-    with patch("app.crypto.services.execution_service.BinanceFuturesAdapter") as MockA, \
-         patch("app.crypto.services.execution_service.KillSwitch") as MockKS:
+    with (
+        patch("app.crypto.services.execution_service.BinanceFuturesAdapter") as MockA,
+        patch("app.crypto.services.execution_service.KillSwitch") as MockKS,
+    ):
         _patch_external(MockA, MockKS)
         with pytest.raises(ExecutionError, match="check_1_approval"):
             await svc._run_pre_checks(proposal, uuid.uuid4())
@@ -92,8 +94,10 @@ async def test_execute_rejects_when_expired() -> None:
     db = _make_db(proposal=proposal)
     svc = ExecutionService(db)
 
-    with patch("app.crypto.services.execution_service.BinanceFuturesAdapter") as MockA, \
-         patch("app.crypto.services.execution_service.KillSwitch") as MockKS:
+    with (
+        patch("app.crypto.services.execution_service.BinanceFuturesAdapter") as MockA,
+        patch("app.crypto.services.execution_service.KillSwitch") as MockKS,
+    ):
         _patch_external(MockA, MockKS)
         with pytest.raises(ExecutionError, match="check_2_expiry"):
             await svc._run_pre_checks(proposal, uuid.uuid4())
@@ -176,11 +180,13 @@ async def test_execute_rejects_when_kill_switch_blocks() -> None:
 
 def test_extract_tp_levels_handles_dict_format() -> None:
     svc = ExecutionService.__new__(ExecutionService)
-    levels = svc._extract_tp_levels([
-        {"tp_level": 66000.0},
-        {"tp_level": 67000.0},
-        {"price": 68000.0},
-    ])
+    levels = svc._extract_tp_levels(
+        [
+            {"tp_level": 66000.0},
+            {"tp_level": 67000.0},
+            {"price": 68000.0},
+        ]
+    )
     assert levels == [66000.0, 67000.0, 68000.0]
 
 
@@ -194,3 +200,177 @@ def test_extract_tp_levels_returns_sorted() -> None:
     svc = ExecutionService.__new__(ExecutionService)
     levels = svc._extract_tp_levels([{"tp_level": 70000}, {"tp_level": 66000}])
     assert levels == [66000.0, 70000.0]
+
+
+@pytest.mark.anyio
+async def test_sl_placement_failure_blocks_and_flags_needs_attention() -> None:
+    """C5 (paper): if the stop-loss order is rejected after the entry fills, the proposal is NOT
+    marked EXECUTED — the position is flagged NEEDS_ATTENTION and a blocking ExecutionError is
+    raised. Adapter is fully mocked, so no real/demo exchange order is placed."""
+    proposal = _make_proposal()
+    db = _make_db(proposal=proposal)
+    svc = ExecutionService(db)
+
+    # Adapter: entry order fills, but the exchange REJECTS the stop-loss order.
+    adapter = AsyncMock()
+    adapter.set_leverage = AsyncMock(return_value={})
+    adapter.place_market_order = AsyncMock(return_value={"orderId": "E1", "avgPrice": "63500"})
+    adapter.place_stop_market_order = AsyncMock(side_effect=RuntimeError("SL rejected"))
+    adapter.place_take_profit_market_order = AsyncMock(return_value={"orderId": "T1"})
+    adapter.get_exchange_info = AsyncMock(return_value={"symbols": []})
+
+    # Validating the SL-failure branch, not sizing math — stub price/filters deterministically.
+    svc._get_mark_price_safe = AsyncMock(return_value=63500.0)  # type: ignore[method-assign]
+    svc._validate_symbol_filters = MagicMock(return_value=(0.001, []))  # type: ignore[method-assign]
+
+    status_calls: list[str] = []
+
+    async def record_status(_proposal: object, status: str) -> None:
+        status_calls.append(status)
+
+    svc._update_proposal_status = AsyncMock(side_effect=record_status)  # type: ignore[method-assign]
+
+    with pytest.raises(ExecutionError, match="NEEDS_ATTENTION"):
+        await svc._execute_proposal(adapter, proposal, uuid.uuid4(), uuid.uuid4())
+
+    # The proposal is flagged NEEDS_ATTENTION and is NEVER marked EXECUTED.
+    assert "NEEDS_ATTENTION" in status_calls
+    assert "EXECUTED" not in status_calls
+    # SL was attempted once; TP placement was never reached (we hard-blocked first).
+    adapter.place_stop_market_order.assert_awaited_once()
+    adapter.place_take_profit_market_order.assert_not_called()
+    # The live-but-unprotected position is persisted as NEEDS_ATTENTION (not rolled back / hidden).
+    positions = [c.args[0] for c in db.add.call_args_list if type(c.args[0]).__name__ == "Position"]
+    assert positions and positions[-1].status == "NEEDS_ATTENTION"
+    # The unprotected exposure is committed so it stays tracked.
+    db.commit.assert_awaited()
+    # Step-4 semantics: the TradeExecution row must NOT be SUCCESS — an entry that filled but
+    # whose SL was rejected is ENTRY_FILLED_SL_FAILED (a non-complete, NEEDS_ATTENTION trade).
+    executions = [
+        c.args[0] for c in db.add.call_args_list if type(c.args[0]).__name__ == "TradeExecution"
+    ]
+    assert executions and executions[-1].execution_status == "ENTRY_FILLED_SL_FAILED"
+    assert executions[-1].execution_status != "SUCCESS"
+
+
+@pytest.mark.anyio
+async def test_entry_and_sl_confirmed_marks_success_and_executed() -> None:
+    """Happy path: entry fills AND the SL is confirmed → TradeExecution is SUCCESS and the
+    proposal is marked EXECUTED. Adapter fully mocked — no real/demo order is placed."""
+    proposal = _make_proposal(take_profit=[{"tp_level": 66000.0}])
+    db = _make_db(proposal=proposal)
+    svc = ExecutionService(db)
+
+    adapter = AsyncMock()
+    adapter.set_leverage = AsyncMock(return_value={})
+    adapter.place_market_order = AsyncMock(return_value={"orderId": "E1", "avgPrice": "63500"})
+    # SL/TP now return an `algoId` (mirrored to `orderId` by the adapter normalizer).
+    adapter.place_stop_market_order = AsyncMock(
+        return_value={"orderId": "ALGO-SL-1", "algoId": "ALGO-SL-1"}
+    )
+    adapter.place_take_profit_market_order = AsyncMock(
+        return_value={"orderId": "ALGO-TP-1", "algoId": "ALGO-TP-1"}
+    )
+    adapter.get_exchange_info = AsyncMock(return_value={"symbols": []})
+
+    svc._get_mark_price_safe = AsyncMock(return_value=63500.0)  # type: ignore[method-assign]
+    svc._validate_symbol_filters = MagicMock(return_value=(0.001, []))  # type: ignore[method-assign]
+
+    status_calls: list[str] = []
+
+    async def record_status(_proposal: object, status: str) -> None:
+        status_calls.append(status)
+
+    svc._update_proposal_status = AsyncMock(side_effect=record_status)  # type: ignore[method-assign]
+
+    with patch(
+        "app.crypto.services.execution_service.build_trade_journal_raw_facts", return_value={}
+    ):
+        out = await svc._execute_proposal(adapter, proposal, uuid.uuid4(), uuid.uuid4())
+
+    assert out["status"] == "SUCCESS"
+    assert out["sl_order_id"] == "ALGO-SL-1"
+    assert "EXECUTED" in status_calls
+    assert "NEEDS_ATTENTION" not in status_calls
+    adapter.place_stop_market_order.assert_awaited_once()
+    adapter.place_take_profit_market_order.assert_awaited()
+    executions = [
+        c.args[0] for c in db.add.call_args_list if type(c.args[0]).__name__ == "TradeExecution"
+    ]
+    assert executions and executions[-1].execution_status == "SUCCESS"
+    assert executions[-1].sl_order_id == "ALGO-SL-1"
+
+
+@pytest.mark.anyio
+async def test_replay_after_sl_failure_is_blocked_before_any_order() -> None:
+    """Replay safety: after an SL failure the proposal is NEEDS_ATTENTION, so re-running
+    execute() fails check_1_approval in pre-checks — no second entry order is ever attempted."""
+    proposal = _make_proposal(status="NEEDS_ATTENTION")
+    db = _make_db(proposal=proposal)
+    svc = ExecutionService(db)
+
+    with (
+        patch("app.crypto.services.execution_service.BinanceFuturesAdapter") as MockA,
+        patch("app.crypto.services.execution_service.KillSwitch") as MockKS,
+    ):
+        _patch_external(MockA, MockKS)
+        with pytest.raises(ExecutionError, match="check_1_approval"):
+            await svc._run_pre_checks(proposal, uuid.uuid4())
+
+
+@pytest.mark.anyio
+async def test_pre_checks_reject_paper_trading_mode() -> None:
+    """PAPER is local-simulation-only — ExecutionService (a real-order path) must reject it."""
+    proposal = _make_proposal()
+    db = _make_db(proposal=proposal)
+    svc = ExecutionService(db)
+
+    with (
+        patch("app.crypto.services.execution_service._TRADING_MODE", "PAPER"),
+        patch.dict(os.environ, {"TRADING_MODE": "PAPER", "EXCHANGE_MODE": "paper"}),
+        patch("app.crypto.services.execution_service.BinanceFuturesAdapter") as MockA,
+        patch("app.crypto.services.execution_service.KillSwitch") as MockKS,
+    ):
+        _patch_external(MockA, MockKS)
+        with pytest.raises(ExecutionError, match="check_3_mode"):
+            await svc._run_pre_checks(proposal, uuid.uuid4())
+
+
+@pytest.mark.anyio
+async def test_pre_checks_accept_demo_trading_mode_at_mode_gate() -> None:
+    """DEMO is order-capable — it must pass the mode gate (any later failure is unrelated)."""
+    proposal = _make_proposal()
+    db = _make_db(proposal=proposal)
+    svc = ExecutionService(db)
+
+    with (
+        patch("app.crypto.services.execution_service._TRADING_MODE", "DEMO"),
+        patch.dict(os.environ, {"TRADING_MODE": "DEMO", "EXCHANGE_MODE": "demo"}),
+        patch("app.crypto.services.execution_service.BinanceFuturesAdapter") as MockA,
+        patch("app.crypto.services.execution_service.KillSwitch") as MockKS,
+    ):
+        _patch_external(MockA, MockKS)
+        try:
+            await svc._run_pre_checks(proposal, uuid.uuid4())
+        except ExecutionError as exc:
+            # DEMO must NOT be rejected by the mode gate or the conflict guard.
+            assert "check_3_mode" not in str(exc)
+            assert "check_3b_mode_conflict" not in str(exc)
+
+
+@pytest.mark.anyio
+async def test_pre_checks_block_on_mode_conflict() -> None:
+    """DEMO trading mode but a live exchange mode is a conflict → fail closed."""
+    proposal = _make_proposal()
+    db = _make_db(proposal=proposal)
+    svc = ExecutionService(db)
+
+    with (
+        patch("app.crypto.services.execution_service._TRADING_MODE", "DEMO"),
+        patch.dict(os.environ, {"TRADING_MODE": "DEMO", "EXCHANGE_MODE": "live"}),
+        patch("app.crypto.services.execution_service.BinanceFuturesAdapter") as MockA,
+        patch("app.crypto.services.execution_service.KillSwitch") as MockKS,
+    ):
+        _patch_external(MockA, MockKS)
+        with pytest.raises(ExecutionError, match="check_3b_mode_conflict"):
+            await svc._run_pre_checks(proposal, uuid.uuid4())

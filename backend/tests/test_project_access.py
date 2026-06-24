@@ -105,9 +105,7 @@ class TestResolveAccess:
             assert access.role == ProjectRole.TRADER
 
             with pytest.raises(AuthorizationError):
-                await service.resolve_access(
-                    project.id, user, require=Permission.AGENT_EDIT
-                )
+                await service.resolve_access(project.id, user, require=Permission.AGENT_EDIT)
 
     @pytest.mark.anyio
     async def test_developer_can_approve_code_but_not_trades(self, service):
@@ -126,6 +124,4 @@ class TestResolveAccess:
             assert access.role == ProjectRole.DEVELOPER
 
             with pytest.raises(AuthorizationError):
-                await service.resolve_access(
-                    project.id, user, require=Permission.TRADE_APPROVE
-                )
+                await service.resolve_access(project.id, user, require=Permission.TRADE_APPROVE)

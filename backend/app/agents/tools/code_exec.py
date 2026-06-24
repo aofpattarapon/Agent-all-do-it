@@ -44,6 +44,21 @@ async def execute_code(code: str, language: str = "python", timeout: int = 10) -
     Returns:
         A dict with ``stdout``, ``stderr`` and ``exit_code``.
     """
+    # Disabled by default — this is not a real sandbox (host RCE). Only runs when an
+    # operator explicitly opts in via ENABLE_CODE_EXEC in a trusted/isolated environment.
+    from app.core.config import settings
+
+    if not settings.ENABLE_CODE_EXEC:
+        logger.warning("code_exec invoked but disabled (ENABLE_CODE_EXEC is false) — refusing")
+        return {
+            "stdout": "",
+            "stderr": (
+                "code_exec is disabled. It runs code on the host and is not sandboxed; "
+                "set ENABLE_CODE_EXEC=true only in a trusted, isolated environment to enable it."
+            ),
+            "exit_code": -1,
+        }
+
     if language != "python":
         return {
             "stdout": "",
@@ -67,7 +82,7 @@ async def execute_code(code: str, language: str = "python", timeout: int = 10) -
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-    except Exception as exc:  # noqa: BLE001 - never raise from a tool
+    except Exception as exc:
         logger.warning("code_exec failed to start subprocess: %s", exc)
         return {"stdout": "", "stderr": f"Failed to start subprocess: {exc}", "exit_code": -1}
 

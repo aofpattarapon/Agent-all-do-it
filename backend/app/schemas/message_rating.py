@@ -1,9 +1,8 @@
 """Message rating schemas for feedback API."""
 
-from datetime import datetime
+import re
 from enum import IntEnum
 from typing import Any
-import re
 from uuid import UUID
 
 from pydantic import Field, field_validator
@@ -58,11 +57,13 @@ class MessageRatingBase(BaseSchema):
 
 class MessageRatingCreate(MessageRatingBase):
     """Schema for creating/updating a rating."""
+
     pass
 
 
 class MessageRatingRead(MessageRatingBase, TimestampSchema):
     """Schema for reading a rating."""
+
     id: UUID
     message_id: UUID
     user_id: UUID

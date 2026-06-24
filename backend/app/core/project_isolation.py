@@ -73,17 +73,52 @@ _TABLE_REF_RE = re.compile(r"\b(?:from|join)\s+([A-Za-z_][\w.\"]*)", re.IGNORECA
 
 #: Write / DDL / side-effecting keywords forbidden anywhere in a raw query.
 _FORBIDDEN_KEYWORDS: tuple[str, ...] = (
-    "insert", "update", "delete", "drop", "alter", "create", "truncate",
-    "grant", "revoke", "attach", "detach", "copy", "into", "vacuum", "analyze",
-    "call", "do", "merge", "replace", "set", "begin", "commit", "rollback",
-    "execute", "prepare", "lock", "reindex", "cluster", "comment", "refresh",
+    "insert",
+    "update",
+    "delete",
+    "drop",
+    "alter",
+    "create",
+    "truncate",
+    "grant",
+    "revoke",
+    "attach",
+    "detach",
+    "copy",
+    "into",
+    "vacuum",
+    "analyze",
+    "call",
+    "do",
+    "merge",
+    "replace",
+    "set",
+    "begin",
+    "commit",
+    "rollback",
+    "execute",
+    "prepare",
+    "lock",
+    "reindex",
+    "cluster",
+    "comment",
+    "refresh",
 )
 
 #: Dangerous functions / extensions that can exfiltrate or side-effect.
 _FORBIDDEN_FUNCTIONS: tuple[str, ...] = (
-    "pg_sleep", "pg_read_file", "pg_read_binary_file", "pg_ls_dir", "lo_import",
-    "lo_export", "dblink", "current_setting", "set_config", "pg_terminate",
-    "pg_cancel", "pg_stat_file",
+    "pg_sleep",
+    "pg_read_file",
+    "pg_read_binary_file",
+    "pg_ls_dir",
+    "lo_import",
+    "lo_export",
+    "dblink",
+    "current_setting",
+    "set_config",
+    "pg_terminate",
+    "pg_cancel",
+    "pg_stat_file",
 )
 
 #: Cheap tautology patterns to catch the most common ``OR 1=1`` style bypass in
@@ -123,12 +158,8 @@ def _has_project_predicate(sql: str, column: str, project_id: str) -> bool:
     """
     col = re.escape(column)
     pid = re.escape(project_id)
-    literal = re.compile(
-        rf"(?:[A-Za-z_]\w*\.)?{col}\s*=\s*'{pid}'", re.IGNORECASE
-    )
-    bind = re.compile(
-        rf"(?:[A-Za-z_]\w*\.)?{col}\s*=\s*:project_id\b", re.IGNORECASE
-    )
+    literal = re.compile(rf"(?:[A-Za-z_]\w*\.)?{col}\s*=\s*'{pid}'", re.IGNORECASE)
+    bind = re.compile(rf"(?:[A-Za-z_]\w*\.)?{col}\s*=\s*:project_id\b", re.IGNORECASE)
     return bool(literal.search(sql) or bind.search(sql))
 
 
@@ -181,9 +212,7 @@ def validate_raw_query(sql: str, project_id: str) -> str:
         if table == PROJECT_ROOT_TABLE:
             touches_scoped = True
             if not _has_project_predicate(stripped, "id", project_id):
-                raise QueryIsolationError(
-                    f"Query on '{table}' must filter by id = '{project_id}'"
-                )
+                raise QueryIsolationError(f"Query on '{table}' must filter by id = '{project_id}'")
             continue
         if table in PROJECT_SCOPED_TABLES:
             touches_scoped = True
@@ -194,9 +223,7 @@ def validate_raw_query(sql: str, project_id: str) -> str:
                 )
             continue
         # Default-deny: unknown / sensitive table (users, conversations, ...).
-        raise QueryIsolationError(
-            f"Table '{table}' is not readable by agents (default-deny)"
-        )
+        raise QueryIsolationError(f"Table '{table}' is not readable by agents (default-deny)")
 
     # Best-effort tautology rejection only matters once a scoped predicate exists.
     if touches_scoped:
@@ -233,8 +260,7 @@ def build_scoped_query(
     table_norm = table.strip().strip('"').lower()
     if table_norm not in PROJECT_SCOPED_TABLES:
         raise QueryIsolationError(
-            f"Structured queries are only allowed on project-scoped tables, "
-            f"not '{table}'"
+            f"Structured queries are only allowed on project-scoped tables, not '{table}'"
         )
 
     # Columns

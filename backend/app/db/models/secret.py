@@ -19,9 +19,7 @@ class Secret(Base, TimestampMixin):
 
     __tablename__ = "secrets"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="CASCADE"),
@@ -43,9 +41,7 @@ class Secret(Base, TimestampMixin):
     )  # all, dev, staging, prod
     value_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
     value_masked: Mapped[str] = mapped_column(String(255), nullable=False)
-    last_used_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # active | disabled | expired
     status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
 

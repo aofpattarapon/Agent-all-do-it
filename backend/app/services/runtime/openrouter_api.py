@@ -6,6 +6,7 @@ Free tier models (e.g. openai/gpt-oss-120b:free) are available with rate limits.
 """
 
 from app.core.config import settings
+from app.services.runtime._utils import API_CALL_TIMEOUT_SECONDS
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "openai/gpt-oss-120b:free"
@@ -30,9 +31,7 @@ async def run_agent(
 
     resolved_key = api_key or getattr(settings, "OPENROUTER_API_KEY", "") or ""
     if not resolved_key:
-        raise RuntimeError(
-            "OPENROUTER_API_KEY missing — set it in Admin → Settings or in .env"
-        )
+        raise RuntimeError("OPENROUTER_API_KEY missing — set it in Admin → Settings or in .env")
 
     # max_retries=0: model_fallback.py handles all retry/backoff logic; the SDK's
     # built-in retries compound with ours and cause 6–9 requests before fallback.
@@ -53,6 +52,7 @@ async def run_agent(
         max_tokens=max_tokens,
         temperature=temperature,
         messages=messages,
+        timeout=API_CALL_TIMEOUT_SECONDS,
     )
     text = response.choices[0].message.content if response.choices else ""
     tokens = None

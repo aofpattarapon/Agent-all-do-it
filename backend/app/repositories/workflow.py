@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.workflow import Schedule, Workflow
 
-
 # ── Workflow ──────────────────────────────────────────────────────────────────
 
 
@@ -24,7 +23,9 @@ async def list_workflows_by_project(
         .where(Workflow.project_id == project_id)
         .order_by(Workflow.created_at.asc())
     )
-    count_query = select(func.count()).select_from(Workflow).where(Workflow.project_id == project_id)
+    count_query = (
+        select(func.count()).select_from(Workflow).where(Workflow.project_id == project_id)
+    )
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset(skip).limit(limit))
     return list(result.scalars().all()), total
@@ -88,7 +89,9 @@ async def list_schedules_by_workflow(
         .where(Schedule.workflow_id == workflow_id)
         .order_by(Schedule.created_at.asc())
     )
-    count_query = select(func.count()).select_from(Schedule).where(Schedule.workflow_id == workflow_id)
+    count_query = (
+        select(func.count()).select_from(Schedule).where(Schedule.workflow_id == workflow_id)
+    )
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset(skip).limit(limit))
     return list(result.scalars().all()), total
@@ -102,7 +105,9 @@ async def list_schedules_by_project(
         .where(Schedule.project_id == project_id)
         .order_by(Schedule.created_at.asc())
     )
-    count_query = select(func.count()).select_from(Schedule).where(Schedule.project_id == project_id)
+    count_query = (
+        select(func.count()).select_from(Schedule).where(Schedule.project_id == project_id)
+    )
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset(skip).limit(limit))
     return list(result.scalars().all()), total

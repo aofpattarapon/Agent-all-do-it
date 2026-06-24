@@ -31,10 +31,11 @@ def cleanup(days: int, dry_run: bool, force: bool) -> None:
         info(f"[DRY RUN] Would delete records older than {cutoff_date}")
         return
 
-    if not force and not click.confirm(f"Delete all records older than {days} days ({cutoff_date})?"):
+    if not force and not click.confirm(
+        f"Delete all records older than {days} days ({cutoff_date})?"
+    ):
         warning("Aborted.")
         return
-    from app.db.session import async_session_maker
 
     async def _cleanup() -> None:
         info(f"Cleaning up records older than {cutoff_date}...")

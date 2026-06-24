@@ -5,6 +5,7 @@ Set MOONSHOT_API_KEY in your environment to use this adapter.
 """
 
 from app.core.config import settings
+from app.services.runtime._utils import API_CALL_TIMEOUT_SECONDS
 
 MOONSHOT_BASE_URL = "https://api.moonshot.cn/v1"
 DEFAULT_MODEL = "moonshot-v1-8k"
@@ -29,13 +30,12 @@ async def run_agent(
 
     resolved_key = api_key or settings.MOONSHOT_API_KEY or ""
     if not resolved_key:
-        raise RuntimeError(
-            "MOONSHOT_API_KEY missing — set it in Admin → Settings or in .env"
-        )
+        raise RuntimeError("MOONSHOT_API_KEY missing — set it in Admin → Settings or in .env")
 
     client = openai.AsyncOpenAI(
         api_key=resolved_key,
         base_url=MOONSHOT_BASE_URL,
+        max_retries=0,  # run_with_fallback owns retry/backoff — no hidden SDK retries
     )
     resolved_model = model or DEFAULT_MODEL
 
@@ -49,6 +49,7 @@ async def run_agent(
         max_tokens=max_tokens,
         temperature=temperature,
         messages=messages,
+        timeout=API_CALL_TIMEOUT_SECONDS,
     )
     text = response.choices[0].message.content if response.choices else ""
     tokens = None

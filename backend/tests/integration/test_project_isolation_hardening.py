@@ -101,8 +101,12 @@ async def test_project_uploads_resolve_under_project_root_and_keep_scope(
     try:
         storage = LocalFileStorage(base_dir=tmp_path / "media")
 
-        path_a = await storage.save(str(user.id), "report.txt", b"alpha", project_id=str(project_a.id))
-        path_b = await storage.save(str(user.id), "report.txt", b"beta", project_id=str(project_b.id))
+        path_a = await storage.save(
+            str(user.id), "report.txt", b"alpha", project_id=str(project_a.id)
+        )
+        path_b = await storage.save(
+            str(user.id), "report.txt", b"beta", project_id=str(project_b.id)
+        )
 
         record_a = await chat_file_repo.create(
             db_session,

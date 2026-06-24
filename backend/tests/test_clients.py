@@ -1,4 +1,3 @@
-
 """Tests for client modules."""
 
 from unittest.mock import AsyncMock, MagicMock, patch

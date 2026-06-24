@@ -8,9 +8,11 @@ import {
   FolderKanban,
   LayoutDashboard,
   MessageSquare,
+  Rocket,
   Star,
   Users,
   Settings2,
+  TrendingUp,
   Workflow,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -34,6 +36,8 @@ const ITEMS: NavItem[] = [
   { label: "Ratings", href: "/admin/ratings", icon: Star },
   { label: "System health", href: "/admin/system", icon: Activity },
   { label: "AI Backend", href: "/admin/settings", icon: Settings2 },
+  { label: "Trading Mode", href: "/admin/trading-mode", icon: TrendingUp },
+  { label: "Setup", href: "/admin/setup", icon: Rocket },
 ];
 
 export function AdminNav() {

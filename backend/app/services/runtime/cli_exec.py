@@ -4,6 +4,7 @@ When running inside Docker, Mac binaries can't be executed directly.
 If CLI_BRIDGE_URL is set, all CLI calls are proxied to the bridge server
 running on the host Mac (backend/cli/bridge_server.py).
 """
+
 from __future__ import annotations
 
 import asyncio

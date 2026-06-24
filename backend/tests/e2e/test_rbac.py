@@ -43,29 +43,34 @@ def svc() -> ProjectService:
 
 # ── Pure unit tests — no DB ───────────────────────────────────────────────────
 
+
 def test_role_permissions_matrix_completeness():
     """Every ProjectRole value must appear in ROLE_PERMISSIONS."""
     for role in ProjectRole:
         assert role in ROLE_PERMISSIONS, f"Missing role in ROLE_PERMISSIONS: {role}"
 
 
-@pytest.mark.parametrize("role,perm,expected", [
-    (ProjectRole.TRADER, Permission.TRADE_APPROVE, True),
-    (ProjectRole.TRADER, Permission.AGENT_EDIT, False),
-    (ProjectRole.TRADER, Permission.CODE_REVIEW_APPROVE, False),
-    (ProjectRole.DEVELOPER, Permission.CODE_REVIEW_APPROVE, True),
-    (ProjectRole.DEVELOPER, Permission.TRADE_APPROVE, False),
-    (ProjectRole.VIEWER, Permission.RUN_EXECUTE, False),
-    (ProjectRole.VIEWER, Permission.PROJECT_VIEW, True),
-    (ProjectRole.OWNER, Permission.PROJECT_DELETE, True),
-    (ProjectRole.PROJECT_MANAGER, Permission.RUN_EXECUTE, True),
-    (ProjectRole.PROJECT_MANAGER, Permission.PROJECT_DELETE, False),
-])
+@pytest.mark.parametrize(
+    "role,perm,expected",
+    [
+        (ProjectRole.TRADER, Permission.TRADE_APPROVE, True),
+        (ProjectRole.TRADER, Permission.AGENT_EDIT, False),
+        (ProjectRole.TRADER, Permission.CODE_REVIEW_APPROVE, False),
+        (ProjectRole.DEVELOPER, Permission.CODE_REVIEW_APPROVE, True),
+        (ProjectRole.DEVELOPER, Permission.TRADE_APPROVE, False),
+        (ProjectRole.VIEWER, Permission.RUN_EXECUTE, False),
+        (ProjectRole.VIEWER, Permission.PROJECT_VIEW, True),
+        (ProjectRole.OWNER, Permission.PROJECT_DELETE, True),
+        (ProjectRole.PROJECT_MANAGER, Permission.RUN_EXECUTE, True),
+        (ProjectRole.PROJECT_MANAGER, Permission.PROJECT_DELETE, False),
+    ],
+)
 def test_permission_matrix(role: ProjectRole, perm: Permission, expected: bool):
     assert (perm in permissions_for_role(role)) == expected
 
 
 # ── Service-level role boundary tests ─────────────────────────────────────────
+
 
 @pytest.mark.anyio
 async def test_trader_can_approve_trade(svc):
@@ -74,8 +79,10 @@ async def test_trader_can_approve_trade(svc):
     trader = _User()
     project = _Project(owner_id=owner.id)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project)
         member_repo.get = AsyncMock(return_value=_Member(ProjectRole.TRADER))
 
@@ -90,8 +97,10 @@ async def test_trader_cannot_edit_agent(svc):
     trader = _User()
     project = _Project(owner_id=owner.id)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project)
         member_repo.get = AsyncMock(return_value=_Member(ProjectRole.TRADER))
 
@@ -106,8 +115,10 @@ async def test_developer_can_approve_code_review(svc):
     dev = _User()
     project = _Project(owner_id=owner.id)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project)
         member_repo.get = AsyncMock(return_value=_Member(ProjectRole.DEVELOPER))
 
@@ -122,8 +133,10 @@ async def test_developer_cannot_approve_trade(svc):
     dev = _User()
     project = _Project(owner_id=owner.id)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project)
         member_repo.get = AsyncMock(return_value=_Member(ProjectRole.DEVELOPER))
 
@@ -138,8 +151,10 @@ async def test_project_manager_can_run_workflow(svc):
     pm = _User()
     project = _Project(owner_id=owner.id)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project)
         member_repo.get = AsyncMock(return_value=_Member(ProjectRole.PROJECT_MANAGER))
 
@@ -154,8 +169,10 @@ async def test_project_manager_cannot_delete_project(svc):
     pm = _User()
     project = _Project(owner_id=owner.id)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project)
         member_repo.get = AsyncMock(return_value=_Member(ProjectRole.PROJECT_MANAGER))
 
@@ -170,8 +187,10 @@ async def test_viewer_cannot_run_anything(svc):
     viewer = _User()
     project = _Project(owner_id=owner.id)
 
-    with patch("app.services.project.project_repo") as repo, \
-         patch("app.services.project.project_member_repo") as member_repo:
+    with (
+        patch("app.services.project.project_repo") as repo,
+        patch("app.services.project.project_member_repo") as member_repo,
+    ):
         repo.get_by_id = AsyncMock(return_value=project)
         member_repo.get = AsyncMock(return_value=_Member(ProjectRole.VIEWER))
 

@@ -6,6 +6,7 @@ Create Date: 2026-05-31T00:00:00+00:00
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0020_app_settings"
@@ -27,7 +28,9 @@ def upgrade() -> None:
         sa.Column("key", sa.String(255), primary_key=True),
         sa.Column("value", sa.Text(), nullable=False, server_default=""),
         sa.Column("description", sa.Text(), nullable=False, server_default=""),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.bulk_insert(

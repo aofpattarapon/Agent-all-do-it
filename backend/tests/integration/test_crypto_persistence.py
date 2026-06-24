@@ -142,7 +142,9 @@ async def test_crypto_persistence_saves_run_outputs(db_session: AsyncSession) ->
             project_id=project.id,
             run_id=run.id,
             agent_role="hawk_counter",
-            output_text=json.dumps({**hawk_payload, "agent": "hawk_counter", "vote": "NEUTRAL", "confidence": 61}),
+            output_text=json.dumps(
+                {**hawk_payload, "agent": "hawk_counter", "vote": "NEUTRAL", "confidence": 61}
+            ),
         )
         await svc.persist_agent_output(
             project_id=project.id,
@@ -175,7 +177,7 @@ async def test_crypto_persistence_saves_run_outputs(db_session: AsyncSession) ->
             ],
             "stop_loss": 90.0,
             "risk_reward": 2.0,
-            "position_size_usdt": 40.0,
+            "position_size_usdt": 50.0,
             "max_loss_usdt": 4.0,
             "total_score": 81.5,
             "sage_approved": True,
@@ -191,17 +193,33 @@ async def test_crypto_persistence_saves_run_outputs(db_session: AsyncSession) ->
         )
 
         news_events = (
-            await db_session.execute(select(NewsEvent).where(NewsEvent.project_id == project.id))
-        ).scalars().all()
+            (await db_session.execute(select(NewsEvent).where(NewsEvent.project_id == project.id)))
+            .scalars()
+            .all()
+        )
         snapshots = (
-            await db_session.execute(select(MarketSnapshot).where(MarketSnapshot.project_id == project.id))
-        ).scalars().all()
+            (
+                await db_session.execute(
+                    select(MarketSnapshot).where(MarketSnapshot.project_id == project.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
         votes = (
-            await db_session.execute(select(AgentVote).where(AgentVote.project_id == project.id))
-        ).scalars().all()
+            (await db_session.execute(select(AgentVote).where(AgentVote.project_id == project.id)))
+            .scalars()
+            .all()
+        )
         proposals = (
-            await db_session.execute(select(TradeProposal).where(TradeProposal.project_id == project.id))
-        ).scalars().all()
+            (
+                await db_session.execute(
+                    select(TradeProposal).where(TradeProposal.project_id == project.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
 
         assert len(news_events) == 1
         assert news_events[0].reliability_score == 88
@@ -235,11 +253,72 @@ async def test_crypto_persistence_accepts_fenced_json_output(db_session: AsyncSe
         )
 
         votes = (
-            await db_session.execute(select(AgentVote).where(AgentVote.project_id == project.id))
-        ).scalars().all()
+            (await db_session.execute(select(AgentVote).where(AgentVote.project_id == project.id)))
+            .scalars()
+            .all()
+        )
         assert len(votes) == 1
         assert votes[0].agent_role == "hawk_trend"
         assert votes[0].vote == "BULLISH"
+    finally:
+        await _cleanup_scope(db_session, user, project, run)
+
+
+@pytest.mark.anyio
+async def test_crypto_persistence_persists_nested_sage_approved_w13_shape(
+    db_session: AsyncSession,
+) -> None:
+    """W14 regression: sage_approved only under agent_vote_summary must persist a
+    PENDING_APPROVAL proposal discoverable by the auto_winrate_gate lookup
+    (project_id + run_id + status='PENDING_APPROVAL')."""
+    user, project, run = await _seed_scope(db_session)
+    svc = CryptoPersistenceService(db_session)
+    try:
+        proposal_payload = {
+            "symbol": "BTCUSDT",
+            "direction": "SHORT",
+            "strategy_type": "BREAKOUT",
+            "time_horizon": "SWING",
+            "entry_plan": {
+                "primary_entry": 63024.8,
+                "entry_zone_low": 62237.2,
+                "entry_zone_high": 63024.8,
+            },
+            "take_profit": [
+                {"tp_level": 61274.4, "rr_ratio": 2.0, "size_pct": 50},
+                {"tp_level": 60399.2, "rr_ratio": 3.0, "size_pct": 30},
+            ],
+            "stop_loss": 63900.0,
+            "risk_reward": 4.0,
+            "position_size_usdt": 50.0,
+            "total_score": 60.55,
+            "approval_status": "PENDING_APPROVAL",
+            # sage_approved NOT at top level — only nested, as in the W13 Auto run.
+            "agent_vote_summary": {"majority_direction": "BEARISH", "sage_approved": True},
+            "news_summary": "Bearish structure.",
+            "full_proposal_md": "BTC short setup",
+        }
+        await svc.persist_agent_output(
+            project_id=project.id,
+            run_id=run.id,
+            agent_role="trade_proposal",
+            output_text=json.dumps(proposal_payload),
+        )
+
+        proposal = (
+            await db_session.execute(
+                select(TradeProposal).where(
+                    TradeProposal.project_id == project.id,
+                    TradeProposal.run_id == run.id,
+                    TradeProposal.status == "PENDING_APPROVAL",
+                )
+            )
+        ).scalar_one()
+        assert proposal.direction == "SHORT"
+        assert proposal.symbol == "BTCUSDT"
+        assert proposal.stop_loss == 63900.0
+        assert proposal.sage_approved is True
+        assert proposal.kill_switch_passed is True
     finally:
         await _cleanup_scope(db_session, user, project, run)
 
@@ -285,7 +364,7 @@ async def test_crypto_persistence_normalizes_trade_proposal_math(db_session: Asy
             ],
             "stop_loss": 62300.0,
             "risk_reward": 9.9,
-            "position_size_usdt": 40.0,
+            "position_size_usdt": 50.0,
             "max_loss_usdt": 999.0,
             "total_score": 81.5,
             "sage_approved": True,
@@ -301,11 +380,13 @@ async def test_crypto_persistence_normalizes_trade_proposal_math(db_session: Asy
         )
 
         proposal = (
-            await db_session.execute(select(TradeProposal).where(TradeProposal.project_id == project.id))
+            await db_session.execute(
+                select(TradeProposal).where(TradeProposal.project_id == project.id)
+            )
         ).scalar_one()
         assert proposal.kill_switch_passed is True
         assert proposal.risk_reward == 2.0
-        assert proposal.max_loss_usdt == 0.7559
+        assert proposal.max_loss_usdt == 0.9449
         assert proposal.take_profit[0]["tp_level"] == 65900.0
         assert proposal.kill_switch_details["proposal_normalized"] is True
     finally:

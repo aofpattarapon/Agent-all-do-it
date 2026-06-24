@@ -136,9 +136,20 @@ TOOL_REGISTRY: dict[str, ToolDef] = {
         schema={
             "type": "object",
             "properties": {
-                "url": {"type": "string", "description": "Full URL to request (including protocol)."},
-                "headers": {"type": "object", "description": "Optional request headers.", "default": {}},
-                "params": {"type": "object", "description": "Optional query parameters.", "default": {}},
+                "url": {
+                    "type": "string",
+                    "description": "Full URL to request (including protocol).",
+                },
+                "headers": {
+                    "type": "object",
+                    "description": "Optional request headers.",
+                    "default": {},
+                },
+                "params": {
+                    "type": "object",
+                    "description": "Optional query parameters.",
+                    "default": {},
+                },
                 "timeout": {"type": "integer", "description": "Timeout in seconds.", "default": 30},
             },
             "required": ["url"],
@@ -151,9 +162,16 @@ TOOL_REGISTRY: dict[str, ToolDef] = {
         schema={
             "type": "object",
             "properties": {
-                "url": {"type": "string", "description": "Full URL to request (including protocol)."},
+                "url": {
+                    "type": "string",
+                    "description": "Full URL to request (including protocol).",
+                },
                 "body": {"type": "object", "description": "JSON body to send.", "default": {}},
-                "headers": {"type": "object", "description": "Optional request headers.", "default": {}},
+                "headers": {
+                    "type": "object",
+                    "description": "Optional request headers.",
+                    "default": {},
+                },
                 "timeout": {"type": "integer", "description": "Timeout in seconds.", "default": 30},
             },
             "required": ["url"],
@@ -167,8 +185,16 @@ TOOL_REGISTRY: dict[str, ToolDef] = {
             "type": "object",
             "properties": {
                 "url": {"type": "string", "description": "Full URL to request."},
-                "headers": {"type": "object", "description": "Optional request headers.", "default": {}},
-                "params": {"type": "object", "description": "Optional query parameters.", "default": {}},
+                "headers": {
+                    "type": "object",
+                    "description": "Optional request headers.",
+                    "default": {},
+                },
+                "params": {
+                    "type": "object",
+                    "description": "Optional query parameters.",
+                    "default": {},
+                },
             },
             "required": ["url"],
         },
@@ -183,7 +209,11 @@ TOOL_REGISTRY: dict[str, ToolDef] = {
                 "symbol": {"type": "string", "description": "Trading symbol, e.g. BTC/USDT."},
                 "side": {"type": "string", "description": "buy or sell."},
                 "amount": {"type": "number", "description": "Base asset amount to trade."},
-                "order_type": {"type": "string", "description": "market or limit.", "default": "market"},
+                "order_type": {
+                    "type": "string",
+                    "description": "market or limit.",
+                    "default": "market",
+                },
                 "price": {"type": "number", "description": "Optional limit or reference price."},
                 "stop_loss": {"type": "number", "description": "Optional stop-loss price."},
                 "take_profits": {
@@ -192,7 +222,11 @@ TOOL_REGISTRY: dict[str, ToolDef] = {
                     "description": "Optional take-profit ladder prices.",
                     "default": [],
                 },
-                "exchange_name": {"type": "string", "description": "Exchange slug.", "default": "binance"},
+                "exchange_name": {
+                    "type": "string",
+                    "description": "Exchange slug.",
+                    "default": "binance",
+                },
             },
             "required": ["symbol", "side", "amount"],
         },
@@ -204,8 +238,15 @@ TOOL_REGISTRY: dict[str, ToolDef] = {
         schema={
             "type": "object",
             "properties": {
-                "symbol": {"type": "string", "description": "Trading symbol, e.g. BTCUSDT or BTC/USDT."},
-                "exchange_name": {"type": "string", "description": "Exchange slug.", "default": "binance"},
+                "symbol": {
+                    "type": "string",
+                    "description": "Trading symbol, e.g. BTCUSDT or BTC/USDT.",
+                },
+                "exchange_name": {
+                    "type": "string",
+                    "description": "Exchange slug.",
+                    "default": "binance",
+                },
             },
             "required": ["symbol"],
         },

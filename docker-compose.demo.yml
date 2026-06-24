@@ -1,0 +1,40 @@
+# Phase 2B DEMO profile — real Binance DEMO execution with VIRTUAL money only.
+#
+# This is the intended OPERATIONAL profile after Phase 2B. It selects first-class
+# DEMO mode (TRADING_MODE=DEMO + EXCHANGE_MODE=demo), which is order-capable against
+# Binance demo endpoints (demo-fapi.binance.com) but NEVER live. LIVE_TRADING_ENABLED
+# stays false (it only ever gates LIVE, not DEMO). DEMO is clearly distinct from PAPER:
+# PAPER is local simulation only and is reserved for tests / explicit local sim.
+#
+# Apply explicitly (NOT auto-loaded — intentionally not named docker-compose.override.yml):
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d \
+#     --force-recreate --no-deps app celery_worker celery_beat
+# Verify inside each container: TRADING_MODE=DEMO, EXCHANGE_MODE=demo, LIVE_TRADING_ENABLED=false.
+# Remove by recreating the same services WITHOUT this -f file.
+#
+# SAFETY: do not place the first controlled demo order until explicitly approved.
+services:
+  app:
+    environment:
+      - TRADING_MODE=DEMO
+      - EXCHANGE_MODE=demo
+      - LIVE_TRADING_ENABLED=false
+      - MARKET_TYPE=futures
+      - BINANCE_ENVIRONMENT=TESTNET
+      - BLOCK_IF_SL_ORDER_FAILS=true
+  celery_worker:
+    environment:
+      - TRADING_MODE=DEMO
+      - EXCHANGE_MODE=demo
+      - LIVE_TRADING_ENABLED=false
+      - MARKET_TYPE=futures
+      - BINANCE_ENVIRONMENT=TESTNET
+      - BLOCK_IF_SL_ORDER_FAILS=true
+  celery_beat:
+    environment:
+      - TRADING_MODE=DEMO
+      - EXCHANGE_MODE=demo
+      - LIVE_TRADING_ENABLED=false
+      - MARKET_TYPE=futures
+      - BINANCE_ENVIRONMENT=TESTNET
+      - BLOCK_IF_SL_ORDER_FAILS=true

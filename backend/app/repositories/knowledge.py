@@ -22,8 +22,10 @@ async def list_by_project(
     search: str | None = None,
 ) -> tuple[list[KnowledgeDocument], int]:
     query = select(KnowledgeDocument).where(KnowledgeDocument.project_id == project_id)
-    count_query = select(func.count()).select_from(KnowledgeDocument).where(
-        KnowledgeDocument.project_id == project_id
+    count_query = (
+        select(func.count())
+        .select_from(KnowledgeDocument)
+        .where(KnowledgeDocument.project_id == project_id)
     )
     if search:
         condition = or_(
@@ -52,9 +54,13 @@ async def list_by_agent(
         KnowledgeDocument.agent_config_id == agent_config_id,
         KnowledgeDocument.project_id == project_id,
     )
-    count_query = select(func.count()).select_from(KnowledgeDocument).where(
-        KnowledgeDocument.agent_config_id == agent_config_id,
-        KnowledgeDocument.project_id == project_id,
+    count_query = (
+        select(func.count())
+        .select_from(KnowledgeDocument)
+        .where(
+            KnowledgeDocument.agent_config_id == agent_config_id,
+            KnowledgeDocument.project_id == project_id,
+        )
     )
     total = await db.scalar(count_query) or 0
     result = await db.execute(

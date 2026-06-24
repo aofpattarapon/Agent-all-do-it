@@ -24,7 +24,9 @@ describe("RunCard", () => {
   it("should render trigger name", () => {
     const run = makeRun({ trigger: "manual" });
     render(<RunCard run={run} onAction={vi.fn()} />);
-    expect(screen.getByText("manual")).toBeInTheDocument();
+    // The trigger is rendered both as the card title (fallback when workflow_name is empty)
+    // and as the trigger pill, so we assert both instances are present.
+    expect(screen.getAllByText("manual")).toHaveLength(2);
   });
 
   // UT-02: Falls back to "Manual run"

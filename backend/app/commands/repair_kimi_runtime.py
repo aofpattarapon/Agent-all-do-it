@@ -13,7 +13,10 @@ from app.db.session import get_db_context
 from app.services.agent_config import merge_runtime_tools_config
 
 
-@command("repair-kimi-runtime", help="Normalize agent runtime fields and switch agents to kimi-cli/kimi-k2.6")
+@command(
+    "repair-kimi-runtime",
+    help="Normalize agent runtime fields and switch agents to kimi-cli/kimi-k2.6",
+)
 @click.option("--project-id", type=str, help="Only repair agents in the given project")
 @click.option("--runtime", default="kimi-cli", show_default=True, help="Target runtime kind")
 @click.option("--model", default="kimi-k2.6", show_default=True, help="Target model")
@@ -30,7 +33,9 @@ def repair_kimi_runtime(
 
     async def _run() -> None:
         async with get_db_context() as db:
-            query = select(AgentConfig).order_by(AgentConfig.project_id, AgentConfig.order_index, AgentConfig.name)
+            query = select(AgentConfig).order_by(
+                AgentConfig.project_id, AgentConfig.order_index, AgentConfig.name
+            )
             if target_project_id is not None:
                 query = query.where(AgentConfig.project_id == target_project_id)
             rows = await db.execute(query)

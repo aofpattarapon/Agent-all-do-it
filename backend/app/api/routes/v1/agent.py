@@ -1,4 +1,3 @@
-
 """AI Agent WebSocket route.
 
 The route is just lifecycle plumbing — auth, accept, dispatch loop, disconnect.
@@ -6,16 +5,15 @@ Per-turn orchestration lives in :class:`app.services.agent_session.AgentSession`
 """
 
 import logging
-import secrets
 from typing import Any
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
-from app.core.config import settings
-from app.services.agent import AgentConnectionManager, send_event
-from app.services.agent_session import AgentSession
 from app.api.deps import get_current_user_ws
+from app.core.config import settings
 from app.db.models.user import User
+from app.services.agent import AgentConnectionManager
+from app.services.agent_session import AgentSession
 
 logger = logging.getLogger(__name__)
 

@@ -13,7 +13,6 @@ Two binaries may be available:
 The adapter auto-detects which binary is present and formats args accordingly.
 """
 
-import os
 import shutil
 
 from app.services.runtime._utils import combine_prompts
@@ -90,7 +89,11 @@ async def run_agent(
 def healthcheck() -> dict:
     """Check whether a ``kimi`` binary is available."""
     if CLI_BRIDGE_URL:
-        return {"kind": "kimi-cli", "available": True, "detail": f"via CLI bridge at {CLI_BRIDGE_URL}"}
+        return {
+            "kind": "kimi-cli",
+            "available": True,
+            "detail": f"via CLI bridge at {CLI_BRIDGE_URL}",
+        }
     found = shutil.which("kimi")
     if found:
         kind = "official" if "kimi-code" in found else "wrapper"

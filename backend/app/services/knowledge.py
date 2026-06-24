@@ -23,21 +23,32 @@ class KnowledgeService:
         return doc
 
     async def list(
-        self, project_id: UUID, skip: int = 0, limit: int = 50, search: str | None = None,
+        self,
+        project_id: UUID,
+        skip: int = 0,
+        limit: int = 50,
+        search: str | None = None,
     ) -> tuple[list[KnowledgeDocument], int]:
         return await knowledge_repo.list_by_project(
             self.db, project_id=project_id, skip=skip, limit=limit, search=search
         )
 
     async def list_by_agent(
-        self, agent_config_id: UUID, project_id: UUID, skip: int = 0, limit: int = 50,
+        self,
+        agent_config_id: UUID,
+        project_id: UUID,
+        skip: int = 0,
+        limit: int = 50,
     ) -> tuple[list[KnowledgeDocument], int]:
         return await knowledge_repo.list_by_agent(
             self.db, agent_config_id=agent_config_id, project_id=project_id, skip=skip, limit=limit
         )
 
     async def create(
-        self, project_id: UUID, data: KnowledgeDocCreate, agent_config_id: UUID | None = None,
+        self,
+        project_id: UUID,
+        data: KnowledgeDocCreate,
+        agent_config_id: UUID | None = None,
     ) -> KnowledgeDocument:
         return await knowledge_repo.create(
             self.db,
@@ -50,7 +61,9 @@ class KnowledgeService:
             source_type=data.source_type,
         )
 
-    async def update(self, doc_id: UUID, project_id: UUID, data: KnowledgeDocUpdate) -> KnowledgeDocument:
+    async def update(
+        self, doc_id: UUID, project_id: UUID, data: KnowledgeDocUpdate
+    ) -> KnowledgeDocument:
         doc = await self.get(doc_id, project_id)
         update_data = data.model_dump(exclude_unset=True)
         return await knowledge_repo.update(self.db, db_doc=doc, update_data=update_data)

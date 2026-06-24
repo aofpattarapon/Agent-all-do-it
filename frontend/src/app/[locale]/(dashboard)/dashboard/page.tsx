@@ -16,6 +16,8 @@ import { format, isWithinInterval, startOfDay, startOfMonth, startOfToday, start
 import { useAuth } from "@/hooks";
 import { ROUTES } from "@/lib/constants";
 import { useConsoleData, type EnrichedRun, type Project, sortByRecency } from "@/components/console/use-console-data";
+import { StatusBadge } from "@/components/run-status/StatusBadge";
+import { displayStatusOf, workflowHealthOf } from "@/lib/run-status";
 import { useConsolePrefs, type TimeRange } from "@/components/console/use-console-prefs";
 import { PixelButton, PixelFrame, PixelSegmented, SectionLabel, StatCard } from "@/components/pixel-ui";
 
@@ -44,10 +46,6 @@ function inWindow(run: EnrichedRun, start: Date | null): boolean {
   const ts = run.started_at ?? run.finished_at;
   if (!ts) return false;
   return new Date(ts) >= start;
-}
-
-function pillClass(status: string): string {
-  return "pix-pill pix-" + status;
 }
 
 // ── Pixel-themed recharts tooltip ────────────────────────────────────────────
@@ -109,11 +107,9 @@ export default function DashboardPage() {
 
   const totalProjects = projects.length;
   const totalRuns = filteredRuns.length;
-  const successRate = useMemo(() => {
-    if (totalRuns === 0) return 0;
-    const done = filteredRuns.filter((r) => r.status === "completed").length;
-    return Math.round((done / totalRuns) * 100);
-  }, [filteredRuns, totalRuns]);
+  // Workflow Health = share of terminal runs that did NOT error (see workflowHealthOf).
+  // complete-reject and limit are intentional outcomes, not failures; active runs are excluded.
+  const workflowHealth = useMemo(() => workflowHealthOf(filteredRuns), [filteredRuns]);
 
   const chartData = useMemo(() => {
     const days = Array.from({ length: 7 }, (_, i) => {
@@ -126,8 +122,9 @@ export default function DashboardPage() {
       const runDate = startOfDay(new Date(ts));
       const slot = days.find((d) => isWithinInterval(runDate, { start: d.date, end: d.date }));
       if (!slot) return;
-      if (run.status === "completed") slot.completed++;
-      else if (run.status === "failed") slot.failed++;
+      const ds = displayStatusOf(run);
+      if (ds === "error") slot.failed++;
+      else if (ds !== "active") slot.completed++;
     });
     return days.map(({ label, completed, failed }) => ({ label, completed, failed }));
   }, [filteredRuns]);
@@ -180,11 +177,11 @@ export default function DashboardPage() {
           sub={prefs.defaultRange === "all" ? "total" : `this ${prefs.defaultRange === "today" ? "day" : prefs.defaultRange}`}
         />
         <StatCard
-          label="Success"
-          value={totalRuns === 0 ? "—" : `${successRate}%`}
+          label="Workflow Health"
+          value={workflowHealth.terminal === 0 ? "—" : `${workflowHealth.pct}%`}
           icon="📈"
-          trend={totalRuns === 0 ? undefined : successRate >= 50 ? "up" : "down"}
-          sub={totalRuns === 0 ? "no runs yet" : `${filteredRuns.filter((r) => r.status === "completed").length}/${totalRuns} ok`}
+          trend={workflowHealth.terminal === 0 ? undefined : workflowHealth.pct >= 50 ? "up" : "down"}
+          sub={workflowHealth.terminal === 0 ? "no finished runs yet" : `${workflowHealth.healthy}/${workflowHealth.terminal} non-error`}
         />
       </div>
 
@@ -333,7 +330,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="pix-mono" style={{ fontSize: 14 }}>
                     {lastRun ? (
-                      <span className={pillClass(lastRun.status)}>last: {lastRun.status}</span>
+                      <StatusBadge run={lastRun} />
                     ) : (
                       <span className="pix-muted">no runs yet</span>
                     )}

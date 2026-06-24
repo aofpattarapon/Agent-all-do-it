@@ -31,9 +31,7 @@ async def list_handoffs(
     limit: int = Query(50, ge=1, le=100),
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.WORKFLOW_VIEW)
-    items, total = await handoff_svc.list(
-        project_id, status=status, skip=skip, limit=limit
-    )
+    items, total = await handoff_svc.list(project_id, status=status, skip=skip, limit=limit)
     return HandoffList(items=items, total=total)
 
 
@@ -92,9 +90,7 @@ async def approve_handoff(
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.HANDOFF_APPROVE)
     handoff = await handoff_svc.approve(handoff_id, project_id, user.id, data)
-    return HandoffActionResponse(
-        handoff=handoff, message="Handoff approved successfully"
-    )
+    return HandoffActionResponse(handoff=handoff, message="Handoff approved successfully")
 
 
 @router.post(
@@ -111,9 +107,7 @@ async def reject_handoff(
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.HANDOFF_APPROVE)
     handoff = await handoff_svc.reject(handoff_id, project_id, data)
-    return HandoffActionResponse(
-        handoff=handoff, message="Handoff rejected"
-    )
+    return HandoffActionResponse(handoff=handoff, message="Handoff rejected")
 
 
 @router.post(
@@ -130,9 +124,7 @@ async def request_revision(
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.HANDOFF_APPROVE)
     handoff = await handoff_svc.request_revision(handoff_id, project_id, reason)
-    return HandoffActionResponse(
-        handoff=handoff, message="Revision requested"
-    )
+    return HandoffActionResponse(handoff=handoff, message="Revision requested")
 
 
 @router.delete(

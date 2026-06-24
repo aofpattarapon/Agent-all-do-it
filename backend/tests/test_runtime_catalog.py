@@ -6,6 +6,8 @@ import pytest
 
 from app.core.exceptions import ValidationError
 from app.core.runtime_catalog import (
+    DEFAULT_MODEL_BY_RUNTIME,
+    RUNTIME_MODEL_OPTIONS,
     default_model_for_runtime,
     normalize_runtime_model_pair,
 )
@@ -28,6 +30,46 @@ def test_normalize_runtime_model_pair_defaults_cli_model():
 def test_normalize_runtime_model_pair_rejects_invalid_combination():
     with pytest.raises(ValidationError):
         normalize_runtime_model_pair("codex-cli", "claude-haiku-4-5-20251001")
+
+
+def test_normalize_runtime_model_pair_accepts_cerebras_models():
+    runtime, model = normalize_runtime_model_pair("cerebras-api", "llama-3.3-70b")
+    assert runtime == "cerebras-api"
+    assert model == "llama-3.3-70b"
+
+
+def test_normalize_runtime_model_pair_accepts_google_ai_studio_models():
+    runtime, model = normalize_runtime_model_pair("google-ai-studio", "gemini-2.0-flash")
+    assert runtime == "google-ai-studio"
+    assert model == "gemini-2.0-flash"
+
+
+def test_openrouter_free_model_catalog_phase_b_cleanup():
+    """Lock Phase B catalog cleanup: removed stale IDs, verified replacement, default valid."""
+    options = RUNTIME_MODEL_OPTIONS["openrouter-api"]
+    assert "moonshotai/kimi-k2.6:free" not in options
+    assert "google/gemma-3-27b-it:free" not in options
+    assert "google/gemma-4-31b-it:free" in options
+    default = DEFAULT_MODEL_BY_RUNTIME["openrouter-api"]
+    assert default in options
+
+
+@pytest.mark.parametrize("model", ["qwen3:8b", "qwen3:14b", "gemma3:12b"])
+def test_normalize_runtime_model_pair_accepts_new_ollama_models(model: str):
+    runtime, normalized_model = normalize_runtime_model_pair("ollama", model)
+    assert runtime == "ollama"
+    assert normalized_model == model
+
+
+def test_normalize_runtime_model_pair_defaults_cerebras_model():
+    runtime, model = normalize_runtime_model_pair("cerebras-api", "")
+    assert runtime == "cerebras-api"
+    assert model == default_model_for_runtime("cerebras-api") == "llama-3.3-70b"
+
+
+def test_normalize_runtime_model_pair_rejects_bad_cerebras_model():
+    with pytest.raises(ValidationError):
+        normalize_runtime_model_pair("cerebras-api", "gemini-2.0-flash")
 
 
 def test_merge_runtime_tools_config_sets_runtime_backend_and_model():

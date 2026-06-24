@@ -63,7 +63,11 @@ def _parse_output(out: str) -> str:
 def healthcheck() -> dict:
     """Check whether the ``codex`` binary is on PATH (or bridge is configured)."""
     if CLI_BRIDGE_URL:
-        return {"kind": "codex-cli", "available": True, "detail": f"via CLI bridge at {CLI_BRIDGE_URL}"}
+        return {
+            "kind": "codex-cli",
+            "available": True,
+            "detail": f"via CLI bridge at {CLI_BRIDGE_URL}",
+        }
     binary = shutil.which(BINARY)
     return {
         "kind": "codex-cli",

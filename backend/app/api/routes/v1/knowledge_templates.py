@@ -17,7 +17,9 @@ router = APIRouter()
 
 
 @router.get("/knowledge-templates", response_model=list[KnowledgeTemplateListItem])
-async def list_knowledge_templates(filters: KnowledgeTemplateFilter = Depends(), db: DBSession = None) -> Any:
+async def list_knowledge_templates(
+    filters: KnowledgeTemplateFilter = Depends(), db: DBSession = None
+) -> Any:
     svc = KnowledgeTemplateService(db)
     templates, _total = await svc.list_templates(filters)
     return templates

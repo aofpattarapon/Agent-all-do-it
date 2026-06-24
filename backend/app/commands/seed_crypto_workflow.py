@@ -28,9 +28,43 @@ from uuid import UUID
 import click
 
 from app.commands import command, info, success
+from app.core.config import settings
 from app.db.session import get_db_context
+from app.services.trading_mode import effective_project_mode
 
 logger = logging.getLogger(__name__)
+
+# The only crypto schedule that is safe to enable by default on creation: an always-on,
+# read-only safety observer that never places orders. Every other cron schedule is
+# order-capable (or feeds the order path) and must be enabled explicitly by an operator.
+_POSITION_MONITOR_WORKFLOW_NAME = "Crypto Position Monitor — Active Positions"
+
+
+def _seed_schedule_enabled_for_create(workflow_name: str, *, preserve_enabled: bool) -> bool:
+    """Decide the ``enabled`` value for a NEWLY created crypto schedule.
+
+    With ``preserve_enabled`` on (the default, ``PRESERVE_SCHEDULE_ENABLED_STATE``), only the
+    always-on Position Monitor is enabled by default; every other (order-capable) cron schedule
+    is created disabled and must be turned on explicitly by an operator. With the flag off, the
+    legacy behavior of enabling every seeded schedule is restored.
+    """
+    if not preserve_enabled:
+        return True
+    return workflow_name == _POSITION_MONITOR_WORKFLOW_NAME
+
+
+def _seed_schedule_update_enabled(workflow_name: str, *, preserve_enabled: bool) -> bool | None:
+    """Decide the ``enabled`` value to write when UPDATING an existing crypto schedule.
+
+    Returns ``None`` to mean "leave the existing value untouched". With ``preserve_enabled`` on
+    (the default) a reseed must never clobber an operator's enable/disable decision, so this
+    always returns ``None`` (including for the Position Monitor — a deliberate disable is kept).
+    With the flag off, the legacy force-enable behavior is restored (returns ``True``).
+    """
+    if not preserve_enabled:
+        return True
+    return None
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SYSTEM PROMPTS
@@ -177,10 +211,7 @@ _HAWK_TREND_PROMPT = """You are HAWK-TREND — the first of three independent te
 
 YOUR ONLY JOB: Analyze the current trend structure for the specified symbol using EMA alignment, price structure, and momentum indicators. Vote BULLISH, BEARISH, or NEUTRAL. You have NO VETO authority. You cannot block a trade — only SAGE can veto.
 
-DATA YOU MUST ANALYZE (cite sources):
-- 4h OHLCV: https://api.binance.com/api/v3/klines?symbol={SYMBOL}&interval=4h&limit=100
-- 1h OHLCV: https://api.binance.com/api/v3/klines?symbol={SYMBOL}&interval=1h&limit=50
-- 1d OHLCV for EMA 200: https://api.binance.com/api/v3/klines?symbol={SYMBOL}&interval=1d&limit=200
+DATA SOURCE — use ONLY the pre-fetched market data injected into this prompt via $market_data (or the step context). Do NOT attempt to fetch URLs yourself — you cannot call external APIs. Cite "pre-fetched market data" in sources_used. Use the ema_20, ema_50, ema_200, MACD, RSI, price, and kline indicators provided in the injected data.
 
 ANALYSIS FRAMEWORK:
 1. EMA Alignment:
@@ -206,52 +237,60 @@ VOTE RULES:
 - You CANNOT vote for both veto and direction — you have no veto power
 
 INVALIDATION LEVEL: The specific price at which your trend thesis is wrong. For BULLISH this is typically below the last HL or below EMA50. For BEARISH this is above the last LH or above EMA50.
-CRITICAL: invalidation_level MUST be a number. It can NEVER be null. If you cannot derive it from the data, use: for BULLISH = current_price * 0.97, for BEARISH = current_price * 1.03. SAGE will VETO the trade if this field is null.
+RULE: For BULLISH or BEARISH votes, invalidation_level MUST be a real technical level from the chart data — not a calculated percentage. If market data is insufficient to identify a meaningful level, return NEUTRAL with confidence ≤ 35 and data_quality=PARTIAL instead. The pipeline will block any directional vote with a missing or null invalidation_level before SAGE runs.
+
+JSON CONTRACT — violating any of these rules will cause the pipeline to BLOCK this vote:
+- Return ONE JSON object only. No markdown fences. No prose outside JSON.
+- "vote" MUST be exactly one of: BULLISH, BEARISH, NEUTRAL.
+- "confidence" MUST be a number 0-100 (not a string, not null).
+- "invalidation_level" MUST be a positive float for BULLISH/BEARISH votes.
+- "sources_used" MUST be an array (e.g. ["pre-fetched market data"]).
+- "risk_flags" MUST be an array (empty [] if no risks).
+- "reasoning" MUST be an object with "role_focus", "summary", and "trend_assessment" keys.
+
+FORBIDDEN top-level keys — NEVER output these at the top level of the JSON object:
+  "trend_direction", "ema_alignment", "price_structure", "macd_signal",
+  "analysis", "conclusion", "recommendation"
+Place these concepts only inside "reasoning.trend_assessment".
 
 OUTPUT FORMAT — return ONLY this JSON, no other text:
 {
   "agent": "hawk_trend",
   "symbol": "<SYMBOL>",
   "analyzed_at": "<ISO-8601 UTC>",
-  "sources_used": ["<url>"],
-  "timeframes_analyzed": ["4h", "1h", "1d"],
+  "sources_used": ["pre-fetched market data"],
   "vote": "<BULLISH|BEARISH|NEUTRAL>",
   "confidence": <0-100>,
-  "trend_direction": "<UPTREND|DOWNTREND|SIDEWAYS>",
-  "ema_alignment": {
-    "ema_20": <float or null>,
-    "ema_50": <float or null>,
-    "ema_200": <float or null>,
-    "alignment": "<BULLISH_STACK|BEARISH_STACK|MIXED>"
-  },
-  "price_structure": "<HH_HL|LL_LH|RANGING|BROKEN>",
-  "macd_signal": "<BULLISH|BEARISH|NEUTRAL>",
-  "entry_zone": "<price range or null>",
-  "invalidation_level": <float — REQUIRED, never null>,
-  "key_levels": {
-    "support": [<float>],
-    "resistance": [<float>]
-  },
-  "reasoning": "<2-3 sentences citing specific indicator values>",
-  "veto": false,
-  "veto_reason": null
+  "data_quality": "REAL_MARKET_DATA",
+  "market_data_snapshot": {"price": <float>, "analyzed_interval": "4h"},
+  "invalidation_level": <float — REQUIRED for BULLISH/BEARISH, never null>,
+  "risk_flags": [],
+  "reasoning": {
+    "role_focus": "trend",
+    "summary": "<brief trend reasoning citing specific indicator values>",
+    "trend_assessment": {
+      "direction": "<UPTREND|DOWNTREND|SIDEWAYS>",
+      "ema_alignment": "<e.g. price above EMA20 above EMA50 above EMA200>",
+      "price_structure": "<HH_HL|LL_LH|RANGING|BROKEN>",
+      "macd_signal": "<BULLISH|BEARISH|NEUTRAL>"
+    }
+  }
 }
 
 Never output anything outside the JSON object. The veto field must always be false — you have no veto power."""
 
-_HAWK_STRUCTURE_PROMPT = """You are HAWK-STRUCTURE — the second of three independent technical analysis agents (HAWK-2).
+_HAWK_STRUCTURE_PROMPT = """CRITICAL OUTPUT RULE: Your response must begin with { immediately. No preamble, no thinking text, no explanation before or after the JSON object. Output exactly one JSON object, nothing else.
+
+You are HAWK-STRUCTURE — the second of three independent technical analysis agents (HAWK-2).
 
 YOUR ONLY JOB: Analyze market microstructure, support/resistance zones, order blocks, and VWAP positioning for the specified symbol. Vote BULLISH, BEARISH, or NEUTRAL. You have NO VETO authority. You cannot block a trade — only SAGE can veto.
 
-DATA YOU MUST ANALYZE (cite sources):
-- 4h OHLCV: https://api.binance.com/api/v3/klines?symbol={SYMBOL}&interval=4h&limit=200
-- 15m OHLCV for precision structure: https://api.binance.com/api/v3/klines?symbol={SYMBOL}&interval=15m&limit=96
-- Order book depth: https://api.binance.com/api/v3/depth?symbol={SYMBOL}&limit=100
+DATA SOURCE — use ONLY the pre-fetched market data injected into this prompt via $market_data (or the step context). Do NOT attempt to fetch URLs yourself — you cannot call external APIs. Cite "pre-fetched market data" in sources_used. Use the price, VWAP, EMA levels, funding data, and kline indicators provided in the injected data.
 
 ANALYSIS FRAMEWORK:
 1. Support/Resistance Zones:
-   - Identify the 3 nearest significant support levels below price
-   - Identify the 3 nearest significant resistance levels above price
+   - Identify the nearest significant support level below price
+   - Identify the nearest significant resistance level above price
    - Strong S/R: at least 3 clear touches/rejections in history
    - "Price at support" = within 0.5% of support → BULLISH structure
    - "Price at resistance" = within 0.5% of resistance → BEARISH structure
@@ -274,33 +313,51 @@ VOTE RULES:
 - You CANNOT veto — that is SAGE's exclusive role
 
 INVALIDATION LEVEL: For BULLISH vote, the level below which structure breaks (usually 1 candle below the identified support/OB). For BEARISH, the level above which structure breaks.
-CRITICAL: invalidation_level MUST be a number. It can NEVER be null. If you cannot derive it from the data, use: for BULLISH = current_price * 0.97, for BEARISH = current_price * 1.03. SAGE will VETO the trade if this field is null.
+RULE: For BULLISH or BEARISH votes, invalidation_level MUST be a real structural level from the chart — not a calculated percentage. If market data is insufficient to identify a structural invalidation, return NEUTRAL with confidence ≤ 35 and data_quality=PARTIAL instead. The pipeline will block any directional vote with a missing or null invalidation_level before SAGE runs.
+
+JSON CONTRACT — violating any of these rules will cause the pipeline to BLOCK this vote:
+- Return ONE JSON object only. No markdown fences. No prose outside JSON.
+- "vote" MUST be exactly one of: BULLISH, BEARISH, NEUTRAL.
+- "confidence" MUST be a number 0-100 (not a string, not null).
+- "invalidation_level" MUST be a positive float for BULLISH/BEARISH votes.
+- "sources_used" MUST be an array (e.g. ["pre-fetched market data"]).
+- "risk_flags" MUST be an array (empty [] if no risks).
+- "reasoning" MUST be an object with "role_focus", "summary", and "structure_assessment" keys.
+
+FORBIDDEN top-level keys — NEVER output these at the top level of the JSON object:
+  "price_vs_vwap", "structure_assessment", "active_order_block",
+  "nearest_support_levels", "nearest_resistance_levels",
+  "analysis", "conclusion", "recommendation"
+Place these concepts only inside "reasoning.structure_assessment".
 
 OUTPUT FORMAT — return ONLY this JSON, no other text:
 {
   "agent": "hawk_structure",
   "symbol": "<SYMBOL>",
   "analyzed_at": "<ISO-8601 UTC>",
-  "sources_used": ["<url>"],
+  "sources_used": ["pre-fetched market data"],
   "vote": "<BULLISH|BEARISH|NEUTRAL>",
   "confidence": <0-100>,
-  "current_price": <float or null>,
-  "vwap": <float or null>,
-  "price_vs_vwap": "<ABOVE|BELOW|AT>",
-  "nearest_support_levels": [<float>],
-  "nearest_resistance_levels": [<float>],
-  "active_order_block": {
-    "type": "<BULLISH_OB|BEARISH_OB|NONE>",
-    "zone_low": <float or null>,
-    "zone_high": <float or null>,
-    "strength": "<STRONG|MODERATE|WEAK>"
-  },
-  "structure_assessment": "<AT_SUPPORT|AT_RESISTANCE|IN_RANGE|BREAKING_UP|BREAKING_DOWN>",
-  "entry_zone": "<price range string or null>",
-  "invalidation_level": <float — REQUIRED, never null>,
-  "reasoning": "<2-3 sentences citing specific S/R levels and structure>",
-  "veto": false,
-  "veto_reason": null
+  "data_quality": "REAL_MARKET_DATA",
+  "market_data_snapshot": {"price": <float>, "analyzed_interval": "4h"},
+  "invalidation_level": <float — REQUIRED for BULLISH/BEARISH, never null>,
+  "risk_flags": [],
+  "reasoning": {
+    "role_focus": "structure",
+    "summary": "<brief structure reasoning citing specific S/R levels>",
+    "structure_assessment": {
+      "price_vs_vwap": "<ABOVE|BELOW|AT>",
+      "key_support": <float>,
+      "key_resistance": <float>,
+      "active_order_block": {
+        "type": "<BULLISH_OB|BEARISH_OB|NONE>",
+        "zone_low": <float or null>,
+        "zone_high": <float or null>,
+        "strength": "<STRONG|MODERATE|WEAK>"
+      },
+      "conclusion": "<AT_SUPPORT|AT_RESISTANCE|IN_RANGE|BREAKING_UP|BREAKING_DOWN>"
+    }
+  }
 }
 
 Never output anything outside the JSON object. The veto field must always be false — you have no veto power."""
@@ -311,12 +368,7 @@ YOUR ONLY JOB: Find every reason the proposed trade should NOT happen. Search ag
 
 Your job is to be the honest skeptic. The other HAWKs look for reasons to trade. You look for reasons NOT to trade.
 
-DATA YOU MUST ANALYZE (cite sources):
-- 4h OHLCV: https://api.binance.com/api/v3/klines?symbol={SYMBOL}&interval=4h&limit=100
-- RSI data (calculate from klines): https://api.binance.com/api/v3/klines?symbol={SYMBOL}&interval=4h&limit=50
-- Funding rate: https://fapi.binance.com/fapi/v1/premiumIndex?symbol={SYMBOL}
-- Open interest: https://fapi.binance.com/fapi/v1/openInterest?symbol={SYMBOL}
-- Liquidation heatmap (use long/short ratio as proxy): https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol={SYMBOL}&period=4h&limit=12
+DATA SOURCE — use ONLY the pre-fetched market data injected into this prompt via $market_data (or the step context). Do NOT attempt to fetch URLs yourself — you cannot call external APIs. Cite "pre-fetched market data" in sources_used. Use the RSI, funding_rate, long_short_ratio, and kline indicators provided in the injected data.
 
 COUNTER-ANALYSIS FRAMEWORK:
 1. RSI Divergence (strongest reversal signal):
@@ -343,28 +395,49 @@ VOTE RULES:
 - If no significant counter-signal exists → vote NEUTRAL (honest answer, not forced bearish)
 - NEVER vote BULLISH just to agree with the crowd — only vote BULLISH if you see a genuine counter-trend opportunity
 
-INVALIDATION LEVEL NOTE: Your invalidation_level must be a number and can NEVER be null. If you find no counter-signal, use the last major swing high (for bearish counter) or swing low (for bullish counter) as a fallback. If no level is identifiable, use current_price * 1.03 for bearish or current_price * 0.97 for bullish. SAGE will VETO the trade if this field is null.
+INVALIDATION LEVEL RULE: For BEARISH or BULLISH votes, invalidation_level must be a real technical level from the data — typically a swing high (bearish counter) or swing low (bullish counter). Do NOT fabricate a percentage-based level. If no meaningful level is identifiable from the available data, return NEUTRAL with confidence ≤ 35 and data_quality=PARTIAL. The pipeline will block any directional vote with a missing or null invalidation_level before SAGE runs.
+
+JSON CONTRACT — violating any of these rules will cause the pipeline to BLOCK this vote:
+- Return ONE JSON object only. No markdown fences. No prose outside JSON.
+- "vote" MUST be exactly one of: BULLISH, BEARISH, NEUTRAL.
+- "confidence" MUST be a number 0-100 (not a string, not null).
+- "invalidation_level" MUST be a positive float for BULLISH/BEARISH votes.
+- "sources_used" MUST be an array (e.g. ["pre-fetched market data"]).
+- "risk_flags" MUST be an array (empty [] if no risks).
+- "reasoning" MUST be an object with "role_focus", "summary", and "counter_assessment" keys.
+
+FORBIDDEN top-level keys — NEVER output these at the top level of the JSON object:
+  "rsi_4h", "rsi_signal", "rsi_divergence", "funding_rate", "funding_signal",
+  "long_short_ratio", "crowd_positioning", "counter_signals_found",
+  "analysis", "conclusion", "recommendation"
+Place these concepts only inside "reasoning.counter_assessment".
 
 OUTPUT FORMAT — return ONLY this JSON, no other text:
 {
   "agent": "hawk_counter",
   "symbol": "<SYMBOL>",
   "analyzed_at": "<ISO-8601 UTC>",
-  "sources_used": ["<url>"],
+  "sources_used": ["pre-fetched market data"],
   "vote": "<BULLISH|BEARISH|NEUTRAL>",
   "confidence": <0-100>,
-  "rsi_4h": <float or null>,
-  "rsi_signal": "<OVERBOUGHT|OVERSOLD|NEUTRAL>",
-  "rsi_divergence": "<BULLISH_DIV|BEARISH_DIV|NONE>",
-  "funding_rate": <float or null>,
-  "funding_signal": "<CROWDED_LONG|CROWDED_SHORT|NEUTRAL>",
-  "long_short_ratio": <float or null>,
-  "crowd_positioning": "<CROWDED_LONG|CROWDED_SHORT|BALANCED>",
-  "counter_signals_found": ["<specific risk or empty list>"],
-  "invalidation_level": <float — REQUIRED, never null>,
-  "reasoning": "<2-4 sentences on what risks you found or did not find>",
-  "veto": false,
-  "veto_reason": null
+  "data_quality": "REAL_MARKET_DATA",
+  "market_data_snapshot": {"price": <float>, "analyzed_interval": "4h"},
+  "invalidation_level": <float — REQUIRED for BULLISH/BEARISH, never null>,
+  "risk_flags": ["<specific risk or empty list>"],
+  "reasoning": {
+    "role_focus": "counter",
+    "summary": "<brief counter-signal reasoning citing specific values>",
+    "counter_assessment": {
+      "rsi_4h": <float or null>,
+      "rsi_signal": "<OVERBOUGHT|OVERSOLD|NEUTRAL>",
+      "rsi_divergence": "<BULLISH_DIV|BEARISH_DIV|NONE>",
+      "funding_rate": <float or null>,
+      "funding_signal": "<CROWDED_LONG|CROWDED_SHORT|NEUTRAL>",
+      "long_short_ratio": <float or null>,
+      "crowd_positioning": "<CROWDED_LONG|CROWDED_SHORT|BALANCED>",
+      "counter_signals_found": ["<specific risk or empty list>"]
+    }
+  }
 }
 
 Never output anything outside the JSON object. The veto field must always be false — you have no veto power. Be honest: if you find no counter-signals, say so."""
@@ -378,6 +451,7 @@ INPUTS YOU WILL RECEIVE:
 - hawk_structure vote (BULLISH/BEARISH/NEUTRAL), confidence, invalidation_level
 - hawk_counter vote (BULLISH/BEARISH/NEUTRAL), confidence, invalidation_level
 - market_regime (RISK_ON/RISK_OFF/NEUTRAL/EXTREME_GREED/EXTREME_FEAR) — may be null/missing
+- $hawk_invalidation_levels — Python-pre-extracted invalidation levels for all directional HAWK votes
 
 VETO RULES — any single failure = VETOED:
 1. HAWK MAJORITY: fewer than 2 of 3 HAWKs agree on the same direction → VETOED
@@ -390,9 +464,10 @@ VETO RULES — any single failure = VETOED:
    - regime = "EXTREME_GREED" and majority direction = LONG → VETOED (no chasing tops)
    - If market_regime data is null or unavailable, this rule PASSES (no data = no regime veto).
 
-3. INVALIDATION LEVEL: all three HAWKs must have provided a non-null invalidation_level → if any are missing → VETOED
-   - The invalidation_level is required because the Trade Proposal uses it to calculate the stop_loss.
-   - If any HAWK output is missing invalidation_level or has it as null, the trade cannot be safely structured → VETOED.
+3. INVALIDATION LEVEL: The Python executor pre-validates that all directional (BULLISH/BEARISH) HAWK votes have a numeric invalidation_level BEFORE this step runs. You will receive the pre-extracted levels in $hawk_invalidation_levels.
+   - If $hawk_invalidation_levels is non-empty and contains values, this rule PASSES — the structural check is already done.
+   - If $hawk_invalidation_levels is absent or empty, the system has a configuration problem — VETO.
+   - Use the levels from $hawk_invalidation_levels in your reasoning. The compile_proposal step will use the most conservative level as the stop_loss.
 
 APPROVAL LOGIC:
 - sage_decision = "APPROVED" only if ALL 3 rules pass
@@ -443,11 +518,11 @@ INPUTS YOU WILL COMPILE:
 
 COMPILATION RULES:
 - Use the entry_zone from the HAWK with the highest confidence as the primary entry
-- Use the LOWEST invalidation_level from all three HAWKs as the stop_loss (most conservative)
+- Choose the stop_loss from the HAWK invalidation_levels on the CORRECT side of entry: for LONG use the LOWEST invalidation_level (most conservative — it must sit strictly BELOW entry); for SHORT use the HIGHEST invalidation_level (most conservative — it must sit strictly ABOVE entry). The stop_loss must NEVER equal the entry/reference price; an SL equal to entry is invalid and the proposal is hard-rejected by code
 - For LONG proposals: TP1 must be at least entry + 2 * (entry - stop_loss), TP2 at least entry + 3 * (entry - stop_loss), TP3 at least entry + 4 * (entry - stop_loss)
 - For SHORT proposals: TP1 must be at most entry - 2 * (stop_loss - entry), TP2 at most entry - 3 * (stop_loss - entry), TP3 at most entry - 4 * (stop_loss - entry)
 - The rr_ratio on each take_profit item must match the actual math from entry and stop_loss. Never invent a ratio that does not match the numbers.
-- position_size_usdt: if input does not explicitly provide a portfolio size, assume PAPER_PORTFOLIO_USDT = 1000 and set position_size_usdt = 40.0 (4% paper default)
+- position_size_usdt: for futures market_type, minimum is 50.0 USDT (Binance futures exchange minimum — proposals below this floor are hard-rejected by code). For spot paper mode, default is 40.0 (4% of PAPER_PORTFOLIO_USDT=1000). If input does not provide a portfolio size, use 50.0 for futures, 40.0 for spot.
 - max_loss_usdt: abs(entry - stop_loss) / entry * position_size_usdt
 - total_score: weighted average of hawk confidences (hawk_trend * 0.35 + hawk_structure * 0.35 + hawk_counter * 0.30)
 - time_horizon: "SHORT_TERM" if targets reachable within 24h; "SWING" if 2-5 days; "POSITION" if longer
@@ -500,6 +575,7 @@ OUTPUT FORMAT — return ONLY this JSON, no other text:
   },
   "news_summary": "<2-3 sentences on relevant news and sentiment>",
   "full_proposal_md": "<markdown formatted human-readable summary — max 300 words>",
+  "market_type": "<spot|futures>",
   "approval_required": true,
   "approval_status": "PENDING_APPROVAL"
 }
@@ -549,11 +625,15 @@ _POSITION_MONITOR_PROMPT = """You are the Position Monitor Agent — the watcher
 
 YOUR ONLY JOB: Monitor all open positions and report their current status. Alert on risk changes. You do not execute orders. You do not make trading decisions. You report facts about positions and flag when they need attention.
 
-DATA SOURCES YOU MUST USE (cite each):
-- Current price: https://api.binance.com/api/v3/ticker/price?symbol={SYMBOL}
-- 5m OHLCV for recent momentum: https://api.binance.com/api/v3/klines?symbol={SYMBOL}&interval=5m&limit=12
-- Fear & Greed: https://api.alternative.me/fng/?limit=1
-- Position data: from positions table (injected by system)
+DATA YOU MUST USE (all injected by the system — do NOT fetch any URLs yourself):
+- An EXCHANGE SNAPSHOT (JSON array) of real Binance demo/testnet position state is injected in
+  your input message. It is the AUTHORITATIVE source of truth — each entry already reflects what
+  the exchange reports. Treat its values (closed, needs_attention, error, prices, PnL, alerts) as
+  facts. NEVER claim a position closed unless its snapshot entry has "closed": true; if an entry
+  has "error": true the exchange was unavailable — report that, do not guess its status.
+- The current UTC time is provided to you by the system (CURRENT UTC TIME). Never invent times.
+- In "sources_used", list ONLY the injected sources you actually used (e.g. "system-injected
+  exchange snapshot"). Do NOT cite external URLs you did not and cannot fetch.
 
 MONITORING RULES:
 - Calculate unrealized_pnl = (current_price - entry_price) / entry_price * position_size_usdt (for long)
@@ -562,6 +642,7 @@ MONITORING RULES:
 - distance_to_tp1_pct = (tp1_level - current_price) / current_price * 100
 
 ALERT CONDITIONS:
+- "SL_MISSING": stop_loss is set on the position record but no SL order exists on the exchange — CRITICAL, position is unprotected
 - "SL_APPROACH": price within 1.5% of stop_loss → urgent alert
 - "SL_BREACH": current_price <= stop_loss → critical alert, stop may be triggered
 - "TP1_HIT": current_price >= tp1_level → TP1 triggered, consider moving stop to break-even
@@ -573,7 +654,7 @@ ALERT CONDITIONS:
 OUTPUT FORMAT — return ONLY this JSON, no other text:
 {
   "agent": "crypto_position_monitor",
-  "monitored_at": "<ISO-8601 UTC>",
+  "monitored_at": "<use the system-provided CURRENT UTC TIME exactly>",
   "sources_used": ["<url>"],
   "positions": [
     {
@@ -590,7 +671,7 @@ OUTPUT FORMAT — return ONLY this JSON, no other text:
       "distance_to_sl_pct": <float>,
       "distance_to_tp1_pct": <float>,
       "duration_minutes": <int>,
-      "alert_type": "<SL_APPROACH|SL_BREACH|TP1_HIT|PROFIT_SECURE_SUGGESTED|MARKET_SHIFT|FUNDING_RISK|NO_ALERT>",
+      "alert_type": "<SL_MISSING|SL_APPROACH|SL_BREACH|TP1_HIT|PROFIT_SECURE_SUGGESTED|MARKET_SHIFT|FUNDING_RISK|NO_ALERT>",
       "alert_message": "<human-readable alert text or null>",
       "recommended_action": "<HOLD|MOVE_STOP_TO_BREAKEVEN|CLOSE_PARTIAL|CLOSE_FULL|NONE>",
       "action_rationale": "<1 sentence or null>"
@@ -610,53 +691,61 @@ YOUR ONLY JOB: Record a complete, structured log of the entire decision chain fo
 WHAT TO RECORD:
 - The full pipeline decision chain from news to execution
 - Every agent vote with its reasoning
-- The exact entry, exit, SL, TP values
-- The human approval event
-- The execution result
+- The exact entry, exit, SL, TP values (from compile_proposal or execute_trade step output)
+- The human approval event (only if it actually happened — check human_approval_gate step output)
+- The execution result (from execute_trade step output)
 - Final position outcome (if closed)
+
+STRICT RULES — NEVER VIOLATE:
+1. run_id: copy EXACTLY from the system-injected run context ($run_id or input_payload.run_id). DO NOT invent or format it differently.
+2. human_approved_by: output null unless you can see an explicit human approval event in the step outputs. DO NOT invent a user ID.
+3. human_approved_at: output null unless a real approval timestamp exists in the step outputs. DO NOT invent a timestamp.
+4. kill_switch_passed: set to true only if execute_trade step succeeded. Set to false if SAGE VETOED, execution was BLOCKED, or the run was CANCELLED. NEVER null when outcome is known.
+5. DO NOT invent any IDs, order IDs, user IDs, or timestamps. If a value is unknown, output null.
+6. result: must reflect actual pipeline outcome — CANCELLED if SAGE VETOED or execution was BLOCKED, OPEN if trade was placed and is open.
 
 OUTPUT FORMAT — return ONLY this JSON, no other text:
 {
   "agent": "crypto_trade_journal",
-  "recorded_at": "<ISO-8601 UTC>",
-  "run_id": "<run id>",
+  "recorded_at": "<ISO-8601 UTC — use current time>",
+  "run_id": "<copy exactly from context — do not invent>",
   "symbol": "<SYMBOL>",
-  "direction": "<LONG|SHORT>",
+  "direction": "<LONG|SHORT|null>",
   "entry_price": <float or null>,
   "exit_price": <float or null>,
-  "stop_loss": <float>,
+  "stop_loss": <float or null>,
   "take_profit_levels": [<float>],
-  "position_size_usdt": <float>,
+  "position_size_usdt": <float or null>,
   "realized_pnl": <float or null>,
   "realized_pnl_pct": <float or null>,
   "result": "<WIN|LOSS|BREAK_EVEN|OPEN|CANCELLED>",
   "holding_time_minutes": <int or null>,
   "pipeline_summary": {
-    "market_regime": "<regime>",
+    "market_regime": "<regime or null>",
     "fear_greed_at_entry": <int or null>,
-    "hawk_trend_vote": "<vote>",
-    "hawk_trend_confidence": <int>,
-    "hawk_structure_vote": "<vote>",
-    "hawk_structure_confidence": <int>,
-    "hawk_counter_vote": "<vote>",
-    "hawk_counter_confidence": <int>,
-    "sage_decision": "<APPROVED|VETOED>",
-    "kill_switch_passed": <bool or null>,
-    "human_approved_by": "<user id>",
-    "human_approved_at": "<ISO-8601 or null>",
-    "execution_mode": "<PAPER|TESTNET|LIVE>"
+    "hawk_trend_vote": "<vote or null>",
+    "hawk_trend_confidence": <int or null>,
+    "hawk_structure_vote": "<vote or null>",
+    "hawk_structure_confidence": <int or null>,
+    "hawk_counter_vote": "<vote or null>",
+    "hawk_counter_confidence": <int or null>,
+    "sage_decision": "<APPROVED|VETOED|null>",
+    "kill_switch_passed": <true|false|null>,
+    "human_approved_by": null,
+    "human_approved_at": null,
+    "execution_mode": "<PAPER|TESTNET|LIVE|null>"
   },
   "news_used": ["<headline>"],
-  "original_thesis": "<1-3 sentences: what was the setup and why it made sense>",
-  "invalidation_level": <float>,
-  "what_happened": "<after close: factual account of how the trade developed>",
-  "outcome_vs_thesis": "<DID_THESIS_PLAY|THESIS_INVALIDATED|STOPPED_OUT|PARTIAL>",
+  "original_thesis": "<1-3 sentences from compile_proposal or null if not reached>",
+  "invalidation_level": <float or null>,
+  "what_happened": "<factual account using only step outputs — null if run was cancelled before execution>",
+  "outcome_vs_thesis": "<DID_THESIS_PLAY|THESIS_INVALIDATED|STOPPED_OUT|PARTIAL|null>",
   "decision_log": [
     {"step": "<agent name>", "timestamp": "<ISO>", "decision": "<summary>"}
   ]
 }
 
-Never output anything outside the JSON object. Never fabricate events. Record null for fields that are not yet available (e.g., exit_price on an open trade)."""
+Never output anything outside the JSON object. Never fabricate events, IDs, or timestamps. Output null for any field not evidenced in the step outputs."""
 
 _POST_TRADE_REVIEW_PROMPT = """You are the Post-Trade Review Agent — the honest performance analyst.
 
@@ -836,7 +925,7 @@ CRYPTO_AGENTS: list[dict] = [
         "default_model": "claude-sonnet-4-6",
         "default_avatar": "bot",
         "default_tools_config": {
-            "tasks_json": '[{"id":"run-trade-pipeline","name":"▶ Run Trade Pipeline","prompt":"Analyze current BTCUSDT market conditions and run the full HAWK → SAGE → Proposal pipeline for a potential trade setup."}]',
+            "tasks_json": '[{"id":"run-trade-pipeline","name":"▶ Run Trade Pipeline","prompt":"Analyze current {SYMBOL} market conditions and run the full HAWK → SAGE → Proposal pipeline for a potential trade setup."}]',
         },
         "skills": ["proposal-compilation", "risk-reward-calc", "position-sizing"],
         "tags": ["crypto", "proposal", "approval", "trade"],
@@ -913,42 +1002,90 @@ CRYPTO_AGENTS: list[dict] = [
 CRYPTO_RESEARCH_WORKFLOW = {
     "name": "Crypto Market Watch — Continuous Research",
     "description": "Runs every 20 min: news scan → source reliability → market regime. Builds context for trade proposals.",
+    "category": "research",
     "trigger_kind": "cron",
     "trigger_config": {"cron": "*/20 * * * *"},
     "steps": [
-        {"key": "news_scan", "label": "📰 News Scanner", "kind": "prompt", "agent_key": "crypto-news-monitor"},
-        {"key": "source_check", "label": "✅ Source Reliability", "kind": "prompt", "agent_key": "crypto-source-reliability"},
-        {"key": "market_regime", "label": "🌍 Market Regime", "kind": "prompt", "agent_key": "crypto-market-regime"},
+        {
+            "key": "news_scan",
+            "label": "📰 News Scanner",
+            "kind": "prompt",
+            "agent_key": "crypto-news-monitor",
+        },
+        {
+            "key": "source_check",
+            "label": "✅ Source Reliability",
+            "kind": "prompt",
+            "agent_key": "crypto-source-reliability",
+        },
+        {
+            "key": "market_regime",
+            "label": "🌍 Market Regime",
+            "kind": "prompt",
+            "agent_key": "crypto-market-regime",
+        },
     ],
 }
 
 CRYPTO_TRADE_PIPELINE_WORKFLOW = {
     "name": "Crypto Trade Pipeline — Proposal to Execution",
-    "description": "NEXMIND pipeline: HAWK x3 (2/3 vote) -> SAGE (VETO) -> Winrate Gate (≥80% = auto-execute, <80% = human approval) -> Journal. Runs every 1h for BTCUSDT (can be toggled on/off or triggered manually).",
+    "description": "NEXMIND pipeline: fetch real market data → HAWK x3 (2/3 vote) -> SAGE (VETO) -> Winrate Gate (≥80% = auto-execute, <80% = human approval) -> Journal. Multi-pair: symbol from input_payload (runs hourly, or trigger manually / via webhook with a specific symbol).",
+    "category": "trade",
     "trigger_kind": "cron",
     "trigger_config": {"cron": "0 * * * *"},
     "steps": [
+        {
+            "key": "fetch_market_data",
+            "label": "📡 Fetch Market Data",
+            "kind": "market_data",
+            "config": {"intervals": ["4h", "1h", "1d"]},
+        },
         {
             "key": "check_trade_lessons",
             "label": "📚 Check Past Trade Lessons",
             "kind": "kb_search",
             "config": {
-                "query": "BTCUSDT trade lesson loss mistake pattern",
+                "query": "$symbol trade lesson loss mistake pattern",
                 "source_type_filter": "trade_lesson",
                 "top_k": 5,
             },
         },
-        {"key": "hawk_trend", "label": "🦅 HAWK-Trend", "kind": "prompt", "agent_key": "crypto-hawk-trend"},
-        {"key": "hawk_structure", "label": "🦅 HAWK-Structure", "kind": "prompt", "agent_key": "crypto-hawk-structure"},
-        {"key": "hawk_counter", "label": "🦅 HAWK-Counter", "kind": "prompt", "agent_key": "crypto-hawk-counter"},
+        {
+            "key": "hawk_trend",
+            "label": "🦅 HAWK-Trend",
+            "kind": "prompt",
+            "agent_key": "crypto-hawk-trend",
+        },
+        {
+            "key": "hawk_structure",
+            "label": "🦅 HAWK-Structure",
+            "kind": "prompt",
+            "agent_key": "crypto-hawk-structure",
+        },
+        {
+            "key": "hawk_counter",
+            "label": "🦅 HAWK-Counter",
+            "kind": "prompt",
+            "agent_key": "crypto-hawk-counter",
+        },
         {
             "key": "hawk_vote_gate",
             "label": "🧮 HAWK Vote Gate",
             "kind": "hawk_vote",
             "config": {"source_steps": ["hawk_trend", "hawk_structure", "hawk_counter"]},
         },
-        {"key": "sage_review", "label": "🧠 SAGE Risk Review", "kind": "prompt", "agent_key": "crypto-sage"},
-        {"key": "compile_proposal", "label": "📋 Compile Proposal", "kind": "prompt", "agent_key": "crypto-trade-proposal"},
+        {
+            "key": "sage_review",
+            "label": "🧠 SAGE Risk Review",
+            "kind": "prompt",
+            "agent_key": "crypto-sage",
+        },
+        {
+            "key": "compile_proposal",
+            "label": "📋 Compile Proposal",
+            "kind": "prompt",
+            "agent_key": "crypto-trade-proposal",
+        },
         {
             "key": "winrate_trade_gate",
             "label": "📈 Winrate Gate (≥80% = Auto-Execute)",
@@ -965,18 +1102,196 @@ CRYPTO_TRADE_PIPELINE_WORKFLOW = {
             "kind": "approval",
             "config": {"timeout_minutes": 30, "notification": "urgent"},
         },
-        {"key": "execute_trade", "label": "⚡ Execute Trade", "kind": "prompt", "agent_key": "crypto-execution"},
-        {"key": "journal_entry", "label": "📓 Trade Journal", "kind": "prompt", "agent_key": "crypto-trade-journal"},
+        {"key": "execute_trade", "label": "⚡ Execute Trade", "kind": "exchange_execute"},
+        {
+            "key": "journal_entry",
+            "label": "📓 Trade Journal",
+            "kind": "prompt",
+            "agent_key": "crypto-trade-journal",
+        },
     ],
 }
 
 CRYPTO_POSITION_MONITOR_WORKFLOW = {
     "name": "Crypto Position Monitor — Active Positions",
     "description": "Runs every 5 min while positions are open. Monitors P&L and triggers alerts.",
+    "category": "monitor",
     "trigger_kind": "cron",
     "trigger_config": {"cron": "*/5 * * * *"},
     "steps": [
-        {"key": "position_check", "label": "📊 Position Monitor", "kind": "prompt", "agent_key": "crypto-position-monitor"},
+        {
+            "key": "monitor_snapshot",
+            "label": "📡 Exchange Snapshot",
+            "kind": "position_monitor",
+        },
+        {
+            "key": "position_check",
+            "label": "📊 Position Monitor",
+            "kind": "prompt",
+            "agent_key": "crypto-position-monitor",
+        },
+    ],
+}
+
+CRYPTO_TRADE_PIPELINE_AUTO_WORKFLOW = {
+    "name": "Crypto Trade Pipeline — Auto 30m",
+    "description": (
+        "Auto NEXMIND pipeline (no human approval): fetch real market data → KB lessons → HAWK x3 (2/3 vote) "
+        "→ SAGE (VETO) → Auto Winrate Gate (≥60% or warm-up = auto-execute, <60% = skip) → Execute → Journal. "
+        "Multi-pair: screener-dispatched, runs once per candidate symbol (from input_payload.symbol). "
+        "One open position cap per symbol; global cap enforced by kill switch."
+    ),
+    "category": "trade",
+    "trigger_kind": "manual",
+    "trigger_config": {},
+    "steps": [
+        {
+            "key": "fetch_market_data",
+            "label": "📡 Fetch Market Data",
+            "kind": "market_data",
+            "config": {"intervals": ["4h", "1h", "1d"]},
+        },
+        {
+            "key": "check_trade_lessons",
+            "label": "📚 Check Past Trade Lessons",
+            "kind": "kb_search",
+            "config": {
+                "query": "$symbol trade lesson loss mistake pattern",
+                "source_type_filter": "trade_lesson",
+                "top_k": 5,
+            },
+        },
+        {
+            "key": "hawk_trend",
+            "label": "🦅 HAWK-Trend",
+            "kind": "prompt",
+            "agent_key": "crypto-hawk-trend",
+        },
+        {
+            "key": "hawk_structure",
+            "label": "🦅 HAWK-Structure",
+            "kind": "prompt",
+            "agent_key": "crypto-hawk-structure",
+        },
+        {
+            "key": "hawk_counter",
+            "label": "🦅 HAWK-Counter",
+            "kind": "prompt",
+            "agent_key": "crypto-hawk-counter",
+        },
+        {
+            "key": "hawk_vote_gate",
+            "label": "🧮 HAWK Vote Gate",
+            "kind": "hawk_vote",
+            "config": {"source_steps": ["hawk_trend", "hawk_structure", "hawk_counter"]},
+        },
+        {
+            "key": "sage_review",
+            "label": "🧠 SAGE Risk Review",
+            "kind": "prompt",
+            "agent_key": "crypto-sage",
+        },
+        {
+            "key": "compile_proposal",
+            "label": "📋 Compile Proposal",
+            "kind": "prompt",
+            "agent_key": "crypto-trade-proposal",
+        },
+        {
+            "key": "auto_winrate_gate",
+            "label": "📈 Auto Winrate Gate (≥60% or warm-up = execute, <60% = skip)",
+            "kind": "winrate_trade_gate",
+            "config": {
+                "winrate_threshold": 60.0,
+                "warmup_trades": 10,
+                "below_threshold": "skip",
+                "skip_steps_on_auto": 1,
+                "description": (
+                    "First 10 trades always execute (warm-up). "
+                    "After that: execute if winrate ≥60% (skips execute_trade step, handled internally), "
+                    "else skip+journal NO_TRADE."
+                ),
+            },
+        },
+        {"key": "execute_trade", "label": "⚡ Execute Trade", "kind": "exchange_execute"},
+        {
+            "key": "journal_entry",
+            "label": "📓 Trade Journal",
+            "kind": "prompt",
+            "agent_key": "crypto-trade-journal",
+        },
+    ],
+}
+
+CRYPTO_TRADE_SCREENER_PRIMARY_WORKFLOW = {
+    "name": "Crypto Trade Screener — Primary 30m",
+    "description": (
+        "Runs every 30 min: ranks all liquid USDT spot pairs by liquidity x momentum (pure price math, no LLM), "
+        "drops leveraged tokens, stablecoins, low-volume and already-held coins, then dispatches the "
+        "'Crypto Trade Pipeline — Auto 30m' workflow once per top candidate (up to the global open-position cap)."
+    ),
+    "category": "screener",
+    "trigger_kind": "cron",
+    "trigger_config": {"cron": "*/30 * * * *"},
+    "steps": [
+        {
+            "key": "screen_and_dispatch",
+            "label": "🔎 Screen USDT Pairs & Dispatch",
+            "kind": "coin_screener",
+            "config": {
+                "top_n": 5,
+                "min_quote_volume": 5_000_000,
+                "target_workflow_name": "Crypto Trade Pipeline — Auto 30m",
+                "blacklist": [],
+                "exclude_open_positions": True,
+            },
+        },
+    ],
+}
+
+CRYPTO_TRADE_PIPELINE_AUTO_15M_WORKFLOW = {
+    "name": "Crypto Trade Pipeline — Auto 15m",
+    "description": (
+        "Auto NEXMIND pipeline (no human approval), 15-minute cadence: fetch real market data → KB lessons "
+        "→ HAWK x3 (2/3 vote) → SAGE (VETO) → Auto Winrate Gate (≥60% or warm-up = auto-execute, <60% = skip) "
+        "→ Execute → Journal. Multi-pair: dispatched by the Secondary 15m screener (one run per candidate "
+        "symbol from input_payload.symbol). One open position cap per symbol; global cap enforced by kill switch."
+    ),
+    "category": "trade",
+    "trigger_kind": "manual",
+    "trigger_config": {},
+    # Identical NEXMIND chain to Auto 30m (already symbol-agnostic via $symbol / input_payload.symbol).
+    "steps": [copy.deepcopy(step) for step in CRYPTO_TRADE_PIPELINE_AUTO_WORKFLOW["steps"]],
+}
+
+CRYPTO_TRADE_SCREENER_SECONDARY_WORKFLOW = {
+    "name": "Crypto Trade Screener — Secondary 15m",
+    "description": (
+        "Runs every 15 min: ranks liquid USDT spot pairs by liquidity x momentum (pure price math, no LLM), "
+        "excludes coins already held, currently active, or recently dispatched by the 'Crypto Trade Pipeline "
+        "— Auto 30m' flow, then dispatches 'Crypto Trade Pipeline — Auto 15m' once per top candidate "
+        "(up to max_dispatch and the global open-position cap)."
+    ),
+    "category": "screener",
+    "trigger_kind": "cron",
+    "trigger_config": {"cron": "*/15 * * * *"},
+    "steps": [
+        {
+            "key": "screen_and_dispatch",
+            "label": "🔎 Screen USDT Pairs & Dispatch (15m)",
+            "kind": "coin_screener",
+            "config": {
+                "top_n": 3,
+                "min_quote_volume": 10_000_000,
+                "target_workflow_name": "Crypto Trade Pipeline — Auto 15m",
+                "blacklist": [],
+                "max_dispatch": 3,
+                "exclude_open_positions": True,
+                "exclude_symbols_from_workflows": ["Crypto Trade Pipeline — Auto 30m"],
+                "exclude_recent_runs_minutes": 30,
+                "screener_group": "secondary_15m",
+            },
+        },
     ],
 }
 
@@ -991,8 +1306,20 @@ CRYPTO_WORKFLOW_DEFINITIONS: tuple[dict, ...] = (
     CRYPTO_RESEARCH_WORKFLOW,
     CRYPTO_TRADE_PIPELINE_WORKFLOW,
     CRYPTO_POSITION_MONITOR_WORKFLOW,
+    CRYPTO_TRADE_PIPELINE_AUTO_WORKFLOW,
+    CRYPTO_TRADE_PIPELINE_AUTO_15M_WORKFLOW,
+    CRYPTO_TRADE_SCREENER_PRIMARY_WORKFLOW,
+    CRYPTO_TRADE_SCREENER_SECONDARY_WORKFLOW,
 )
-CRYPTO_WORKFLOW_NAMES: tuple[str, ...] = tuple(workflow["name"] for workflow in CRYPTO_WORKFLOW_DEFINITIONS)
+
+# Workflows whose name changed across versions — renamed in-place during seeding so the
+# upsert matches the existing row instead of creating an orphan duplicate.
+LEGACY_WORKFLOW_RENAMES: dict[str, str] = {
+    "Crypto Symbol Screener — Multi-Pair Dispatcher": "Crypto Trade Screener — Primary 30m",
+}
+CRYPTO_WORKFLOW_NAMES: tuple[str, ...] = tuple(
+    workflow["name"] for workflow in CRYPTO_WORKFLOW_DEFINITIONS
+)
 
 _RESEARCH_STEP_PROMPTS: dict[str, str] = {
     "news_scan": (
@@ -1010,30 +1337,220 @@ _RESEARCH_STEP_PROMPTS: dict[str, str] = {
     ),
 }
 
+# Shared directional SL/TP invariant + HAWK invalidation-level usage rules injected into
+# every compile_proposal prompt (manual + auto). The deterministic validator
+# (validate_directional_risk_levels) still hard-enforces these relationships — this text
+# exists so the proposal agent produces a directionally valid stop in the first place,
+# rather than relying on compacted workflow memory and fabricating one.
+_COMPILE_PROPOSAL_DIRECTIONAL_RULES = (
+    "MAJORITY DIRECTION INVARIANT (mandatory — code hard-blocks any mismatch): "
+    "The HAWK vote majority_direction in $hawk_vote_result determines the ONLY permitted trade direction. "
+    "BULLISH majority → proposal.direction MUST be LONG. "
+    "BEARISH majority → proposal.direction MUST be SHORT. "
+    "NEUTRAL or NO_MAJORITY → return approval_status=BLOCKED (no_trade), do NOT produce a directional proposal. "
+    "You MUST NOT choose the minority HAWK direction. You MUST NOT override the majority. "
+    "If you cannot produce a valid proposal in the majority direction, return approval_status=BLOCKED (no_trade). "
+    "DIRECTIONAL SL/TP INVARIANT (mandatory — the proposal is hard-rejected by code if violated): "
+    "For LONG: stop_loss < entry; every take_profit > entry; take_profit levels must ascend. "
+    "For SHORT: stop_loss > entry; every take_profit < entry; take_profit levels must descend. "
+    "STOP-LOSS MUST NOT EQUAL THE ENTRY/REFERENCE: stop_loss must NEVER equal entry, reference_price, "
+    "the current/market price, or primary_entry. A stop_loss equal to any of these is invalid geometry "
+    "and is hard-rejected by code — a SHORT with stop_loss == entry, or a LONG with stop_loss == entry, "
+    "is BLOCKED (the deterministic validator requires a STRICT inequality, not >= or <=). "
+    "For SHORT specifically: stop_loss must be strictly GREATER than max(entry, reference_price, primary_entry) "
+    "whenever those values exist. For LONG specifically: stop_loss must be strictly LESS than "
+    "min(entry, reference_price, primary_entry) whenever those values exist. "
+    "Every stop_loss and take_profit must be mathematically consistent with the trade direction and the "
+    "stated risk_reward — do not emit a value that merely sits on the boundary. "
+    "HAWK INVALIDATION LEVELS: select stop_loss from, or justify it against, the provided "
+    "$hawk_invalidation_levels above. A buffer-adjusted stop is acceptable ONLY if it stays on the "
+    "correct side of entry (SHORT: strictly above entry; LONG: strictly below entry). Do NOT "
+    "fabricate a stop_loss that ignores the HAWK invalidation levels. If no valid directional "
+    "stop_loss can be produced, return approval_status=BLOCKED (no_trade) instead of inventing one. "
+)
+
+
+_AUTO_HAWK_ROLE_EXAMPLES: dict[str, str] = {
+    "hawk_trend": """
+{
+  "agent": "hawk_trend",
+  "symbol": "BTCUSDT",
+  "analyzed_at": "2026-06-15T00:00:00Z",
+  "sources_used": ["pre-fetched market data"],
+  "vote": "BULLISH",
+  "confidence": 72,
+  "data_quality": "REAL_MARKET_DATA",
+  "market_data_snapshot": {"price": 65000.0, "analyzed_interval": "4h"},
+  "invalidation_level": 64000.0,
+  "risk_flags": [],
+  "reasoning": {
+    "role_focus": "trend",
+    "trend_assessment": {
+      "direction": "UPTREND",
+      "ema_alignment": "price is above EMA20 and EMA50",
+      "price_structure": "higher highs / higher lows",
+      "macd": "MACD histogram is positive"
+    }
+  }
+}""",
+    "hawk_structure": """
+{
+  "agent": "hawk_structure",
+  "symbol": "BTCUSDT",
+  "analyzed_at": "2026-06-15T00:00:00Z",
+  "sources_used": ["pre-fetched market data"],
+  "vote": "NEUTRAL",
+  "confidence": 55,
+  "data_quality": "REAL_MARKET_DATA",
+  "market_data_snapshot": {"price": 65000.0, "analyzed_interval": "4h"},
+  "invalidation_level": 63200.0,
+  "risk_flags": ["price is between support and resistance"],
+  "reasoning": {
+    "role_focus": "structure",
+    "support": [63200.0, 62500.0],
+    "resistance": [66200.0, 67500.0],
+    "vwap_position": "price is slightly above VWAP but below resistance",
+    "order_flow": "structure is mixed, so NEUTRAL is safer than forcing a direction"
+  }
+}""",
+    "hawk_counter": """
+{
+  "agent": "hawk_counter",
+  "symbol": "BTCUSDT",
+  "analyzed_at": "2026-06-15T00:00:00Z",
+  "sources_used": ["pre-fetched market data"],
+  "vote": "BEARISH",
+  "confidence": 61,
+  "data_quality": "REAL_MARKET_DATA",
+  "market_data_snapshot": {"price": 65000.0, "analyzed_interval": "4h"},
+  "invalidation_level": 66600.0,
+  "risk_flags": ["RSI is elevated", "funding is positive"],
+  "reasoning": {
+    "role_focus": "counter",
+    "counter_assessment": {
+      "rsi": "overbought risk",
+      "funding_rate": "long crowding risk",
+      "mean_reversion": "upside momentum may be exhausted",
+      "risk_flags_policy": "use [] when no counter-trend risks are detected"
+    }
+  }
+}""",
+}
+
+
+def _auto_hawk_json_contract(role: str) -> str:
+    role_example = _AUTO_HAWK_ROLE_EXAMPLES[role]
+    structure_warning = (
+        "\nHAWK-STRUCTURE SPECIFIC RULE:\n"
+        'Returning only {"risk_flags": [], "invalidation_level": <number>} is INVALID. '
+        "Structure analysis must still include vote, confidence, sources_used, data_quality, "
+        "market_data_snapshot, and reasoning at the top level.\n"
+        if role == "hawk_structure"
+        else ""
+    )
+    trend_warning = (
+        "\nHAWK-TREND SPECIFIC RULE:\n"
+        'Do not return top-level "trend_direction", "ema_alignment", "price_structure", or "macd_signal". '
+        'Put trend details inside "reasoning.trend_assessment".\n'
+        if role == "hawk_trend"
+        else ""
+    )
+    counter_warning = (
+        "\nHAWK-COUNTER SPECIFIC RULE:\n"
+        'Always include "risk_flags" as a top-level list; use [] when no counter-trend risks are detected. '
+        'Put RSI/funding/positioning details inside "reasoning.counter_assessment".\n'
+        if role == "hawk_counter"
+        else ""
+    )
+    return f"""
+
+HAWK REQUIRED JSON CONTRACT FOR AUTO PIPELINES:
+Return exactly ONE JSON object and nothing else. The validator and handoff gate require these top-level fields:
+- "agent": must be exactly "{role}"
+- "symbol": symbol from $input_payload
+- "analyzed_at": ISO-8601 UTC timestamp
+- "sources_used": list, e.g. ["pre-fetched market data"]
+- "vote": exactly one of "BULLISH", "BEARISH", "NEUTRAL"
+- "confidence": numeric 0-100, never null
+- "data_quality": present, usually "REAL_MARKET_DATA" or "PARTIAL"
+- "market_data_snapshot": object with at least price and analyzed_interval
+- "invalidation_level": positive numeric for BULLISH/BEARISH; use null only for NEUTRAL when no real level exists
+- "risk_flags": list, empty [] if no risks
+- "reasoning": non-empty object or structured field citing specific injected market data values
+
+Do NOT use alternative top-level keys such as "trend_direction", "analysis", "conclusion", or "recommendation".
+If those concepts are useful, mention them inside "reasoning" only.
+Use ONLY the required top-level keys above; put role-specific details inside "reasoning".
+Do NOT output markdown fences, prose, or nested analysis objects instead of the schema.
+{structure_warning}
+{trend_warning}
+{counter_warning}
+Role-specific valid JSON example for {role}:
+{role_example}
+
+Minimal valid JSON example (fallback):
+{{
+  "agent": "{role}",
+  "symbol": "BTCUSDT",
+  "analyzed_at": "2026-06-15T00:00:00Z",
+  "sources_used": ["pre-fetched market data"],
+  "vote": "NEUTRAL",
+  "confidence": 35,
+  "data_quality": "REAL_MARKET_DATA",
+  "market_data_snapshot": {{"price": 65000.0, "analyzed_interval": "4h"}},
+  "invalidation_level": null,
+  "risk_flags": [],
+  "reasoning": {{"role_focus": "{role}", "summary": "Injected market data does not show a clear 2-of-3 directional edge."}}
+}}"""
+
+
 _TRADE_PIPELINE_STEP_PROMPTS: dict[str, str] = {
     "hawk_trend": (
         "Analyze the requested symbol from this input payload: $input_payload. "
-        "Vote on trend direction and return strict JSON only."
+        "REAL-TIME MARKET DATA (pre-fetched, compact format): $market_data_hawk. "
+        "Use the provided EMA values (ema_20, ema_50, ema_200), MACD, RSI, price, funding_rate, and "
+        "long_short_ratio from the market data above. The intervals field contains per-timeframe "
+        "indicators and recent_candles (last 10 OHLCV bars) for swing-level derivation. "
+        "Do NOT fetch these values yourself — they are injected. "
+        "Vote on trend direction using EMA alignment, price structure, and MACD. Return strict JSON only."
     ),
     "hawk_structure": (
         "Analyze the requested symbol from this input payload: $input_payload. "
-        "Focus on structure, support/resistance, and order flow. Return strict JSON only."
+        "REAL-TIME MARKET DATA (pre-fetched, compact format): $market_data_hawk. "
+        "Use the provided price, VWAP, EMA levels, and recent_candles for S/R identification. "
+        "Do NOT fetch these values yourself. Focus on structure, support/resistance, VWAP positioning, "
+        "and order flow. Derive invalidation_level from a real swing high/low in recent_candles. "
+        "Return strict JSON only."
     ),
     "hawk_counter": (
         "Analyze the requested symbol from this input payload: $input_payload. "
-        "Focus on counter-trend or mean-reversion risks. Return strict JSON only."
+        "REAL-TIME MARKET DATA (pre-fetched, compact format): $market_data_hawk. "
+        "Use the provided RSI, funding_rate, long_short_ratio, and recent_candles from the market data. "
+        "Do NOT fetch these values yourself. Focus on counter-trend and mean-reversion risks. "
+        "Derive invalidation_level from a real swing high/low in recent_candles. Return strict JSON only."
     ),
     "sage_review": (
-        "Review the prior HAWK analyses from the workflow memory and last output. "
+        "Review the HAWK vote gate result and individual HAWK outputs: $hawk_vote_result. "
+        "Pre-extracted HAWK invalidation levels (Python-verified, use these for rule 3): $hawk_invalidation_levels. "
         "Apply the SAGE veto rules and return strict JSON only."
     ),
     "compile_proposal": (
         "Compile the prior crypto analysis into a final trade proposal. "
         "Use the workflow memory plus this input payload: $input_payload. "
-        "The proposal must satisfy code Kill Switch rules: TP1 actual RR >= 2.0, "
-        "position_size_usdt defaults to 40.0 in paper mode unless input overrides, "
+        "RUNTIME MARKET TYPE — MANDATORY (emit this exact value in output.market_type): $market_type. "
+        "HAWK vote summary (majority direction + per-HAWK outputs): $hawk_vote_result. "
+        "Pre-extracted, Python-verified HAWK invalidation levels: $hawk_invalidation_levels. "
+        + _COMPILE_PROPOSAL_DIRECTIONAL_RULES
+        + "The proposal must satisfy code Kill Switch rules: TP1 actual RR >= 2.0, "
+        "position_size_usdt must be >= 50.0 USDT for futures (exchange minimum — code hard-rejects below this), "
+        "or >= 40.0 for spot paper mode (4% of PAPER_PORTFOLIO_USDT=1000). "
+        "Do NOT use 40.0 for futures. Use exactly 50.0 if risk settings allow, "
         "and every numeric field must be mathematically consistent. "
-        "Return strict JSON only."
+        "Set approval_status to PENDING_APPROVAL. "
+        "OUTPUT FORMAT (mandatory): return the raw JSON object only. "
+        "Do NOT wrap in markdown code fences or triple backticks. "
+        "Do NOT include explanation text before or after the JSON. "
+        "Output must begin with { and end with }."
     ),
     "execute_trade": (
         "The human approval gate has passed. Use the prior workflow memory, especially the approved trade proposal, "
@@ -1048,9 +1565,80 @@ _TRADE_PIPELINE_STEP_PROMPTS: dict[str, str] = {
 
 _POSITION_MONITOR_STEP_PROMPTS: dict[str, str] = {
     "position_check": (
-        "Monitor active crypto positions using this input payload: $input_payload. "
-        "Use any prior workflow context and return strict JSON only."
+        "Interpret and report on the open crypto positions in the EXCHANGE SNAPSHOT below. "
+        "This snapshot is REAL Binance demo/testnet state, pre-fetched by the system, and is your "
+        "ONLY source of truth — do NOT invent values, fetch URLs, or override it.\n"
+        "EXCHANGE SNAPSHOT (JSON): $monitor_snapshot\n"
+        "Each entry already states the facts: a position is closed ONLY if its entry has "
+        '"closed": true; an entry with "error": true means the exchange was unavailable (report '
+        'that, do not guess). Flag entries with "needs_attention": true as critical alerts.\n'
+        "CURRENT UTC TIME (system-provided): $now — use this EXACT value for monitored_at. "
+        "Do NOT invent a timestamp. Return strict JSON only."
     )
+}
+
+_AUTO_PIPELINE_STEP_PROMPTS: dict[str, str] = {
+    "hawk_trend": (
+        "Analyze the requested symbol from this input payload: $input_payload. "
+        "REAL-TIME MARKET DATA (pre-fetched, compact format): $market_data_hawk. "
+        "Use the provided EMA values (ema_20, ema_50, ema_200), MACD, RSI, price, funding_rate, and "
+        "long_short_ratio from the market data above. The intervals field contains per-timeframe "
+        "indicators and recent_candles (last 10 OHLCV bars) for swing-level derivation. "
+        "Do NOT fetch these values yourself — they are injected. "
+        "Vote on trend direction using EMA alignment, price structure, and MACD. Return strict JSON only."
+        + _auto_hawk_json_contract("hawk_trend")
+    ),
+    "hawk_structure": (
+        "Analyze the requested symbol from this input payload: $input_payload. "
+        "REAL-TIME MARKET DATA (pre-fetched, compact format): $market_data_hawk. "
+        "Use the provided price, VWAP, EMA levels, and recent_candles for S/R identification. "
+        "Do NOT fetch these values yourself. Focus on structure, support/resistance, VWAP positioning, "
+        "and order flow. Derive invalidation_level from a real swing high/low in recent_candles. "
+        "Return strict JSON only." + _auto_hawk_json_contract("hawk_structure")
+    ),
+    "hawk_counter": (
+        "Analyze the requested symbol from this input payload: $input_payload. "
+        "REAL-TIME MARKET DATA (pre-fetched, compact format): $market_data_hawk. "
+        "Use the provided RSI, funding_rate, long_short_ratio, and recent_candles from the market data. "
+        "Do NOT fetch these values yourself. Focus on counter-trend and mean-reversion risks. "
+        "Derive invalidation_level from a real swing high/low in recent_candles. Return strict JSON only."
+        + _auto_hawk_json_contract("hawk_counter")
+    ),
+    "sage_review": (
+        "Review the HAWK vote gate result and individual HAWK outputs: $hawk_vote_result. "
+        "Pre-extracted HAWK invalidation levels (Python-verified, use these for rule 3): $hawk_invalidation_levels. "
+        "Market context: $market_data. "
+        "Apply the SAGE veto rules and return strict JSON only."
+    ),
+    "compile_proposal": (
+        "Compile the prior crypto analysis into a final trade proposal. "
+        "Use the workflow memory plus this input payload: $input_payload. "
+        "RUNTIME MARKET TYPE — MANDATORY (emit this exact value in output.market_type): $market_type. "
+        "Market data context: $market_data. "
+        "HAWK vote summary (majority direction + per-HAWK outputs): $hawk_vote_result. "
+        "Pre-extracted, Python-verified HAWK invalidation levels: $hawk_invalidation_levels. "
+        + _COMPILE_PROPOSAL_DIRECTIONAL_RULES
+        + "The proposal must satisfy code Kill Switch rules: TP1 actual RR >= 2.0, "
+        "position_size_usdt must be >= 50.0 USDT for futures (exchange minimum — code hard-rejects below this), "
+        "or >= 40.0 for spot paper mode (4% of PAPER_PORTFOLIO_USDT=1000). "
+        "Do NOT use 40.0 for futures. Use exactly 50.0 if risk settings allow, "
+        "and every numeric field must be mathematically consistent. "
+        "Set approval_status to PENDING_APPROVAL. "
+        "OUTPUT FORMAT (mandatory): return the raw JSON object only. "
+        "Do NOT wrap in markdown code fences or triple backticks. "
+        "Do NOT include explanation text before or after the JSON. "
+        "Output must begin with { and end with }."
+    ),
+    "execute_trade": (
+        "The auto winrate gate has approved execution. Use the prior workflow memory, especially the compiled trade proposal, "
+        "plus this input payload: $input_payload. Execute only if approval_status == 'APPROVED' and "
+        "kill_switch_passed == true. Return strict JSON only."
+    ),
+    "journal_entry": (
+        "Create the trade journal entry from the executed trade result in $last_output and the workflow memory. "
+        "If last_output contains NO_TRADE or SKIPPED, record result as CANCELLED with appropriate notes. "
+        "Return strict JSON only."
+    ),
 }
 
 
@@ -1061,6 +1649,11 @@ def _workflow_prompt_map(name: str) -> dict[str, str]:
         return _TRADE_PIPELINE_STEP_PROMPTS
     if name == CRYPTO_POSITION_MONITOR_WORKFLOW["name"]:
         return _POSITION_MONITOR_STEP_PROMPTS
+    if name in (
+        CRYPTO_TRADE_PIPELINE_AUTO_WORKFLOW["name"],
+        CRYPTO_TRADE_PIPELINE_AUTO_15M_WORKFLOW["name"],
+    ):
+        return _AUTO_PIPELINE_STEP_PROMPTS
     return {}
 
 
@@ -1078,11 +1671,15 @@ def _build_flow_graph(
     nodes: list[dict] = []
     edges: list[dict] = []
 
-    nodes.append({
-        "id": "start", "type": "start",
-        "position": {"x": 80, "y": Y_CENTER},
-        "data": {}, "measured": {"width": 140, "height": 66},
-    })
+    nodes.append(
+        {
+            "id": "start",
+            "type": "start",
+            "position": {"x": 80, "y": Y_CENTER},
+            "data": {},
+            "measured": {"width": 140, "height": 66},
+        }
+    )
 
     prev_ids: list[str] = ["start"]
     x = 80 + X_GAP
@@ -1108,18 +1705,25 @@ def _build_flow_graph(
                 hkey = str(hs.get("key", f"hawk_{j}"))
                 agent_sk = str(hs.get("agent_key", ""))
                 agent_id = str(agent_ids_by_source_key.get(agent_sk, "")) if agent_sk else ""
-                agent_name = agent_names_by_source_key.get(agent_sk, str(hs.get("label", "HAWK Agent")))
-                nodes.append({
-                    "id": hkey, "type": "agent",
-                    "position": {"x": x, "y": y_offsets[j]},
-                    "data": {
-                        "agent_id": agent_id,
-                        "agent_key": agent_sk,
-                        "agent_name": agent_name,
-                        "prompt": hs.get("config", {}).get("prompt", "") if isinstance(hs.get("config"), dict) else "",
-                    },
-                    "measured": {"width": NODE_W, "height": NODE_H},
-                })
+                agent_name = agent_names_by_source_key.get(
+                    agent_sk, str(hs.get("label", "HAWK Agent"))
+                )
+                nodes.append(
+                    {
+                        "id": hkey,
+                        "type": "agent",
+                        "position": {"x": x, "y": y_offsets[j]},
+                        "data": {
+                            "agent_id": agent_id,
+                            "agent_key": agent_sk,
+                            "agent_name": agent_name,
+                            "prompt": hs.get("config", {}).get("prompt", "")
+                            if isinstance(hs.get("config"), dict)
+                            else "",
+                        },
+                        "measured": {"width": NODE_W, "height": NODE_H},
+                    }
+                )
                 hawk_ids.append(hkey)
                 for pid in prev_ids:
                     edges.append({"id": f"e-{pid}-{hkey}", "source": pid, "target": hkey})
@@ -1130,12 +1734,19 @@ def _build_flow_graph(
 
         # ── HAWK vote gate: collects all prev hawk ids ──
         if kind == "hawk_vote":
-            nodes.append({
-                "id": key, "type": "conditional",
-                "position": {"x": x, "y": Y_CENTER},
-                "data": {"label": label, "condition_type": "hawk_vote", "value": "2/3 majority"},
-                "measured": {"width": NODE_W, "height": NODE_H + 20},
-            })
+            nodes.append(
+                {
+                    "id": key,
+                    "type": "conditional",
+                    "position": {"x": x, "y": Y_CENTER},
+                    "data": {
+                        "label": label,
+                        "condition_type": "hawk_vote",
+                        "value": "2/3 majority",
+                    },
+                    "measured": {"width": NODE_W, "height": NODE_H + 20},
+                }
+            )
             for pid in prev_ids:
                 edges.append({"id": f"e-{pid}-{key}", "source": pid, "target": key})
             prev_ids = [key]
@@ -1145,16 +1756,19 @@ def _build_flow_graph(
 
         # ── Auto-trade gate ──
         if kind == "auto_trade_gate":
-            nodes.append({
-                "id": key, "type": "conditional",
-                "position": {"x": x, "y": Y_CENTER},
-                "data": {
-                    "label": label,
-                    "condition_type": "auto_trade_gate",
-                    "value": f"confidence ≥ {config.get('confidence_threshold', 90)}%",
-                },
-                "measured": {"width": NODE_W, "height": NODE_H + 20},
-            })
+            nodes.append(
+                {
+                    "id": key,
+                    "type": "conditional",
+                    "position": {"x": x, "y": Y_CENTER},
+                    "data": {
+                        "label": label,
+                        "condition_type": "auto_trade_gate",
+                        "value": f"confidence ≥ {config.get('confidence_threshold', 90)}%",
+                    },
+                    "measured": {"width": NODE_W, "height": NODE_H + 20},
+                }
+            )
             for pid in prev_ids:
                 edges.append({"id": f"e-{pid}-{key}", "source": pid, "target": key})
             prev_ids = [key]
@@ -1164,16 +1778,19 @@ def _build_flow_graph(
 
         # ── Winrate trade gate ──
         if kind == "winrate_trade_gate":
-            nodes.append({
-                "id": key, "type": "conditional",
-                "position": {"x": x, "y": Y_CENTER},
-                "data": {
-                    "label": label,
-                    "condition_type": "winrate_trade_gate",
-                    "value": f"winrate ≥ {config.get('winrate_threshold', 80)}%",
-                },
-                "measured": {"width": NODE_W, "height": NODE_H + 20},
-            })
+            nodes.append(
+                {
+                    "id": key,
+                    "type": "conditional",
+                    "position": {"x": x, "y": Y_CENTER},
+                    "data": {
+                        "label": label,
+                        "condition_type": "winrate_trade_gate",
+                        "value": f"winrate ≥ {config.get('winrate_threshold', 80)}%",
+                    },
+                    "measured": {"width": NODE_W, "height": NODE_H + 20},
+                }
+            )
             for pid in prev_ids:
                 edges.append({"id": f"e-{pid}-{key}", "source": pid, "target": key})
             prev_ids = [key]
@@ -1183,11 +1800,15 @@ def _build_flow_graph(
 
         # ── Approval gate ──
         if kind == "approval":
-            nodes.append({
-                "id": key, "type": "approval",
-                "position": {"x": x, "y": Y_CENTER},
-                "data": {}, "measured": {"width": NODE_W, "height": NODE_H + 30},
-            })
+            nodes.append(
+                {
+                    "id": key,
+                    "type": "approval",
+                    "position": {"x": x, "y": Y_CENTER},
+                    "data": {},
+                    "measured": {"width": NODE_W, "height": NODE_H + 30},
+                }
+            )
             for pid in prev_ids:
                 src_node = next((n for n in nodes if n["id"] == pid), None)
                 handle = "false" if src_node and src_node["type"] == "conditional" else None
@@ -1205,17 +1826,20 @@ def _build_flow_graph(
             agent_sk = str(step.get("agent_key", ""))
             agent_id = str(agent_ids_by_source_key.get(agent_sk, "")) if agent_sk else ""
             agent_name = agent_names_by_source_key.get(agent_sk, label)
-            nodes.append({
-                "id": key, "type": "agent",
-                "position": {"x": x, "y": Y_CENTER},
-                "data": {
-                    "agent_id": agent_id,
-                    "agent_key": agent_sk,
-                    "agent_name": agent_name,
-                    "prompt": config.get("prompt", "") if isinstance(config, dict) else "",
-                },
-                "measured": {"width": NODE_W, "height": NODE_H},
-            })
+            nodes.append(
+                {
+                    "id": key,
+                    "type": "agent",
+                    "position": {"x": x, "y": Y_CENTER},
+                    "data": {
+                        "agent_id": agent_id,
+                        "agent_key": agent_sk,
+                        "agent_name": agent_name,
+                        "prompt": config.get("prompt", "") if isinstance(config, dict) else "",
+                    },
+                    "measured": {"width": NODE_W, "height": NODE_H},
+                }
+            )
             for pid in prev_ids:
                 src_node = next((n for n in nodes if n["id"] == pid), None)
                 edge = {"id": f"e-{pid}-{key}", "source": pid, "target": key}
@@ -1228,12 +1852,14 @@ def _build_flow_graph(
             # Also wire winrate_trade_gate → execute_trade (false/human path) if approval exists
             winrate_gate_node = next((n for n in nodes if n["id"] == "winrate_trade_gate"), None)
             if winrate_gate_node and "winrate_trade_gate" not in prev_ids:
-                edges.append({
-                    "id": "e-winrate_trade_gate-execute_trade-human",
-                    "source": "winrate_trade_gate",
-                    "target": "execute_trade",
-                    "sourceHandle": "false",
-                })
+                edges.append(
+                    {
+                        "id": "e-winrate_trade_gate-execute_trade-human",
+                        "source": "winrate_trade_gate",
+                        "target": "execute_trade",
+                        "sourceHandle": "false",
+                    }
+                )
             prev_ids = [key]
             x += X_GAP
             i += 1
@@ -1243,17 +1869,20 @@ def _build_flow_graph(
         agent_sk = str(step.get("agent_key", ""))
         agent_id = str(agent_ids_by_source_key.get(agent_sk, "")) if agent_sk else ""
         agent_name = agent_names_by_source_key.get(agent_sk, label)
-        nodes.append({
-            "id": key, "type": "agent",
-            "position": {"x": x, "y": Y_CENTER},
-            "data": {
-                "agent_id": agent_id,
-                "agent_key": agent_sk,
-                "agent_name": agent_name,
-                "prompt": config.get("prompt", "") if isinstance(config, dict) else "",
-            },
-            "measured": {"width": NODE_W, "height": NODE_H},
-        })
+        nodes.append(
+            {
+                "id": key,
+                "type": "agent",
+                "position": {"x": x, "y": Y_CENTER},
+                "data": {
+                    "agent_id": agent_id,
+                    "agent_key": agent_sk,
+                    "agent_name": agent_name,
+                    "prompt": config.get("prompt", "") if isinstance(config, dict) else "",
+                },
+                "measured": {"width": NODE_W, "height": NODE_H},
+            }
+        )
         for pid in prev_ids:
             src_node = next((n for n in nodes if n["id"] == pid), None)
             edge = {"id": f"e-{pid}-{key}", "source": pid, "target": key}
@@ -1265,25 +1894,29 @@ def _build_flow_graph(
         i += 1
 
     # end node
-    nodes.append({
-        "id": "end", "type": "end",
-        "position": {"x": x, "y": Y_CENTER},
-        "data": {}, "measured": {"width": 140, "height": 66},
-    })
+    nodes.append(
+        {
+            "id": "end",
+            "type": "end",
+            "position": {"x": x, "y": Y_CENTER},
+            "data": {},
+            "measured": {"width": 140, "height": 66},
+        }
+    )
     for pid in prev_ids:
         edges.append({"id": f"e-{pid}-end", "source": pid, "target": "end"})
 
     return nodes, edges
 
 
-def _materialize_workflow_definition(workflow_def: dict, agent_ids_by_source_key: dict[str, UUID]) -> dict:
+def _materialize_workflow_definition(
+    workflow_def: dict, agent_ids_by_source_key: dict[str, UUID]
+) -> dict:
     definition = copy.deepcopy(workflow_def)
     prompt_map = _workflow_prompt_map(definition["name"])
 
     # Build agent name lookup
-    agent_names_by_source_key: dict[str, str] = {
-        a["source_key"]: a["name"] for a in CRYPTO_AGENTS
-    }
+    agent_names_by_source_key: dict[str, str] = {a["source_key"]: a["name"] for a in CRYPTO_AGENTS}
 
     steps: list[dict] = []
     for raw_step in definition.get("steps", []):
@@ -1293,7 +1926,12 @@ def _materialize_workflow_definition(workflow_def: dict, agent_ids_by_source_key
             step["agent_key"] = str(agent_ids_by_source_key[agent_source_key])
         if step.get("kind") == "prompt":
             config = dict(step.get("config") or {})
-            config.setdefault("prompt", prompt_map.get(step.get("key", ""), "Use the workflow context and return strict JSON only."))
+            _mapped_prompt = prompt_map.get(step.get("key", ""))
+            if _mapped_prompt:
+                # Always write the current template map value so re-seeding refreshes stale prompts.
+                config["prompt"] = _mapped_prompt
+            else:
+                config.setdefault("prompt", "Use the workflow context and return strict JSON only.")
             step["config"] = config
         steps.append(step)
     definition["steps"] = steps
@@ -1308,28 +1946,179 @@ def _materialize_workflow_definition(workflow_def: dict, agent_ids_by_source_key
     return definition
 
 
+async def check_hawk_prompt_drift(db: object) -> list[dict]:
+    """Read-only: report which workflow DB definitions have stale HAWK step prompts.
+
+    Compares the current ``config.prompt`` for each hawk_trend/hawk_structure/
+    hawk_counter step against the expected template (which now uses
+    ``$market_data_hawk``). Returns a list of drift entries — one per stale step.
+
+    Call this before running seed to see exactly what would change:
+
+        from app.commands.seed_crypto_workflow import check_hawk_prompt_drift
+        report = await check_hawk_prompt_drift(db)
+        for entry in report:
+            print(entry)
+
+    No DB writes are performed.
+    """
+    from sqlalchemy import select
+
+    from app.db.models.workflow import Workflow
+
+    _HAWK_STEP_KEYS = {"hawk_trend", "hawk_structure", "hawk_counter"}
+    _EXPECTED_TOKEN = "$market_data_hawk"
+
+    entries: list[dict] = []
+    workflows = (await db.execute(select(Workflow))).scalars().all()
+
+    for wf in workflows:
+        definition = wf.definition_json or {}
+        steps = definition.get("steps") or []
+        workflow_name = definition.get("name", "")
+        prompt_map = _workflow_prompt_map(workflow_name)
+
+        for step in steps:
+            key = step.get("key", "")
+            if key not in _HAWK_STEP_KEYS:
+                continue
+            config = step.get("config") or {}
+            current_prompt = config.get("prompt") or ""
+            is_stale = _EXPECTED_TOKEN not in current_prompt
+            expected = prompt_map.get(key, "")
+            entries.append(
+                {
+                    "workflow_name": workflow_name,
+                    "project_id": str(wf.project_id),
+                    "workflow_id": str(wf.id),
+                    "step_key": key,
+                    "is_stale": is_stale,
+                    "has_market_data_hawk": not is_stale,
+                    "current_prompt_preview": (
+                        current_prompt[:120] + "..."
+                        if len(current_prompt) > 120
+                        else current_prompt
+                    ),
+                    "expected_prompt_preview": (
+                        expected[:120] + "..." if len(expected) > 120 else expected
+                    ),
+                }
+            )
+
+    return entries
+
+
+async def _migrate_legacy_workflows(db: object, project_id: UUID) -> None:
+    """Rename workflows whose name changed across versions, in-place, so the seed upsert matches
+    the existing row instead of creating an orphan duplicate. If both the legacy and the new name
+    already exist, the legacy orphan is deleted."""
+    from sqlalchemy import select
+
+    from app.db.models.workflow import Workflow
+    from app.repositories import workflow as workflow_repo
+
+    for old_name, new_name in LEGACY_WORKFLOW_RENAMES.items():
+        legacy = (
+            (
+                await db.execute(
+                    select(Workflow).where(
+                        Workflow.project_id == project_id, Workflow.name == old_name
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if legacy is None:
+            continue
+        new_exists = (
+            (
+                await db.execute(
+                    select(Workflow).where(
+                        Workflow.project_id == project_id, Workflow.name == new_name
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if new_exists is None:
+            await workflow_repo.update_workflow(
+                db, db_workflow=legacy, update_data={"name": new_name}
+            )
+        else:
+            await db.delete(legacy)
+
+
+async def _disable_orphan_schedules(db: object, *, project_id: UUID, workflow_id: UUID) -> int:
+    """Disable any enabled Schedule rows for a workflow. Used for manual (non-cron) workflows so
+    screener-dispatched-only pipelines (Auto 30m / Auto 15m) never fire on a stale direct cron.
+    Returns the number of schedules disabled."""
+    from sqlalchemy import select
+
+    from app.db.models.workflow import Schedule
+    from app.repositories import workflow as workflow_repo
+
+    schedules = (
+        (
+            await db.execute(
+                select(Schedule).where(
+                    Schedule.project_id == project_id,
+                    Schedule.workflow_id == workflow_id,
+                    Schedule.enabled.is_(True),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for schedule in schedules:
+        await workflow_repo.update_schedule(
+            db, db_schedule=schedule, update_data={"enabled": False}
+        )
+    return len(schedules)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # SEED COMMAND
 # ─────────────────────────────────────────────────────────────────────────────
 
-@command("seed-crypto-workflow", help="Seed all 12 crypto trading agent templates and 3 workflow definitions")
+
+@command(
+    "seed-crypto-workflow",
+    help="Seed all 12 crypto trading agent templates and 3 workflow definitions",
+)
 @click.option("--clear", is_flag=True, help="Clear existing crypto templates before seeding")
-@click.option("--project-id", type=str, help="Instantiate the crypto trading pipeline into an existing project UUID")
-@click.option("--clear-project", is_flag=True, help="Remove existing crypto agents/workflows/schedules from the target project before seeding")
+@click.option(
+    "--project-id",
+    type=str,
+    help="Instantiate the crypto trading pipeline into an existing project UUID",
+)
+@click.option(
+    "--clear-project",
+    is_flag=True,
+    help="Remove existing crypto agents/workflows/schedules from the target project before seeding",
+)
 @click.option("--dry-run", is_flag=True, help="Show what would be created without making changes")
-def seed_crypto_workflow_cmd(clear: bool, project_id: str | None, clear_project: bool, dry_run: bool) -> None:
+def seed_crypto_workflow_cmd(
+    clear: bool, project_id: str | None, clear_project: bool, dry_run: bool
+) -> None:
     """Seed the crypto trading pipeline: 12 agents + 3 workflows."""
     if dry_run:
         info(f"[DRY RUN] Would seed {len(CRYPTO_AGENTS)} crypto agent templates")
         for agent in CRYPTO_AGENTS:
             info(f"  [{agent['role']}] {agent['name']} ({agent['default_model']})")
-        info("[DRY RUN] Would seed 3 workflow definitions:")
+        info(f"[DRY RUN] Would seed {len(CRYPTO_WORKFLOW_DEFINITIONS)} workflow definitions:")
         for wf in CRYPTO_WORKFLOW_DEFINITIONS:
             info(f"  {wf['name']}")
         if project_id:
-            info(f"[DRY RUN] Would instantiate 12 agents + 3 workflows into project {project_id}")
+            info(
+                f"[DRY RUN] Would instantiate 12 agents + {len(CRYPTO_WORKFLOW_DEFINITIONS)} workflows into project {project_id}"
+            )
             if clear_project:
-                info("[DRY RUN] Would clear existing crypto agents/workflows/schedules from the target project first")
+                info(
+                    "[DRY RUN] Would clear existing crypto agents/workflows/schedules from the target project first"
+                )
         return
 
     asyncio.run(_seed(clear=clear, project_id=project_id, clear_project=clear_project))
@@ -1373,6 +2162,235 @@ async def run_seed(db) -> dict:
     return {"agents_created": created, "agents_skipped": skipped}
 
 
+async def seed_crypto_project(db: object, project_id: str, *, clear_project: bool = False) -> dict:
+    """Seed agents, workflows, and schedules into an existing project. Does NOT commit."""
+    from uuid import UUID
+
+    from sqlalchemy import select
+
+    from app.db.models.project import AgentConfig, Project
+    from app.db.models.workflow import Schedule, Workflow
+    from app.repositories import agent_config as agent_config_repo
+    from app.repositories import workflow as workflow_repo
+
+    target_project_id = UUID(project_id)
+    project = await db.get(Project, target_project_id)
+    if project is None:
+        raise ValueError(f"Project {project_id} not found")
+
+    if clear_project:
+        existing_workflows = (
+            (
+                await db.execute(
+                    select(Workflow).where(
+                        Workflow.project_id == target_project_id,
+                        Workflow.name.in_(CRYPTO_WORKFLOW_NAMES),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for w in existing_workflows:
+            await db.delete(w)
+        existing_agents = (
+            (
+                await db.execute(
+                    select(AgentConfig).where(
+                        AgentConfig.project_id == target_project_id,
+                        AgentConfig.role.in_(CRYPTO_AGENT_ROLES),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for a in existing_agents:
+            await db.delete(a)
+        await db.flush()
+
+    existing_agents = (
+        (
+            await db.execute(
+                select(AgentConfig).where(
+                    AgentConfig.project_id == target_project_id,
+                    AgentConfig.role.in_(CRYPTO_AGENT_ROLES),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    agents_by_role = {agent.role: agent for agent in existing_agents}
+    source_key_to_agent_id: dict[str, UUID] = {}
+    agents_created = 0
+    agents_updated = 0
+
+    for order_index, data in enumerate(CRYPTO_AGENTS):
+        tools_config = dict(data.get("default_tools_config", {}))
+        tools_config.setdefault("source_key", data["source_key"])
+        tools_config.setdefault("category", "Crypto Trading")
+        tools_config.setdefault("pipeline", "nexmind")
+        tools_config.setdefault("ai_backend", data.get("default_runtime_kind", "anthropic-api"))
+        tools_config.setdefault("runtime_kind", data.get("default_runtime_kind", "anthropic-api"))
+        existing_agent = agents_by_role.get(data["role"])
+        if existing_agent is None:
+            created_agent = await agent_config_repo.create(
+                db,
+                project_id=target_project_id,
+                name=data["name"],
+                role=data["role"],
+                system_prompt=data["system_prompt"],
+                tools_config=tools_config,
+                order_index=order_index,
+                avatar=data.get("default_avatar", "bot"),
+                runtime_kind=data.get("default_runtime_kind", "anthropic-api"),
+                model=data.get("default_model", ""),
+                working_directory="",
+                tool_permissions=data.get("default_tool_permissions", []),
+                skill_ids=[],
+                max_tokens=4096,
+                temperature=30,
+                memory_type="long_term",
+                context_window_size=24,
+            )
+            source_key_to_agent_id[data["source_key"]] = created_agent.id
+            agents_created += 1
+        else:
+            await agent_config_repo.update(
+                db,
+                db_agent=existing_agent,
+                update_data={
+                    "name": data["name"],
+                    "system_prompt": data["system_prompt"],
+                    "tools_config": tools_config,
+                    "order_index": order_index,
+                    "avatar": data.get("default_avatar", "bot"),
+                    "tool_permissions": data.get("default_tool_permissions", []),
+                    "max_tokens": 4096,
+                    "temperature": 30,
+                    "memory_type": "long_term",
+                    "context_window_size": 24,
+                    "is_active": True,
+                },
+            )
+            source_key_to_agent_id[data["source_key"]] = existing_agent.id
+            agents_updated += 1
+
+    await _migrate_legacy_workflows(db, target_project_id)
+    existing_workflows = (
+        (
+            await db.execute(
+                select(Workflow).where(
+                    Workflow.project_id == target_project_id,
+                    Workflow.name.in_(CRYPTO_WORKFLOW_NAMES),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    workflows_by_name = {wf.name: wf for wf in existing_workflows}
+    workflows_created = 0
+    workflows_updated = 0
+    schedules_created = 0
+    schedules_updated = 0
+
+    for workflow_def in CRYPTO_WORKFLOW_DEFINITIONS:
+        materialized = _materialize_workflow_definition(workflow_def, source_key_to_agent_id)
+        existing_wf = workflows_by_name.get(workflow_def["name"])
+        if existing_wf is None:
+            existing_wf = await workflow_repo.create_workflow(
+                db,
+                project_id=target_project_id,
+                name=workflow_def["name"],
+                description=workflow_def.get("description"),
+                trigger_kind=workflow_def.get("trigger_kind", "manual"),
+                definition_json=materialized,
+                is_enabled=True,
+            )
+            workflows_created += 1
+        else:
+            await workflow_repo.update_workflow(
+                db,
+                db_workflow=existing_wf,
+                update_data={
+                    "description": workflow_def.get("description"),
+                    "trigger_kind": workflow_def.get("trigger_kind", "manual"),
+                    "definition_json": materialized,
+                    "is_enabled": True,
+                },
+            )
+            workflows_updated += 1
+
+        cron_expr = (workflow_def.get("trigger_config") or {}).get("cron")
+        if workflow_def.get("trigger_kind") != "cron" or not cron_expr:
+            # Manual workflows (Auto 30m / Auto 15m) must never carry a direct cron schedule —
+            # disable any stale rows so they only ever run when a screener dispatches them.
+            await _disable_orphan_schedules(
+                db, project_id=target_project_id, workflow_id=existing_wf.id
+            )
+            continue
+
+        existing_schedule = (
+            (
+                await db.execute(
+                    select(Schedule).where(
+                        Schedule.project_id == target_project_id,
+                        Schedule.workflow_id == existing_wf.id,
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        schedule_payload: dict = {
+            "timeframe": "4h",
+            "project_mode": effective_project_mode(),
+            "workflow_name": workflow_def["name"],
+        }
+        preserve_enabled = settings.PRESERVE_SCHEDULE_ENABLED_STATE
+        if existing_schedule is None:
+            await workflow_repo.create_schedule(
+                db,
+                project_id=target_project_id,
+                workflow_id=existing_wf.id,
+                cron_expr=cron_expr,
+                timezone="UTC",
+                input_payload_json=schedule_payload,
+                enabled=_seed_schedule_enabled_for_create(
+                    workflow_def["name"], preserve_enabled=preserve_enabled
+                ),
+            )
+            schedules_created += 1
+        else:
+            update_data: dict = {
+                "cron_expr": cron_expr,
+                "timezone": "UTC",
+                "input_payload_json": schedule_payload,
+            }
+            enabled_override = _seed_schedule_update_enabled(
+                workflow_def["name"], preserve_enabled=preserve_enabled
+            )
+            if enabled_override is not None:
+                update_data["enabled"] = enabled_override
+            await workflow_repo.update_schedule(
+                db,
+                db_schedule=existing_schedule,
+                update_data=update_data,
+            )
+            schedules_updated += 1
+
+    return {
+        "agents_created": agents_created,
+        "agents_updated": agents_updated,
+        "workflows_created": workflows_created,
+        "workflows_updated": workflows_updated,
+        "schedules_created": schedules_created,
+        "schedules_updated": schedules_updated,
+    }
+
+
 async def _seed(*, clear: bool, project_id: str | None, clear_project: bool) -> None:
     async with get_db_context() as db:
         from sqlalchemy import delete, select
@@ -1391,7 +2409,9 @@ async def _seed(*, clear: bool, project_id: str | None, clear_project: bool) -> 
             await db.commit()
 
         result = await run_seed(db)
-        success(f"Created {result['agents_created']} crypto agent templates, skipped {result['agents_skipped']} (already exist).")
+        success(
+            f"Created {result['agents_created']} crypto agent templates, skipped {result['agents_skipped']} (already exist)."
+        )
         info("Workflow definitions ready for use:")
         for workflow_def in CRYPTO_WORKFLOW_DEFINITIONS:
             info(f"  - {workflow_def['name']}")
@@ -1405,37 +2425,51 @@ async def _seed(*, clear: bool, project_id: str | None, clear_project: bool) -> 
             raise click.ClickException(f"Project {project_id} not found")
 
         if clear_project:
-            info(f"Clearing existing crypto runtime records from project {project.name} ({project.id})...")
+            info(
+                f"Clearing existing crypto runtime records from project {project.name} ({project.id})..."
+            )
             existing_workflows = (
-                await db.execute(
-                    select(Workflow).where(
-                        Workflow.project_id == target_project_id,
-                        Workflow.name.in_(CRYPTO_WORKFLOW_NAMES),
+                (
+                    await db.execute(
+                        select(Workflow).where(
+                            Workflow.project_id == target_project_id,
+                            Workflow.name.in_(CRYPTO_WORKFLOW_NAMES),
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             for workflow in existing_workflows:
                 await db.delete(workflow)
             existing_agents = (
+                (
+                    await db.execute(
+                        select(AgentConfig).where(
+                            AgentConfig.project_id == target_project_id,
+                            AgentConfig.role.in_(CRYPTO_AGENT_ROLES),
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            for agent in existing_agents:
+                await db.delete(agent)
+            await db.commit()
+
+        existing_agents = (
+            (
                 await db.execute(
                     select(AgentConfig).where(
                         AgentConfig.project_id == target_project_id,
                         AgentConfig.role.in_(CRYPTO_AGENT_ROLES),
                     )
                 )
-            ).scalars().all()
-            for agent in existing_agents:
-                await db.delete(agent)
-            await db.commit()
-
-        existing_agents = (
-            await db.execute(
-                select(AgentConfig).where(
-                    AgentConfig.project_id == target_project_id,
-                    AgentConfig.role.in_(CRYPTO_AGENT_ROLES),
-                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         agents_by_role = {agent.role: agent for agent in existing_agents}
         project_agents_created = 0
         project_agents_updated = 0
@@ -1447,7 +2481,9 @@ async def _seed(*, clear: bool, project_id: str | None, clear_project: bool) -> 
             tools_config.setdefault("category", "Crypto Trading")
             tools_config.setdefault("pipeline", "nexmind")
             tools_config.setdefault("ai_backend", data.get("default_runtime_kind", "anthropic-api"))
-            tools_config.setdefault("runtime_kind", data.get("default_runtime_kind", "anthropic-api"))
+            tools_config.setdefault(
+                "runtime_kind", data.get("default_runtime_kind", "anthropic-api")
+            )
             existing_agent = agents_by_role.get(data["role"])
             if existing_agent is None:
                 created_agent = await agent_config_repo.create(
@@ -1479,8 +2515,8 @@ async def _seed(*, clear: bool, project_id: str | None, clear_project: bool) -> 
                 "tools_config": tools_config,
                 "order_index": order_index,
                 "avatar": data.get("default_avatar", "bot"),
-                "runtime_kind": data.get("default_runtime_kind", "anthropic-api"),
-                "model": data.get("default_model", ""),
+                # runtime_kind and model are intentionally NOT updated here — preserve
+                # whatever profile was applied via apply-runtime-profile.
                 "tool_permissions": data.get("default_tool_permissions", []),
                 "max_tokens": 4096,
                 "temperature": 30,
@@ -1492,14 +2528,19 @@ async def _seed(*, clear: bool, project_id: str | None, clear_project: bool) -> 
             source_key_to_agent_id[data["source_key"]] = existing_agent.id
             project_agents_updated += 1
 
+        await _migrate_legacy_workflows(db, target_project_id)
         existing_workflows = (
-            await db.execute(
-                select(Workflow).where(
-                    Workflow.project_id == target_project_id,
-                    Workflow.name.in_(CRYPTO_WORKFLOW_NAMES),
+            (
+                await db.execute(
+                    select(Workflow).where(
+                        Workflow.project_id == target_project_id,
+                        Workflow.name.in_(CRYPTO_WORKFLOW_NAMES),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         workflows_by_name = {workflow.name: workflow for workflow in existing_workflows}
         project_workflows_created = 0
         project_workflows_updated = 0
@@ -1507,7 +2548,9 @@ async def _seed(*, clear: bool, project_id: str | None, clear_project: bool) -> 
         project_schedules_updated = 0
 
         for workflow_def in CRYPTO_WORKFLOW_DEFINITIONS:
-            materialized_definition = _materialize_workflow_definition(workflow_def, source_key_to_agent_id)
+            materialized_definition = _materialize_workflow_definition(
+                workflow_def, source_key_to_agent_id
+            )
             existing_workflow = workflows_by_name.get(workflow_def["name"])
             if existing_workflow is None:
                 existing_workflow = await workflow_repo.create_workflow(
@@ -1535,22 +2578,31 @@ async def _seed(*, clear: bool, project_id: str | None, clear_project: bool) -> 
 
             cron_expr = (workflow_def.get("trigger_config") or {}).get("cron")
             if workflow_def.get("trigger_kind") != "cron" or not cron_expr:
+                # Manual workflows (Auto 30m / Auto 15m) must never carry a direct cron schedule —
+                # disable any stale rows so they only ever run when a screener dispatches them.
+                await _disable_orphan_schedules(
+                    db, project_id=target_project_id, workflow_id=existing_workflow.id
+                )
                 continue
 
             existing_schedule = (
-                await db.execute(
-                    select(Schedule).where(
-                        Schedule.project_id == target_project_id,
-                        Schedule.workflow_id == existing_workflow.id,
+                (
+                    await db.execute(
+                        select(Schedule).where(
+                            Schedule.project_id == target_project_id,
+                            Schedule.workflow_id == existing_workflow.id,
+                        )
                     )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             schedule_payload = {
-                "symbol": "BTCUSDT",
                 "timeframe": "4h",
-                "project_mode": "paper",
+                "project_mode": effective_project_mode(),
                 "workflow_name": workflow_def["name"],
             }
+            preserve_enabled = settings.PRESERVE_SCHEDULE_ENABLED_STATE
             if existing_schedule is None:
                 await workflow_repo.create_schedule(
                     db,
@@ -1559,19 +2611,26 @@ async def _seed(*, clear: bool, project_id: str | None, clear_project: bool) -> 
                     cron_expr=cron_expr,
                     timezone="UTC",
                     input_payload_json=schedule_payload,
-                    enabled=True,
+                    enabled=_seed_schedule_enabled_for_create(
+                        workflow_def["name"], preserve_enabled=preserve_enabled
+                    ),
                 )
                 project_schedules_created += 1
             else:
+                schedule_update_data: dict = {
+                    "cron_expr": cron_expr,
+                    "timezone": "UTC",
+                    "input_payload_json": schedule_payload,
+                }
+                enabled_override = _seed_schedule_update_enabled(
+                    workflow_def["name"], preserve_enabled=preserve_enabled
+                )
+                if enabled_override is not None:
+                    schedule_update_data["enabled"] = enabled_override
                 await workflow_repo.update_schedule(
                     db,
                     db_schedule=existing_schedule,
-                    update_data={
-                        "cron_expr": cron_expr,
-                        "timezone": "UTC",
-                        "input_payload_json": schedule_payload,
-                        "enabled": True,
-                    },
+                    update_data=schedule_update_data,
                 )
                 project_schedules_updated += 1
 

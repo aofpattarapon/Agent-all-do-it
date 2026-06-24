@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -10,12 +11,11 @@ from uuid import UUID
 from fastapi import APIRouter, Body, HTTPException, Query, status
 from sqlalchemy import desc, select, update
 
-import os
-
 from app.agents.tools.exchange_tool import place_order
 from app.api.deps import CurrentUser, DBSession, ProjectSvc
-from app.crypto.services.execution_service import ExecutionError, ExecutionService
+from app.api.routes.v1.runs import classify_project_runs
 from app.core.rbac import Permission
+from app.crypto.services.execution_service import ExecutionError, ExecutionService
 from app.db.models.crypto_trading import (
     AgentVote,
     MarketSnapshot,
@@ -26,10 +26,119 @@ from app.db.models.crypto_trading import (
     TradeJournal,
     TradeProposal,
 )
+from app.schemas.metrics import PerformanceSummary
+from app.schemas.readiness import TradingReadiness
+from app.schemas.trading_settings_status import TradingSettingsStatus
+from app.services.crypto_persistence import build_trade_journal_raw_facts
+from app.services.execution_preflight import ExecutionPreflightError, prepare_execution_plan
+from app.services.execution_visibility import (
+    build_execution_visibility,
+    build_protection_summary,
+    build_trade_confirmation,
+)
+from app.services.hawk_condition_watch import DEFAULT_SYMBOLS, HawkConditionWatch
 from app.services.kill_switch import KillSwitch
+from app.services.run_metrics import build_performance_summary, build_run_summary
+from app.services.trade_metrics import build_trade_metrics, closed_trades_from_journal
+from app.services.trading_mode import build_runtime_visibility
+from app.services.trading_readiness import evaluate_trading_readiness
+from app.services.trading_settings_status import build_trading_settings_status
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+@router.get("/projects/{project_id}/trading/runtime-mode")
+async def get_runtime_mode(
+    project_id: UUID,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+) -> Any:
+    """Return the normalized, UI-facing runtime trading-mode object (read-only).
+
+    Single source of truth for "what mode is the system in / what will the next order do",
+    derived from the environment via ``resolve_trading_mode``. Distinct from the per-execution
+    ``execution_visibility`` returned on positions (which reports historical routing).
+    """
+    await project_svc.resolve_access(project_id, user, require=Permission.TRADE_VIEW)
+    return build_runtime_visibility()
+
+
+@router.get("/projects/{project_id}/trading/readiness", response_model=TradingReadiness)
+async def get_trading_readiness(
+    project_id: UUID,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+) -> Any:
+    """Read-only "what will the next order do?" evaluation.
+
+    Fail-closed and pure: never places an order, never mutates env/settings, and never
+    exposes credential values (``credential_values_exposed`` is always ``False``).
+    """
+    await project_svc.resolve_access(project_id, user, require=Permission.TRADE_VIEW)
+    return evaluate_trading_readiness()
+
+
+@router.get(
+    "/projects/{project_id}/trading/settings-status",
+    response_model=TradingSettingsStatus,
+)
+async def get_trading_settings_status(
+    project_id: UUID,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    db: DBSession,
+) -> Any:
+    """Read-only Trading Settings Sync status (Phase W32A) — single source of truth.
+
+    Consolidates effective mode, auto-approval policy, validation-only/schedule posture, W29 /
+    W31J readiness, order-readiness blockers, artifacts and checkpoint/resume info into one object
+    for frontend inspection. Strictly read-only: never places/cancels an order, never dispatches/
+    approves/resumes/retries a run, never creates a risk_ack, never mutates env/settings/schedules/
+    ``validation_only``/mode, and never exposes secret values. ``safety.can_send_order_now`` is
+    fail-closed and is expected to be ``False`` while W29 is HOLD and placement is disabled.
+    """
+    await project_svc.resolve_access(project_id, user, require=Permission.TRADE_VIEW)
+    return await build_trading_settings_status(db, project_id)
+
+
+@router.get("/projects/{project_id}/trading/hawk-condition-watch")
+async def get_hawk_condition_watch(
+    project_id: UUID,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    db: DBSession,
+    symbols: str | None = Query(
+        None,
+        description="Optional comma-separated owner-approved symbols, e.g. 'BTCUSDT,ETHUSDT'.",
+    ),
+    lookback_days: int | None = Query(
+        None, ge=1, le=365, description="Optional historical HAWK pass-rate lookback window in days."
+    ),
+) -> Any:
+    """Read-only, advisory HAWK condition watch posture (READY / NOT_READY / HOLD).
+
+    Strictly read-only: evaluates public market data plus historical HAWK vote-gate reads
+    and returns a posture object. It never places/cancels orders, never dispatches/approves/
+    resumes/retries runs, never creates risk acknowledgements, and never mutates
+    ``validation_only`` or schedules. ``READY`` means "conditions may be more favourable;
+    fresh owner approval is still required" — it is **not** an instruction to trade. The
+    response always carries the hard safety fields ``order_capable=false``,
+    ``dispatch_capable=false``, ``approval_required_for_retry=true`` and
+    ``validation_only_unchanged=true``.
+    """
+    await project_svc.resolve_access(project_id, user, require=Permission.TRADE_VIEW)
+
+    selected: tuple[str, ...] = DEFAULT_SYMBOLS
+    if symbols:
+        parsed = tuple(s.strip().upper() for s in symbols.split(",") if s.strip())
+        if parsed:
+            selected = parsed
+
+    watch = HawkConditionWatch(db)
+    return await watch.evaluate(
+        project_id=project_id, symbols=selected, lookback_days=lookback_days
+    )
 
 
 @router.get("/projects/{project_id}/trading/proposals")
@@ -130,8 +239,16 @@ async def execute_proposal(
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.TRADE_APPROVE)
 
-    # Delegate to ExecutionService for testnet — it handles 12 pre-checks + BinanceFuturesAdapter
-    if os.getenv("EXCHANGE_MODE", "paper").lower() == "testnet":
+    # Delegate to ExecutionService for FUTURES demo/testnet — it handles the 12 pre-checks
+    # (kill-switch fail-closed, idempotency, SL hard-block) via the futures-only
+    # BinanceFuturesAdapter and the Algo Order API. DEMO must NOT fall through to the place_order
+    # path: that posted conditional SL/TP to /fapi/v1/order (-4120) and could open a naked
+    # position. Spot demo/testnet has no spot adapter here, so it still falls through to
+    # place_order (which routes spot via _spot_demo_execute).
+    if (
+        os.getenv("EXCHANGE_MODE", "paper").lower() in {"demo", "testnet"}
+        and os.getenv("MARKET_TYPE", "futures").lower() != "spot"
+    ):
         svc = ExecutionService(db)
         try:
             return await svc.execute(proposal_id, project_id, user.id)
@@ -159,42 +276,25 @@ async def execute_proposal(
             detail="Proposal already has an active execution record",
         )
 
-    entry_price = _entry_price_from_plan(proposal.entry_plan)
-    if entry_price <= 0:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid entry plan price")
-
-    take_profits = _take_profit_levels(proposal.take_profit)
-    ks = KillSwitch(db)
-    ks_result = await ks.check(
-        project_id=project_id,
-        symbol=proposal.symbol,
-        direction=proposal.direction,
-        stop_loss=proposal.stop_loss,
-        take_profit_levels=take_profits,
-        proposed_size_usdt=float(proposal.position_size_usdt or 0),
-        entry_price=entry_price,
-        market_regime="NEUTRAL",
-    )
-    if not ks_result.passed:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"error": "Kill Switch blocked execution", "reasons": ks_result.blocked_reasons},
+    try:
+        plan = await prepare_execution_plan(
+            db=db,
+            project_id=project_id,
+            proposal=proposal,
+            require_status="APPROVED",
         )
-
-    size_usdt = ks_result.adjusted_position_size_usdt or float(proposal.position_size_usdt or 0)
-    if size_usdt <= 0:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid position size")
-    amount = round(size_usdt / entry_price, 8)
-    side = "buy" if proposal.direction.upper() == "LONG" else "sell"
+    except ExecutionPreflightError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     result = await place_order(
         symbol=proposal.symbol,
-        side=side,
-        amount=amount,
+        side=plan.side,
+        amount=plan.amount,
         order_type="market",
-        price=entry_price,
+        price=plan.entry_price,
         stop_loss=proposal.stop_loss,
-        take_profits=take_profits,
+        take_profits=plan.take_profits,
+        notional_usdt=plan.size_usdt,
     )
 
     execution = TradeExecution(
@@ -205,7 +305,7 @@ async def execute_proposal(
         symbol=proposal.symbol,
         side=proposal.direction.upper(),
         executed_price=_as_float(result.get("executed_price")),
-        size=_as_float(result.get("size")) or amount,
+        size=_as_float(result.get("size")) or plan.amount,
         sl_order_id=result.get("sl_order_id"),
         tp_order_ids=result.get("tp_order_ids") or [],
         execution_status=str(result.get("execution_status", "FAILED")),
@@ -221,11 +321,11 @@ async def execute_proposal(
             execution_id=execution.id,
             symbol=proposal.symbol,
             side=proposal.direction.upper(),
-            entry_price=execution.executed_price or entry_price,
-            current_price=execution.executed_price or entry_price,
-            size=execution.size or amount,
+            entry_price=execution.executed_price or plan.entry_price,
+            current_price=execution.executed_price or plan.entry_price,
+            size=execution.size or plan.amount,
             stop_loss=proposal.stop_loss,
-            take_profits=take_profits,
+            take_profits=plan.take_profits,
             status="OPEN",
         )
         db.add(position)
@@ -240,19 +340,27 @@ async def execute_proposal(
                 position_id=position.id,
                 symbol=proposal.symbol,
                 direction=proposal.direction.upper(),
-                entry_price=execution.executed_price or entry_price,
-                size=execution.size or amount,
+                entry_price=execution.executed_price or plan.entry_price,
+                size=execution.size or plan.amount,
                 result="OPEN",
                 original_thesis=proposal.full_proposal_md or proposal.news_summary,
                 agent_votes=proposal.agent_vote_summary or {},
                 news_used=[proposal.news_summary] if proposal.news_summary else [],
+                raw_facts=build_trade_journal_raw_facts(
+                    proposal=proposal,
+                    execution_payload=result,
+                    position_id=position.id,
+                    journal_action="executed",
+                    entry_price=execution.executed_price or plan.entry_price,
+                    size=execution.size or plan.amount,
+                ),
                 decision_log=[
                     {
                         "timestamp": datetime.now(UTC).isoformat(),
                         "action": "executed",
                         "exchange": execution.exchange,
                         "order_id": execution.order_id or "",
-                        "entry_price": execution.executed_price or entry_price,
+                        "entry_price": execution.executed_price or plan.entry_price,
                     }
                 ],
             )
@@ -288,15 +396,30 @@ async def list_positions(
     user: CurrentUser,
     project_svc: ProjectSvc,
     db: DBSession,
-    status_filter: str = Query("OPEN"),
+    status_filter: str = Query("OPEN", description="Status or comma-separated statuses, or 'ALL'"),
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.TRADE_VIEW)
+    # Accept a single status, a comma-separated list (e.g. "OPEN,CLOSED"), or "ALL".
+    statuses = [s.strip().upper() for s in status_filter.split(",") if s.strip()]
+    conditions = [Position.project_id == project_id]
+    if statuses and "ALL" not in statuses:
+        conditions.append(Position.status.in_(statuses))
     result = await db.execute(
-        select(Position)
-        .where(Position.project_id == project_id, Position.status == status_filter)
-        .order_by(desc(Position.created_at))
+        select(Position).where(*conditions).order_by(desc(Position.created_at))
     )
-    return [_position_to_dict(item) for item in result.scalars().all()]
+    positions = list(result.scalars().all())
+
+    # Batch-load the linked executions so each position can surface its true execution
+    # mode + TP/SL order ids (read-only enrichment).
+    execution_ids = {p.execution_id for p in positions if p.execution_id}
+    executions: dict[UUID, TradeExecution] = {}
+    if execution_ids:
+        exec_result = await db.execute(
+            select(TradeExecution).where(TradeExecution.id.in_(execution_ids))
+        )
+        executions = {e.id: e for e in exec_result.scalars().all()}
+
+    return [_position_to_dict(p, executions.get(p.execution_id)) for p in positions]
 
 
 @router.get("/projects/{project_id}/trading/journal")
@@ -347,7 +470,9 @@ async def get_performance(
 ) -> Any:
     await project_svc.resolve_access(project_id, user, require=Permission.TRADE_VIEW)
     result = await db.execute(
-        select(TradeJournal).where(TradeJournal.project_id == project_id).order_by(TradeJournal.created_at)
+        select(TradeJournal)
+        .where(TradeJournal.project_id == project_id)
+        .order_by(TradeJournal.created_at)
     )
     trades = result.scalars().all()
     if not trades:
@@ -357,8 +482,12 @@ async def get_performance(
     losses = [trade for trade in trades if trade.result == "LOSS"]
     total_pnl = sum(float(trade.realized_pnl or 0) for trade in trades)
     avg_win = sum(float(trade.realized_pnl or 0) for trade in wins) / len(wins) if wins else 0.0
-    avg_loss = sum(float(trade.realized_pnl or 0) for trade in losses) / len(losses) if losses else 0.0
-    gross_profit = sum(float(trade.realized_pnl or 0) for trade in wins if (trade.realized_pnl or 0) > 0)
+    avg_loss = (
+        sum(float(trade.realized_pnl or 0) for trade in losses) / len(losses) if losses else 0.0
+    )
+    gross_profit = sum(
+        float(trade.realized_pnl or 0) for trade in wins if (trade.realized_pnl or 0) > 0
+    )
     gross_loss = abs(
         sum(float(trade.realized_pnl or 0) for trade in losses if (trade.realized_pnl or 0) < 0)
     )
@@ -381,6 +510,29 @@ async def get_performance(
         "profit_factor": round(gross_profit / gross_loss, 2) if gross_loss > 0 else 0,
         "pnl_curve": pnl_curve,
     }
+
+
+@router.get("/projects/{project_id}/trading/performance/summary", response_model=PerformanceSummary)
+async def get_performance_summary(
+    project_id: UUID,
+    user: CurrentUser,
+    project_svc: ProjectSvc,
+    db: DBSession,
+) -> Any:
+    """Clearly-separated workflow-health vs. trade-outcome metrics (read-only).
+
+    Workflow rates come from run ``display_status`` (terminal runs only). Trade win-rate
+    and PnL come exclusively from closed ``TradeJournal`` trades — a ``complete-reject``
+    run is never counted as a trade loss, and ``limit`` is reported separately from ``error``.
+    """
+    await project_svc.resolve_access(project_id, user, require=Permission.TRADE_VIEW)
+    classified = await classify_project_runs(db, project_id)
+    run_summary = build_run_summary(classified)
+    journal_result = await db.execute(
+        select(TradeJournal).where(TradeJournal.project_id == project_id)
+    )
+    trade_metrics = build_trade_metrics(closed_trades_from_journal(journal_result.scalars().all()))
+    return build_performance_summary(run_summary, trade_metrics)
 
 
 @router.get("/projects/{project_id}/trading/news")
@@ -519,7 +671,9 @@ async def _get_proposal_or_404(db: DBSession, project_id: UUID, proposal_id: UUI
     )
     proposal = result.scalar_one_or_none()
     if proposal is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trade proposal not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Trade proposal not found"
+        )
     return proposal
 
 
@@ -623,8 +777,10 @@ def _execution_to_dict(execution: TradeExecution) -> dict[str, Any]:
     }
 
 
-def _position_to_dict(position: Position) -> dict[str, Any]:
-    return {
+def _position_to_dict(
+    position: Position, execution: TradeExecution | None = None
+) -> dict[str, Any]:
+    base: dict[str, Any] = {
         "id": str(position.id),
         "symbol": position.symbol,
         "side": position.side,
@@ -643,6 +799,40 @@ def _position_to_dict(position: Position) -> dict[str, Any]:
         "created_at": position.created_at.isoformat(),
     }
 
+    # Read-only execution-visibility enrichment: derive the true execution mode and
+    # TP/SL protection state from the linked TradeExecution. Never changes behavior.
+    visibility = build_execution_visibility(
+        exchange=execution.exchange if execution else None,
+        raw_response=execution.raw_response if execution else None,
+        sl_order_id=execution.sl_order_id if execution else None,
+        tp_order_ids=execution.tp_order_ids if execution else None,
+        stop_loss=position.stop_loss,
+        take_profits=position.take_profits,
+        position_status=position.status,
+    )
+    base["execution_visibility"] = visibility
+    base["protection_summary"] = build_protection_summary(
+        sl_order_id=execution.sl_order_id if execution else None,
+        tp_order_ids=execution.tp_order_ids if execution else None,
+        stop_loss=position.stop_loss,
+        take_profits=position.take_profits,
+        position_status=position.status,
+        submitted_to_exchange=visibility["submitted_to_exchange"],
+    )
+    # Honest, column-derived confirmation flags (order_placed / position_created /
+    # exchange_confirmed / pnl_estimated). Read-only; never fabricates.
+    base.update(
+        build_trade_confirmation(
+            position_status=position.status,
+            realized_pnl=position.realized_pnl,
+            submitted_to_exchange=visibility["submitted_to_exchange"],
+            has_execution=execution is not None,
+            order_id=execution.order_id if execution else None,
+            execution_status=execution.execution_status if execution else None,
+        )
+    )
+    return base
+
 
 def _journal_to_dict(journal: TradeJournal) -> dict[str, Any]:
     return {
@@ -655,6 +845,7 @@ def _journal_to_dict(journal: TradeJournal) -> dict[str, Any]:
         "size": journal.size,
         "realized_pnl": journal.realized_pnl,
         "realized_pnl_pct": journal.realized_pnl_pct,
+        "pnl_estimated": journal.realized_pnl is None,
         "holding_time_minutes": journal.holding_time_minutes,
         "result": journal.result,
         "original_thesis": journal.original_thesis,

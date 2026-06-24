@@ -22,10 +22,25 @@ from typing import TypeVar
 from urllib.parse import urlparse
 
 # Default allowed HTML tags for rich text content
-DEFAULT_ALLOWED_TAGS = frozenset({
-    "a", "abbr", "acronym", "b", "blockquote", "br", "code",
-    "em", "i", "li", "ol", "p", "pre", "strong", "ul",
-})
+DEFAULT_ALLOWED_TAGS = frozenset(
+    {
+        "a",
+        "abbr",
+        "acronym",
+        "b",
+        "blockquote",
+        "br",
+        "code",
+        "em",
+        "i",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "strong",
+        "ul",
+    }
+)
 
 # Default allowed HTML attributes
 DEFAULT_ALLOWED_ATTRIBUTES = {
@@ -103,11 +118,7 @@ def sanitize_filename(filename: str, allow_unicode: bool = False) -> str:
     if allow_unicode:
         filename = unicodedata.normalize("NFKC", filename)
     else:
-        filename = (
-            unicodedata.normalize("NFKD", filename)
-            .encode("ascii", "ignore")
-            .decode("ascii")
-        )
+        filename = unicodedata.normalize("NFKD", filename).encode("ascii", "ignore").decode("ascii")
 
     # Get just the filename (remove any path components)
     filename = os.path.basename(filename)

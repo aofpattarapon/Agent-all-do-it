@@ -1,4 +1,3 @@
-
 """Business logic for user-scoped slash command settings (PostgreSQL async).
 
 Two flavors of row live in the same table:
@@ -32,9 +31,7 @@ class UserSlashCommandService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def list_for_user(
-        self, *, user_id: UUID
-    ) -> tuple[list[UserSlashCommand], int]:
+    async def list_for_user(self, *, user_id: UUID) -> tuple[list[UserSlashCommand], int]:
         return await user_slash_command_repo.list_for_user(self.db, user_id=user_id)
 
     async def create_custom(
@@ -70,9 +67,7 @@ class UserSlashCommandService:
         ``prompt`` stays NULL so the frontend knows this is just an enable
         flag, not a custom prompt.
         """
-        existing = await user_slash_command_repo.get_by_name(
-            self.db, user_id=user_id, name=name
-        )
+        existing = await user_slash_command_repo.get_by_name(self.db, user_id=user_id, name=name)
         if existing is None:
             return await user_slash_command_repo.create(
                 self.db,

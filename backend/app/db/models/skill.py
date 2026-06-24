@@ -19,15 +19,11 @@ class Skill(Base, TimestampMixin):
 
     __tablename__ = "skills"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # Catalog source: "template" | "user" | "system"
     source: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     # Unique slug within the source (e.g. "web-research", "react-development")
-    slug: Mapped[str | None] = mapped_column(
-        String(100), nullable=True, unique=True, index=True
-    )
+    slug: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True, index=True)
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

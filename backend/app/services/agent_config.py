@@ -56,7 +56,9 @@ class AgentConfigService:
     async def list(
         self, project_id: UUID, skip: int = 0, limit: int = 100
     ) -> tuple[list[AgentConfig], int]:
-        return await agent_config_repo.list_by_project(self.db, project_id=project_id, skip=skip, limit=limit)
+        return await agent_config_repo.list_by_project(
+            self.db, project_id=project_id, skip=skip, limit=limit
+        )
 
     async def create(self, project_id: UUID, data: AgentConfigCreate) -> AgentConfig:
         runtime_kind, model = normalize_runtime_model_pair(data.runtime_kind, data.model)
@@ -84,7 +86,9 @@ class AgentConfigService:
             context_window_size=data.context_window_size,
         )
 
-    async def update(self, agent_id: UUID, project_id: UUID, data: AgentConfigUpdate) -> AgentConfig:
+    async def update(
+        self, agent_id: UUID, project_id: UUID, data: AgentConfigUpdate
+    ) -> AgentConfig:
         agent = await self.get(agent_id, project_id)
         update_data = data.model_dump(exclude_unset=True)
         runtime_kind = update_data.get("runtime_kind", agent.runtime_kind)

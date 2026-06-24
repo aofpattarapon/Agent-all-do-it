@@ -1,4 +1,3 @@
-
 """Data access for user-scoped slash command settings (PostgreSQL async)."""
 
 from __future__ import annotations
@@ -17,9 +16,7 @@ async def get_by_id(db: AsyncSession, command_id: UUID) -> UserSlashCommand | No
     return result.scalar_one_or_none()
 
 
-async def get_by_name(
-    db: AsyncSession, *, user_id: UUID, name: str
-) -> UserSlashCommand | None:
+async def get_by_name(db: AsyncSession, *, user_id: UUID, name: str) -> UserSlashCommand | None:
     result = await db.execute(
         select(UserSlashCommand).where(
             UserSlashCommand.user_id == user_id,
@@ -29,9 +26,7 @@ async def get_by_name(
     return result.scalar_one_or_none()
 
 
-async def list_for_user(
-    db: AsyncSession, *, user_id: UUID
-) -> tuple[list[UserSlashCommand], int]:
+async def list_for_user(db: AsyncSession, *, user_id: UUID) -> tuple[list[UserSlashCommand], int]:
     stmt = (
         select(UserSlashCommand)
         .where(UserSlashCommand.user_id == user_id)

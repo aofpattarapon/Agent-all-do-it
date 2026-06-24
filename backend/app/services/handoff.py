@@ -9,7 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.db.models.handoff import Handoff
 from app.repositories import handoff_repo
-from app.schemas.handoff import HandoffApproveRequest, HandoffCreate, HandoffRejectRequest, HandoffUpdate
+from app.schemas.handoff import (
+    HandoffApproveRequest,
+    HandoffCreate,
+    HandoffRejectRequest,
+    HandoffUpdate,
+)
 
 
 class HandoffService:
@@ -64,9 +69,7 @@ class HandoffService:
             package_json=data.package_json,
         )
 
-    async def update(
-        self, handoff_id: UUID, project_id: UUID, data: HandoffUpdate
-    ) -> Handoff:
+    async def update(self, handoff_id: UUID, project_id: UUID, data: HandoffUpdate) -> Handoff:
         handoff = await self.get(handoff_id, project_id)
         update_data = data.model_dump(exclude_unset=True)
         return await handoff_repo.update(self.db, db_handoff=handoff, update_data=update_data)
@@ -99,13 +102,9 @@ class HandoffService:
             )
         return await handoff_repo.reject(self.db, db_handoff=handoff, reason=data.reason)
 
-    async def request_revision(
-        self, handoff_id: UUID, project_id: UUID, reason: str
-    ) -> Handoff:
+    async def request_revision(self, handoff_id: UUID, project_id: UUID, reason: str) -> Handoff:
         handoff = await self.get(handoff_id, project_id)
-        return await handoff_repo.request_revision(
-            self.db, db_handoff=handoff, reason=reason
-        )
+        return await handoff_repo.request_revision(self.db, db_handoff=handoff, reason=reason)
 
     async def delete(self, handoff_id: UUID, project_id: UUID) -> None:
         handoff = await self.get(handoff_id, project_id)

@@ -50,8 +50,7 @@ def _is_error_result(text: str) -> bool:
 
 def _summarize_backend(active: list[dict[str, Any]], fallback: str) -> str:
     runtimes = {
-        str((agent.get("tools_config") or {}).get("runtime_kind") or fallback)
-        for agent in active
+        str((agent.get("tools_config") or {}).get("runtime_kind") or fallback) for agent in active
     }
     if not runtimes:
         return fallback
@@ -160,13 +159,15 @@ async def _execute_supervisor_bg(
                     error_text="No active agents configured for this project.",
                 ),
             )
-            await event_bus.emit(AgentEvent(
-                type="run.failed",
-                project_id=str(project_id),
-                run_id=str(run_id),
-                task=task,
-                data="No active agents configured for this project.",
-            ))
+            await event_bus.emit(
+                AgentEvent(
+                    type="run.failed",
+                    project_id=str(project_id),
+                    run_id=str(run_id),
+                    task=task,
+                    data="No active agents configured for this project.",
+                )
+            )
             return
 
         backend_used = _summarize_backend(active, global_cfg["default_backend"])
@@ -185,13 +186,15 @@ async def _execute_supervisor_bg(
             ),
         )
         await run_svc.db.commit()
-        await event_bus.emit(AgentEvent(
-            type="task_started",
-            project_id=str(project_id),
-            run_id=str(run_id),
-            task=task,
-            data=f"{len(active)} agents queued",
-        ))
+        await event_bus.emit(
+            AgentEvent(
+                type="task_started",
+                project_id=str(project_id),
+                run_id=str(run_id),
+                task=task,
+                data=f"{len(active)} agents queued",
+            )
+        )
 
         from app.agents.supervisor import SupervisorAgent
 
@@ -218,21 +221,25 @@ async def _execute_supervisor_bg(
                 ),
             )
             await run_svc.db.commit()
-            await event_bus.emit(AgentEvent(
-                type="task_done" if not failed else "run.failed",
-                project_id=str(project_id),
-                run_id=str(run_id),
-                task=task,
-                data=result[:1000],
-            ))
-            if not failed:
-                await event_bus.emit(AgentEvent(
-                    type="run.completed",
+            await event_bus.emit(
+                AgentEvent(
+                    type="task_done" if not failed else "run.failed",
                     project_id=str(project_id),
                     run_id=str(run_id),
                     task=task,
                     data=result[:1000],
-                ))
+                )
+            )
+            if not failed:
+                await event_bus.emit(
+                    AgentEvent(
+                        type="run.completed",
+                        project_id=str(project_id),
+                        run_id=str(run_id),
+                        task=task,
+                        data=result[:1000],
+                    )
+                )
         except Exception as exc:
             message = f"[Agent error: {exc}]"
             await run_svc.update(
@@ -252,13 +259,15 @@ async def _execute_supervisor_bg(
                 ),
             )
             await run_svc.db.commit()
-            await event_bus.emit(AgentEvent(
-                type="run.failed",
-                project_id=str(project_id),
-                run_id=str(run_id),
-                task=task,
-                data=message[:1000],
-            ))
+            await event_bus.emit(
+                AgentEvent(
+                    type="run.failed",
+                    project_id=str(project_id),
+                    run_id=str(run_id),
+                    task=task,
+                    data=message[:1000],
+                )
+            )
 
 
 @router.post("/projects/{project_id}/run", response_model=RunTaskResponse)

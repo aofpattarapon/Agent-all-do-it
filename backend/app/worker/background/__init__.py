@@ -35,8 +35,6 @@ def fire_and_forget(coro: Coroutine[Any, Any, Any], *, label: str) -> None:
             return
         exc = t.exception()
         if exc is not None:
-            logger.exception(
-                "background_task_failed", extra={"task": label}, exc_info=exc
-            )
+            logger.exception("background_task_failed", extra={"task": label}, exc_info=exc)
 
     task.add_done_callback(_on_done)

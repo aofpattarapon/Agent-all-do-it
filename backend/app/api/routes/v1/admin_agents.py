@@ -30,18 +30,20 @@ async def list_all_agents(
     )
     items = []
     for agent, project_name in result.all():
-        items.append({
-            "id": str(agent.id),
-            "project_id": str(agent.project_id),
-            "project_name": project_name,
-            "name": agent.name,
-            "role": agent.role,
-            "runtime_kind": agent.runtime_kind,
-            "model": agent.model,
-            "is_active": agent.is_active,
-            "tool_permissions": agent.tool_permissions,
-            "created_at": agent.created_at.isoformat() if agent.created_at else None,
-        })
+        items.append(
+            {
+                "id": str(agent.id),
+                "project_id": str(agent.project_id),
+                "project_name": project_name,
+                "name": agent.name,
+                "role": agent.role,
+                "runtime_kind": agent.runtime_kind,
+                "model": agent.model,
+                "is_active": agent.is_active,
+                "tool_permissions": agent.tool_permissions,
+                "created_at": agent.created_at.isoformat() if agent.created_at else None,
+            }
+        )
     return {"items": items, "total": count}
 
 
@@ -63,14 +65,16 @@ async def list_all_workflows(
     )
     items = []
     for wf, project_name in result.all():
-        items.append({
-            "id": str(wf.id),
-            "project_id": str(wf.project_id),
-            "project_name": project_name,
-            "name": wf.name,
-            "trigger_kind": wf.trigger_kind,
-            "is_enabled": wf.is_enabled,
-            "node_count": len((wf.definition_json or {}).get("nodes", [])),
-            "created_at": wf.created_at.isoformat() if wf.created_at else None,
-        })
+        items.append(
+            {
+                "id": str(wf.id),
+                "project_id": str(wf.project_id),
+                "project_name": project_name,
+                "name": wf.name,
+                "trigger_kind": wf.trigger_kind,
+                "is_enabled": wf.is_enabled,
+                "node_count": len((wf.definition_json or {}).get("nodes", [])),
+                "created_at": wf.created_at.isoformat() if wf.created_at else None,
+            }
+        )
     return {"items": items, "total": count}

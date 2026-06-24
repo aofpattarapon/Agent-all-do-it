@@ -28,14 +28,14 @@ class IntegrationService:
             )
         return integration
 
-    async def list(self, project_id: UUID, skip: int = 0, limit: int = 50) -> tuple[list[Integration], int]:
+    async def list(
+        self, project_id: UUID, skip: int = 0, limit: int = 50
+    ) -> tuple[list[Integration], int]:
         return await integration_repo.list_by_project(
             self.db, project_id=project_id, skip=skip, limit=limit
         )
 
-    async def create(
-        self, project_id: UUID, user_id: UUID, data: IntegrationCreate
-    ) -> Integration:
+    async def create(self, project_id: UUID, user_id: UUID, data: IntegrationCreate) -> Integration:
         return await integration_repo.create(
             self.db,
             project_id=project_id,
@@ -78,7 +78,10 @@ class IntegrationService:
             integration.error_text = ""
             self.db.add(integration)
             await self.db.flush()
-            return {"success": True, "message": f"OpenClaw gateway at {gateway_url} looks reachable"}
+            return {
+                "success": True,
+                "message": f"OpenClaw gateway at {gateway_url} looks reachable",
+            }
 
         if kind == "obsidian":
             vault_path = integration.config_json.get("vault_path", "")

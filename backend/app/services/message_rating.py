@@ -1,4 +1,5 @@
 """Message rating service - business logic for ratings."""
+
 import csv
 from collections.abc import AsyncGenerator, AsyncIterable
 from dataclasses import dataclass
@@ -43,7 +44,9 @@ class MessageRatingService:
         """
         message = await conversation_repo.get_message_by_id(self.db, message_id)
         if not message:
-            raise NotFoundError(message="Message not found", details={"message_id": str(message_id)})
+            raise NotFoundError(
+                message="Message not found", details={"message_id": str(message_id)}
+            )
         return message.role
 
     async def _validate_message_in_conversation(
@@ -56,16 +59,16 @@ class MessageRatingService:
         """
         message = await conversation_repo.get_message_by_id(self.db, message_id)
         if not message:
-            raise NotFoundError(message="Message not found", details={"message_id": str(message_id)})
+            raise NotFoundError(
+                message="Message not found", details={"message_id": str(message_id)}
+            )
         if message.conversation_id != conversation_id:
             raise NotFoundError(
                 message="Message not found in this conversation",
                 details={"message_id": str(message_id), "conversation_id": str(conversation_id)},
             )
 
-    async def _validate_conversation_ownership(
-        self, conversation_id: UUID, user_id: UUID
-    ) -> None:
+    async def _validate_conversation_ownership(self, conversation_id: UUID, user_id: UUID) -> None:
         """Validate that the conversation belongs to the specified user.
 
         Raises:
@@ -112,9 +115,7 @@ class MessageRatingService:
             )
 
         # Check for existing rating
-        existing = await rating_repo.get_rating_by_message_and_user(
-            self.db, message_id, user_id
-        )
+        existing = await rating_repo.get_rating_by_message_and_user(self.db, message_id, user_id)
 
         if existing:
             # Update existing rating
@@ -167,9 +168,7 @@ class MessageRatingService:
         await self._validate_conversation_ownership(conversation_id, user_id)
         await self._validate_message_in_conversation(message_id, conversation_id)
 
-        rating = await rating_repo.get_rating_by_message_and_user(
-            self.db, message_id, user_id
-        )
+        rating = await rating_repo.get_rating_by_message_and_user(self.db, message_id, user_id)
         if not rating:
             raise NotFoundError(
                 message="Rating not found",
@@ -285,9 +284,18 @@ class MessageRatingService:
 
     _CSV_INJECTION_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
     _CSV_HEADER = [
-        "ID", "Message ID", "Conversation ID", "User ID",
-        "Rating", "Comment", "Message Content", "Message Role",
-        "User Email", "User Name", "Created At", "Updated At",
+        "ID",
+        "Message ID",
+        "Conversation ID",
+        "User ID",
+        "Rating",
+        "Comment",
+        "Message Content",
+        "Message Role",
+        "User Email",
+        "User Name",
+        "Created At",
+        "Updated At",
     ]
 
     def _csv_escape(self, value: str) -> str:
@@ -345,6 +353,7 @@ class MessageRatingService:
             async for chunk in chunks:
                 for item in chunk:
                     yield self._serialize_csv_row(self._csv_row_values(item))
+
         return _generate()
 
     async def export_ratings(

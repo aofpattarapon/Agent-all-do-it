@@ -1,4 +1,3 @@
-
 """create knowledge_bases — skipped (enable_teams/enable_rag/use_jwt=false or no SQL DB)
 
 Revision ID: 0007_knowledge_bases

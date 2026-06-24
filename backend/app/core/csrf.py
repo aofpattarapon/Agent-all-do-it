@@ -1,4 +1,3 @@
-
 """CSRF protection middleware for FastAPI.
 
 This module provides CSRF (Cross-Site Request Forgery) protection for

@@ -21,13 +21,14 @@ from app.core.logfire_setup import instrument_app, setup_logfire
 from app.core.logging import setup_logging
 from app.core.middleware import RequestIDMiddleware
 from app.core.project_isolation import ProjectIsolationMiddleware
-from app.services.schedule_runner import schedule_loop
-
 from app.core.rate_limit import limiter
+from app.services.schedule_runner import schedule_loop
+from app.services.trading_mode import sync_db_trading_mode_to_redis
 
 
 class LifespanState(TypedDict, total=False):
     """Lifespan state - resources available via request.state."""
+
     redis: RedisClient
 
 
@@ -42,21 +43,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[LifespanState, None]:
     state: LifespanState = {}
     setup_logfire()
     from app.core.logfire_setup import instrument_asyncpg
+
     instrument_asyncpg()
     redis_client = RedisClient()
     await redis_client.connect()
     state["redis"] = redis_client
+    await sync_db_trading_mode_to_redis()
     _sched_task = asyncio.create_task(schedule_loop())
     yield state
 
     # === Shutdown ===
     _sched_task.cancel()
     import contextlib
+
     with contextlib.suppress(asyncio.CancelledError):
         await _sched_task
     if "redis" in state:
         await state["redis"].close()
     from app.db.session import close_db
+
     await close_db()
 
 
@@ -160,6 +165,7 @@ A FastAPI project
 
     # CORS middleware
     from starlette.middleware.cors import CORSMiddleware
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,

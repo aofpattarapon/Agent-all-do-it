@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { PixelFrame, SectionLabel, PixelButton } from "@/components/pixel-ui";
 import type { Project, RunItem } from "@/components/console/use-console-data";
+import { displayStatusOf, isErrorRun } from "@/lib/run-status";
 import { KanbanColumn } from "./KanbanColumn";
 
 interface EnrichedRun extends RunItem {
@@ -25,13 +26,13 @@ interface ProjectList {
   total: number;
 }
 
-const COLUMNS: { label: string; color: "gray" | "blue" | "yellow" | "red" | "green"; statuses: string[] }[] = [
-  { label: "Queued", color: "gray", statuses: ["queued"] },
-  { label: "Running", color: "blue", statuses: ["running"] },
-  { label: "Waiting", color: "yellow", statuses: ["waiting_approval"] },
-  { label: "Blocked", color: "red", statuses: ["blocked"] },
-  { label: "Failed", color: "red", statuses: ["failed", "cancelled"] },
-  { label: "Done", color: "green", statuses: ["completed"] },
+// Columns are driven by the canonical display_status taxonomy. "Done" is any terminal,
+// non-error outcome (complete-trade / complete-reject / limit); "Error" uses the canonical
+// isErrorRun predicate so handoff failures count as errors while HAWK no-majority does not.
+const COLUMNS: { label: string; color: "gray" | "blue" | "yellow" | "red" | "green"; matcher: (r: EnrichedRun) => boolean }[] = [
+  { label: "Active", color: "blue", matcher: (r) => displayStatusOf(r) === "active" },
+  { label: "Done", color: "green", matcher: (r) => displayStatusOf(r) !== "active" && !isErrorRun(r) },
+  { label: "Error", color: "red", matcher: (r) => isErrorRun(r) },
 ];
 
 interface WorkboardPageProps {
@@ -123,14 +124,14 @@ export function WorkboardPage({ projectId: propProjectId }: WorkboardPageProps) 
   const grouped = useMemo(() => {
     const map: Record<string, EnrichedRun[]> = {};
     COLUMNS.forEach((col) => {
-      map[col.label] = filteredRuns.filter((r) => col.statuses.includes(r.status));
+      map[col.label] = filteredRuns.filter((r) => col.matcher(r));
     });
     return map;
   }, [filteredRuns]);
 
-  // Active runs count (not done)
+  // Active runs count (not done/error)
   const activeCount = useMemo(
-    () => filteredRuns.filter((r) => r.status !== "completed").length,
+    () => filteredRuns.filter((r) => displayStatusOf(r) === "active").length,
     [filteredRuns],
   );
 

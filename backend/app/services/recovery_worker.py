@@ -7,10 +7,10 @@ paused with ``resume_policy='manual_token_fix'`` so a human can intervene.
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.workflow import Run
@@ -22,6 +22,13 @@ logger = logging.getLogger(__name__)
 CASCADE_MODES: dict[int, str | None] = {0: "", 1: "ollama", 2: "anthropic-api", 3: None}
 
 _MAX_CASCADE = max(CASCADE_MODES)
+
+# A run still in a non-terminal active state after this long has no live Celery task
+# behind it — the Celery hard time limit (600s) would have killed any real task well
+# before this. Such runs are orphaned (worker crash/OOM/SIGKILL, or a dispatch that
+# never landed) and must be failed, or the schedule overlap guard blocks that workflow
+# forever. Kept comfortably above 600s + grace.
+_ORPHAN_TIMEOUT_SECS = 900
 
 
 class RecoveryService:
@@ -78,6 +85,48 @@ class RecoveryService:
 
         await self.db.flush()
         return requeued
+
+    async def reap_orphaned_runs(self) -> list[Run]:
+        """Fail runs stuck in an active state with no live task behind them.
+
+        A run left ``running`` or ``queued`` past ``_ORPHAN_TIMEOUT_SECS`` cannot have
+        a live Celery task (the hard task limit is far shorter), so it is orphaned —
+        a worker crash/OOM/SIGKILL, or a dispatch that never landed. Such runs keep the
+        per-workflow overlap guard engaged forever, so we fail them to release it.
+        ``waiting_approval`` is intentionally excluded (it is a legitimate long-lived,
+        human-gated state). ``paused`` runs are handled by the recovery cascade instead.
+
+        Returns the runs that were reaped (status set to failed).
+        """
+        now = datetime.now(UTC)
+        cutoff = now - timedelta(seconds=_ORPHAN_TIMEOUT_SECS)
+        # For "running" use started_at (when execution began); for "queued" the run was
+        # never picked up, so fall back to created_at. updated_at covers either if set.
+        result = await self.db.execute(
+            select(Run).where(
+                Run.status.in_(["running", "queued"]),
+                or_(
+                    Run.started_at.is_not(None) & (Run.started_at <= cutoff),
+                    Run.started_at.is_(None) & (Run.created_at <= cutoff),
+                ),
+            )
+        )
+        orphaned = list(result.scalars().all())
+        for run in orphaned:
+            prior_status = run.status
+            run.status = "failed"
+            run.finished_at = now
+            run.error_text = (
+                f"Reaped as orphaned: stuck in '{prior_status}' with no live task "
+                f"for >{_ORPHAN_TIMEOUT_SECS}s (worker crash or lost dispatch)."
+            )
+            logger.warning(
+                "Reaped orphaned run %s (was active >%ds); released overlap guard",
+                run.id,
+                _ORPHAN_TIMEOUT_SECS,
+            )
+        await self.db.flush()
+        return orphaned
 
     async def get_run(self, run_id: UUID) -> Run | None:
         return await self.db.get(Run, run_id)

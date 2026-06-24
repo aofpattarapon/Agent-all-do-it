@@ -2,12 +2,26 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ScrollText, RefreshCw, ExternalLink, Loader2, Circle } from "lucide-react";
+import { ScrollText, RefreshCw, ExternalLink, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
-import { PixelFrame, SectionLabel } from "@/components/pixel-ui";
+import { PixelFrame } from "@/components/pixel-ui";
+import { StatusBadge } from "@/components/run-status/StatusBadge";
 import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import type { RunDisplayFields, RunStatusInput } from "@/lib/run-status";
+import { displayStatusOf } from "@/lib/run-status";
+
+// System Logs keeps a coarse 3-bucket ops view, but the buckets are derived from the canonical
+// display_status taxonomy (error via the same rule as everywhere else), not the legacy statusGroupOf.
+// complete-trade / complete-reject / limit all fold into "done" here; only true errors are "error".
+type LogBucket = "active" | "done" | "error";
+function logBucketOf(run: RunStatusInput): LogBucket {
+  const ds = displayStatusOf(run);
+  if (ds === "error") return "error";
+  if (ds === "active") return "active";
+  return "done";
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -19,7 +33,7 @@ interface ProjectList {
   items: Project[];
   total: number;
 }
-interface RunItem {
+interface RunItem extends RunDisplayFields {
   id: string;
   project_id: string;
   workflow_id: string | null;
@@ -37,22 +51,7 @@ interface RunList {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const STATUS_COLOR: Record<string, string> = {
-  running:          "#3b82f6",
-  queued:           "#9ca3af",
-  waiting_approval: "#f59e0b",
-  blocked:          "#f97316",
-  completed:        "#22c55e",
-  failed:           "#ef4444",
-  cancelled:        "#6b7280",
-  paused:           "#a855f7",
-};
-
 const ACTIVE_STATUSES = new Set(["running", "queued", "waiting_approval", "blocked", "paused"]);
-
-function statusColor(s: string) {
-  return STATUS_COLOR[s] ?? "#9ca3af";
-}
 
 function formatDuration(startedAt: string | null, finishedAt: string | null): string {
   if (!startedAt) return "—";
@@ -74,14 +73,15 @@ interface FlatRun extends RunItem {
 }
 
 function RunRow({ run, isLive }: { run: FlatRun; isLive: boolean }) {
-  const color = statusColor(run.status);
+  const group = logBucketOf(run);
+  const color = group === "active" ? "#3b82f6" : group === "done" ? "#22c55e" : "#ef4444";
 
   return (
     <div
       className="grid items-center gap-2 border-b px-3 py-2 text-xs transition-colors hover:bg-white/5"
       style={{
         borderColor: "var(--pix-border)",
-        gridTemplateColumns: "10px 120px 1fr 90px 70px 60px 28px",
+        gridTemplateColumns: "10px 120px 1fr 110px 70px 60px 28px",
         fontFamily: '"VT323", monospace',
       }}
     >
@@ -111,12 +111,7 @@ function RunRow({ run, isLive }: { run: FlatRun; isLive: boolean }) {
       </span>
 
       {/* status badge */}
-      <span
-        className="rounded px-1.5 py-0.5 text-center"
-        style={{ background: color + "22", color, fontSize: 11, border: `1px solid ${color}44` }}
-      >
-        {run.status}
-      </span>
+      <StatusBadge run={run} />
 
       {/* started */}
       <span style={{ color: "var(--pix-muted)", fontSize: 11 }}>{relTime(run.started_at)}</span>
@@ -143,7 +138,7 @@ function RunRow({ run, isLive }: { run: FlatRun; isLive: boolean }) {
 
 export default function SystemLogsPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "done">("active");
+  const [filterStatus, setFilterStatus] = useState<LogBucket | "all">("active");
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   // Fetch all projects
@@ -198,12 +193,11 @@ export default function SystemLogsPage() {
 
   // Filter
   const filtered = allRuns.filter((r) => {
-    if (filterStatus === "active") return ACTIVE_STATUSES.has(r.status);
-    if (filterStatus === "done") return !ACTIVE_STATUSES.has(r.status);
-    return true;
+    if (filterStatus === "all") return true;
+    return logBucketOf(r) === filterStatus;
   });
 
-  const activeCount = allRuns.filter((r) => ACTIVE_STATUSES.has(r.status)).length;
+  const activeCount = allRuns.filter((r) => logBucketOf(r) === "active").length;
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4">
@@ -266,16 +260,21 @@ export default function SystemLogsPage() {
 
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-3">
-        {(["running", "waiting_approval", "completed", "failed"] as const).map((s) => {
-          const count = allRuns.filter((r) => r.status === s).length;
+        {([
+          { key: "active", label: "Active", color: "#3b82f6" },
+          { key: "done", label: "Done", color: "#22c55e" },
+          { key: "error", label: "Error", color: "#ef4444" },
+          { key: "all", label: "Total", color: "var(--pix-muted)" },
+        ] as const).map((s) => {
+          const count = allRuns.filter((r) => (s.key === "all" ? true : logBucketOf(r) === s.key)).length;
           return (
-            <PixelFrame tight key={s}>
+            <PixelFrame tight key={s.key}>
               <div className="p-3 text-center">
-                <div style={{ fontFamily: '"VT323", monospace', fontSize: 24, color: statusColor(s) }}>
+                <div style={{ fontFamily: '"VT323", monospace', fontSize: 24, color: s.color }}>
                   {count}
                 </div>
                 <div style={{ fontFamily: '"VT323", monospace', fontSize: 11, color: "var(--pix-muted)" }}>
-                  {s.replace("_", " ")}
+                  {s.label}
                 </div>
               </div>
             </PixelFrame>
@@ -285,7 +284,7 @@ export default function SystemLogsPage() {
 
       {/* Filter tabs */}
       <div className="flex gap-2">
-        {(["active", "all", "done"] as const).map((f) => (
+        {(["active", "all", "done", "error"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilterStatus(f)}

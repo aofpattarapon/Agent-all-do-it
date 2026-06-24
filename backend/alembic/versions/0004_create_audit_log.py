@@ -1,4 +1,3 @@
-
 """create audit log — skipped (enable_teams=false or no SQL DB)
 
 Revision ID: 0004_audit_log

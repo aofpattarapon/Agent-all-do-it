@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
+from app.core.secret_crypto import decrypt_secret, encrypt_secret
 from app.db.models.secret import Secret
 from app.repositories import secret_repo
 from app.schemas.secret import SecretCreate, SecretUpdate
@@ -37,14 +38,15 @@ class SecretService:
             )
         return secret
 
-    async def list(self, project_id: UUID, skip: int = 0, limit: int = 50) -> tuple[list[Secret], int]:
+    async def list(
+        self, project_id: UUID, skip: int = 0, limit: int = 50
+    ) -> tuple[list[Secret], int]:
         return await secret_repo.list_by_project(
             self.db, project_id=project_id, skip=skip, limit=limit
         )
 
     async def create(self, project_id: UUID, user_id: UUID, data: SecretCreate) -> Secret:
-        # NOTE: In production, encrypt value_encrypted with Fernet or KMS.
-        # For MVP, we store plaintext in value_encrypted but never return it.
+        # Stored encrypted at rest (Fernet); the masked form is what we surface in reads.
         masked = _mask_value(data.value)
         return await secret_repo.create(
             self.db,
@@ -53,7 +55,7 @@ class SecretService:
             name=data.name,
             provider=data.provider,
             environment=data.environment,
-            value_encrypted=data.value,
+            value_encrypted=encrypt_secret(data.value),
             value_masked=masked,
         )
 
@@ -61,9 +63,15 @@ class SecretService:
         secret = await self.get(secret_id, project_id)
         update_data = data.model_dump(exclude_unset=True)
         if "value" in update_data:
-            update_data["value_encrypted"] = update_data.pop("value")
-            update_data["value_masked"] = _mask_value(update_data["value_encrypted"])
+            plaintext = update_data.pop("value")
+            update_data["value_encrypted"] = encrypt_secret(plaintext)
+            update_data["value_masked"] = _mask_value(plaintext)
         return await secret_repo.update(self.db, db_secret=secret, update_data=update_data)
+
+    async def get_decrypted_value(self, secret_id: UUID, project_id: UUID) -> str:
+        """Return the decrypted secret value for internal use (never in API responses)."""
+        secret = await self.get(secret_id, project_id)
+        return decrypt_secret(secret.value_encrypted)
 
     async def delete(self, secret_id: UUID, project_id: UUID) -> None:
         secret = await self.get(secret_id, project_id)

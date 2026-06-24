@@ -232,7 +232,7 @@ export function ConsoleShell({
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuthStore();
-  const { projects, team, allRuns, totalProjects, totalAgents, totalRuns, successRate } = useConsoleData();
+  const { projects, team, allRuns, totalProjects, totalAgents, totalRuns, workflowHealth } = useConsoleData();
 
   // Derive the active nav id from pathname when not explicitly provided
   const strippedPath = stripLocale(pathname);
@@ -344,7 +344,7 @@ export function ConsoleShell({
               />
               <PixelNavButton
                 icon={<TrendingUp size={17} />}
-                label="Learning Loop"
+                label="Learning Loop (All)"
                 active={resolvedActive === "learning-loop"}
                 onClick={() => router.push("/learning-loop")}
               />
@@ -362,13 +362,13 @@ export function ConsoleShell({
               />
               <PixelNavButton
                 icon={<CandlestickChart size={17} />}
-                label="Order History"
+                label="Order History (All)"
                 active={resolvedActive === "order-history"}
                 onClick={() => router.push("/order-history")}
               />
               <PixelNavButton
                 icon={<ScrollText size={17} />}
-                label="System Logs"
+                label="System Logs (All)"
                 active={resolvedActive === "system-logs"}
                 onClick={() => router.push("/system-logs")}
               />
@@ -430,9 +430,9 @@ export function ConsoleShell({
                 <span className="pix-v">{totalRuns}</span>
               </div>
               <div className="pix-stat">
-                <span className="pix-k">Success</span>
-                <span className={"pix-v " + (successRate >= 50 ? "pix-up" : "pix-down")}>
-                  {totalRuns === 0 ? "—" : `${successRate}%`}
+                <span className="pix-k">Health</span>
+                <span className={"pix-v " + (workflowHealth >= 50 ? "pix-up" : "pix-down")}>
+                  {totalRuns === 0 ? "—" : `${workflowHealth}%`}
                 </span>
               </div>
             </div>

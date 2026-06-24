@@ -8,9 +8,13 @@ export async function POST(request: NextRequest) {
     if ("error" in adminCheck) return adminCheck.error;
     const { accessToken } = adminCheck;
 
+    let bodyText: string | undefined;
+    try { bodyText = await request.text(); } catch { bodyText = undefined; }
+
     const data = await backendFetch<unknown>("/api/v1/admin/seed/crypto", {
       method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: bodyText || "{}",
     });
     return NextResponse.json(data);
   } catch (error) {

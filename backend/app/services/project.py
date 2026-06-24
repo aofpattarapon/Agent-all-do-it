@@ -19,9 +19,13 @@ class ProjectService:
         self.db = db
 
     async def get(self, project_id: UUID, user_id: UUID) -> Project:
-        project = await project_repo.get_by_user_and_id(self.db, user_id=user_id, project_id=project_id)
+        project = await project_repo.get_by_user_and_id(
+            self.db, user_id=user_id, project_id=project_id
+        )
         if not project:
-            raise NotFoundError(message="Project not found", details={"project_id": str(project_id)})
+            raise NotFoundError(
+                message="Project not found", details={"project_id": str(project_id)}
+            )
         return project
 
     async def resolve_access(
@@ -72,9 +76,7 @@ class ProjectService:
                 project=project,
             )
         else:
-            member = await project_member_repo.get(
-                self.db, project_id=project_id, user_id=user.id
-            )
+            member = await project_member_repo.get(self.db, project_id=project_id, user_id=user.id)
             if member is None:
                 raise NotFoundError(
                     message="Project not found",
@@ -95,7 +97,9 @@ class ProjectService:
             access.require(require)
         return access
 
-    async def list(self, user_id: UUID, skip: int = 0, limit: int = 50) -> tuple[list[Project], int]:
+    async def list(
+        self, user_id: UUID, skip: int = 0, limit: int = 50
+    ) -> tuple[list[Project], int]:
         return await project_repo.list_by_user(self.db, user_id=user_id, skip=skip, limit=limit)
 
     async def create(self, user_id: UUID, data: ProjectCreate) -> Project:
@@ -107,8 +111,9 @@ class ProjectService:
         )
         # Auto-init per-project Obsidian vault and data directories
         try:
-            from app.core.project_paths import project_vault_dir, project_run_artifacts_dir
-            project_vault_dir(project.id)        # creates data/projects/{id}/vault/
+            from app.core.project_paths import project_run_artifacts_dir, project_vault_dir
+
+            project_vault_dir(project.id)  # creates data/projects/{id}/vault/
             project_run_artifacts_dir(project.id)  # creates data/projects/{id}/run_artifacts/
             # Write a README so users know the vault location
             vault = project_vault_dir(project.id)

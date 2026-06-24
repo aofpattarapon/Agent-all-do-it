@@ -142,9 +142,7 @@ async def readiness_probe(
     # Determine overall health — only db + redis are critical for readiness.
     critical = {k: v for k, v in checks.items() if k in ("database", "redis")}
     all_healthy = (
-        all(check.get("status") == "healthy" for check in critical.values())
-        if critical
-        else True
+        all(check.get("status") == "healthy" for check in critical.values()) if critical else True
     )
 
     # The admin /system page reads each service from the top level, so flatten

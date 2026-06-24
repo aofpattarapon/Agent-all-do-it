@@ -5,6 +5,7 @@ Set GROQ_API_KEY in .env or via Admin → Settings to use this adapter.
 """
 
 from app.core.config import settings
+from app.services.runtime._utils import API_CALL_TIMEOUT_SECONDS
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
@@ -29,13 +30,12 @@ async def run_agent(
 
     resolved_key = api_key or getattr(settings, "GROQ_API_KEY", "") or ""
     if not resolved_key:
-        raise RuntimeError(
-            "GROQ_API_KEY missing — set it in Admin → Settings or in .env"
-        )
+        raise RuntimeError("GROQ_API_KEY missing — set it in Admin → Settings or in .env")
 
     client = openai.AsyncOpenAI(
         api_key=resolved_key,
         base_url=GROQ_BASE_URL,
+        max_retries=0,  # run_with_fallback owns retry/backoff — no hidden SDK retries
     )
     resolved_model = model or DEFAULT_MODEL
 
@@ -49,6 +49,7 @@ async def run_agent(
         max_tokens=max_tokens,
         temperature=temperature,
         messages=messages,
+        timeout=API_CALL_TIMEOUT_SECONDS,
     )
     text = response.choices[0].message.content if response.choices else ""
     tokens = None

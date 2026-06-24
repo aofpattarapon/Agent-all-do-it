@@ -1,5 +1,4 @@
 """Project management CLI."""
-# ruff: noqa: E402 - Import at bottom to avoid circular imports
 
 import click
 from tabulate import tabulate
@@ -26,6 +25,7 @@ def server_cli():
 def server_run(host: str, port: int, reload: bool):
     """Run the development server."""
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host=host,
@@ -58,8 +58,9 @@ def db_cli():
 @db_cli.command("init")
 def db_init():
     """Initialize the database (run all migrations)."""
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     click.echo("Initializing database...")
     alembic_cfg = Config("alembic.ini")
@@ -71,8 +72,9 @@ def db_init():
 @click.option("-m", "--message", required=True, help="Migration message")
 def db_migrate(message: str):
     """Create a new migration."""
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     alembic_cfg = Config("alembic.ini")
     command.revision(alembic_cfg, message=message, autogenerate=True)
@@ -83,8 +85,9 @@ def db_migrate(message: str):
 @click.option("--revision", default="head", help="Revision to upgrade to")
 def db_upgrade(revision: str):
     """Run database migrations."""
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     alembic_cfg = Config("alembic.ini")
     command.upgrade(alembic_cfg, revision)
@@ -95,8 +98,9 @@ def db_upgrade(revision: str):
 @click.option("--revision", default="-1", help="Revision to downgrade to")
 def db_downgrade(revision: str):
     """Rollback database migrations."""
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     alembic_cfg = Config("alembic.ini")
     command.downgrade(alembic_cfg, revision)
@@ -106,8 +110,9 @@ def db_downgrade(revision: str):
 @db_cli.command("current")
 def db_current():
     """Show current migration revision."""
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     alembic_cfg = Config("alembic.ini")
     command.current(alembic_cfg)
@@ -116,8 +121,9 @@ def db_current():
 @db_cli.command("history")
 def db_history():
     """Show migration history."""
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     alembic_cfg = Config("alembic.ini")
     command.history(alembic_cfg)
@@ -136,11 +142,17 @@ def celery_cli():
 def celery_worker(loglevel: str, concurrency: int):
     """Start Celery worker."""
     import subprocess
-    subprocess.run([
-        "celery", "-A", "app.worker.celery_app", "worker",
-        f"--loglevel={loglevel}",
-        f"--concurrency={concurrency}",
-    ])
+
+    subprocess.run(
+        [
+            "celery",
+            "-A",
+            "app.worker.celery_app",
+            "worker",
+            f"--loglevel={loglevel}",
+            f"--concurrency={concurrency}",
+        ]
+    )
 
 
 @celery_cli.command("beat")
@@ -148,10 +160,16 @@ def celery_worker(loglevel: str, concurrency: int):
 def celery_beat(loglevel: str):
     """Start Celery beat scheduler."""
     import subprocess
-    subprocess.run([
-        "celery", "-A", "app.worker.celery_app", "beat",
-        f"--loglevel={loglevel}",
-    ])
+
+    subprocess.run(
+        [
+            "celery",
+            "-A",
+            "app.worker.celery_app",
+            "beat",
+            f"--loglevel={loglevel}",
+        ]
+    )
 
 
 @celery_cli.command("flower")
@@ -159,10 +177,16 @@ def celery_beat(loglevel: str):
 def celery_flower(port: int):
     """Start Flower monitoring UI."""
     import subprocess
-    subprocess.run([
-        "celery", "-A", "app.worker.celery_app", "flower",
-        f"--port={port}",
-    ])
+
+    subprocess.run(
+        [
+            "celery",
+            "-A",
+            "app.worker.celery_app",
+            "flower",
+            f"--port={port}",
+        ]
+    )
 
 
 # === User Commands ===
@@ -174,17 +198,20 @@ def user_cli():
 
 @user_cli.command("create")
 @click.option("--email", prompt=True, help="User email")
-@click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="User password")
+@click.option(
+    "--password", prompt=True, hide_input=True, confirmation_prompt=True, help="User password"
+)
 @click.option("--role", type=click.Choice(["user", "admin"]), default="user", help="User role")
 @click.option("--superuser", is_flag=True, default=False, help="Create as superuser")
 def user_create(email: str, password: str, role: str, superuser: bool):
     """Create a new user."""
     import asyncio
+
     from app.core.exceptions import AlreadyExistsError
     from app.db.models.user import UserRole
+    from app.db.session import async_session_maker
     from app.schemas.user import UserCreate
     from app.services.user import UserService
-    from app.db.session import async_session_maker
 
     async def _create():
         async with async_session_maker() as session:
@@ -202,6 +229,7 @@ def user_create(email: str, password: str, role: str, superuser: bool):
             except AlreadyExistsError:
                 click.secho(f"User already exists: {email}", fg="red")
                 return None
+
     user = asyncio.run(_create())
     if user:
         click.secho(f"User created: {user.email} (role: {user.role})", fg="green")
@@ -209,7 +237,9 @@ def user_create(email: str, password: str, role: str, superuser: bool):
 
 @user_cli.command("create-admin")
 @click.option("--email", prompt=True, help="Admin email")
-@click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Admin password")
+@click.option(
+    "--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Admin password"
+)
 def user_create_admin(email: str, password: str):
     """Create an admin user.
 
@@ -217,11 +247,12 @@ def user_create_admin(email: str, password: str):
     Use this to create the initial admin account after setting up the database.
     """
     import asyncio
+
     from app.core.exceptions import AlreadyExistsError
     from app.db.models.user import UserRole
+    from app.db.session import async_session_maker
     from app.schemas.user import UserCreate
     from app.services.user import UserService
-    from app.db.session import async_session_maker
 
     async def _create():
         async with async_session_maker() as session:
@@ -237,6 +268,7 @@ def user_create_admin(email: str, password: str):
             except AlreadyExistsError:
                 click.secho(f"User already exists: {email}", fg="red")
                 return None
+
     user = asyncio.run(_create())
     if user:
         click.secho(f"Admin user created: {user.email}", fg="green")
@@ -249,10 +281,11 @@ def user_create_admin(email: str, password: str):
 def user_set_role(email: str, role: str):
     """Change a user's role."""
     import asyncio
+
     from app.core.exceptions import NotFoundError
     from app.db.models.user import UserRole
-    from app.services.user import UserService
     from app.db.session import async_session_maker
+    from app.services.user import UserService
 
     async def _update():
         async with async_session_maker() as session:
@@ -276,8 +309,9 @@ def user_set_role(email: str, role: str):
 def user_list():
     """List all users."""
     import asyncio
-    from app.services.user import UserService
+
     from app.db.session import async_session_maker
+    from app.services.user import UserService
 
     async def _list():
         async with async_session_maker() as session:

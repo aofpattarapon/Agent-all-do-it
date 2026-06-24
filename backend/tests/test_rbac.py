@@ -92,9 +92,7 @@ def test_unknown_role_grants_nothing():
 
 
 def test_project_access_require_raises_when_missing():
-    access = ProjectAccess(
-        project_id=uuid4(), user_id=uuid4(), role=ProjectRole.VIEWER
-    )
+    access = ProjectAccess(project_id=uuid4(), user_id=uuid4(), role=ProjectRole.VIEWER)
     assert access.has(Permission.PROJECT_VIEW) is True
     with pytest.raises(AuthorizationError):
         access.require(Permission.TRADE_APPROVE)

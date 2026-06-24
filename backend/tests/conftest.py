@@ -81,6 +81,8 @@ async def client(
 def api_key_headers() -> dict[str, str]:
     """Headers with valid API key."""
     return {settings.API_KEY_HEADER: settings.API_KEY}
+
+
 # Note: For integration tests requiring authenticated users,
 # use dependency overrides with mock users instead of test_user fixture.
 # See tests/api/test_auth.py and tests/api/test_users.py for examples.

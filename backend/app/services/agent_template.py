@@ -24,9 +24,7 @@ class AgentTemplateService:
             )
         return template
 
-    async def list(
-        self, filters: AgentTemplateFilter
-    ) -> tuple[list[AgentTemplate], int]:
+    async def list(self, filters: AgentTemplateFilter) -> tuple[list[AgentTemplate], int]:
         return await repo.list_templates(
             self.db,
             source=filters.source,

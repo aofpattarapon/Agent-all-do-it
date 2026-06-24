@@ -64,4 +64,6 @@ class RoomMessage(Base):
     room: Mapped["Room"] = relationship("Room", back_populates="messages")
 
     def __repr__(self) -> str:
-        return f"<RoomMessage(id={self.id}, sender_type={self.sender_type}, room_id={self.room_id})>"
+        return (
+            f"<RoomMessage(id={self.id}, sender_type={self.sender_type}, room_id={self.room_id})>"
+        )

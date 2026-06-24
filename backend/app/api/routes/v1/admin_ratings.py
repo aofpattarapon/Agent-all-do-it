@@ -8,6 +8,7 @@ The endpoints are:
 - GET /admin/ratings/summary - Get aggregated rating statistics
 - GET /admin/ratings/export - Export ratings as JSON or CSV
 """
+
 from typing import Any
 
 from fastapi import APIRouter, Query

@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.room import Room, RoomMessage
 
-
 # ── Room ──────────────────────────────────────────────────────────────────────
 
 
@@ -19,11 +18,7 @@ async def get_room_by_id(db: AsyncSession, room_id: UUID) -> Room | None:
 async def list_rooms_by_project(
     db: AsyncSession, *, project_id: UUID, skip: int = 0, limit: int = 100
 ) -> tuple[list[Room], int]:
-    query = (
-        select(Room)
-        .where(Room.project_id == project_id)
-        .order_by(Room.created_at.asc())
-    )
+    query = select(Room).where(Room.project_id == project_id).order_by(Room.created_at.asc())
     count_query = select(func.count()).select_from(Room).where(Room.project_id == project_id)
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset(skip).limit(limit))
@@ -76,7 +71,9 @@ async def list_messages_by_room(
         .where(RoomMessage.room_id == room_id)
         .order_by(RoomMessage.created_at.asc())
     )
-    count_query = select(func.count()).select_from(RoomMessage).where(RoomMessage.room_id == room_id)
+    count_query = (
+        select(func.count()).select_from(RoomMessage).where(RoomMessage.room_id == room_id)
+    )
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset(skip).limit(limit))
     return list(result.scalars().all()), total

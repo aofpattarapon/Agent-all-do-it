@@ -1,4 +1,3 @@
-
 """Token schemas."""
 
 from typing import Literal

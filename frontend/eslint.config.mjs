@@ -10,7 +10,13 @@ const compat = new FlatCompat({ baseDirectory: __dirname });
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    ignores: [".next/", "node_modules/", "out/"],
+    ignores: [".next/", "node_modules/", "out/", "next-env.d.ts"],
+  },
+  {
+    files: ["src/components/game/**/*.ts", "src/components/game/**/*.tsx"],
+    rules: {
+      "@typescript-eslint/ban-ts-comment": "off",
+    },
   },
   {
     rules: {

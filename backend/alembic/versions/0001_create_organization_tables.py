@@ -1,4 +1,3 @@
-
 """create organization tables — skipped (enable_teams=false or no SQL DB)
 
 Revision ID: 0001_org

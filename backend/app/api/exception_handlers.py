@@ -34,9 +34,7 @@ def _is_websocket(conn: HTTPConnection) -> bool:
     return conn.scope.get("type") == "websocket"
 
 
-async def app_exception_handler(
-    request: HTTPConnection, exc: AppException
-) -> JSONResponse | None:
+async def app_exception_handler(request: HTTPConnection, exc: AppException) -> JSONResponse | None:
     """Handle application exceptions for both HTTP and WebSocket scopes.
 
     Logs 5xx errors as errors and 4xx as warnings. Returns a JSON response

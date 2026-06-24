@@ -1,6 +1,7 @@
 """Schemas for user-scoped slash command settings."""
 
 from __future__ import annotations
+
 from uuid import UUID
 
 from pydantic import Field, field_validator

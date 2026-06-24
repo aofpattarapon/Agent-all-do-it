@@ -24,18 +24,38 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Roles whose prompts explicitly request JSON output.  When the primary/fallback
+# adapter is Ollama, request structured JSON mode so local models are less likely
+# to emit prose or markdown-wrapped payloads.
+_JSON_EMITTING_ROLES: frozenset[str] = frozenset({
+    "hawk_trend",
+    "hawk_structure",
+    "hawk_counter",
+    "sage",
+    "trade_proposal",
+    "execution",
+    "market_regime",
+    "source_reliability",
+    "news_monitor",
+    "position_monitor",
+    "trade_journal",
+    "post_trade_review",
+})
+
 # Ordered fallback chains: primary → fallback1 → fallback2
 # CLI adapters fall back to their API equivalent, then to a cheap API model.
 FALLBACK_CHAIN: dict[str, list[str]] = {
-    "claude-cli":    ["claude-cli-work", "anthropic-api", "groq-api", "openai-api"],
-    "codex-cli":     ["openai-api", "groq-api", "anthropic-api"],
-    "kimi-cli":      ["openrouter-api", "groq-api", "anthropic-api"],
-    "kimi-api":      ["openrouter-api", "openrouter-api", "groq-api", "openai-api", "anthropic-api"],
-    "groq-api":      ["openrouter-api", "anthropic-api", "openai-api"],
+    "claude-cli": ["claude-cli-work", "anthropic-api", "groq-api", "openai-api"],
+    "codex-cli": ["openai-api", "groq-api", "anthropic-api"],
+    "kimi-cli": ["openrouter-api", "groq-api", "anthropic-api"],
+    "kimi-api": ["openrouter-api", "openrouter-api", "groq-api", "openai-api", "anthropic-api"],
+    "groq-api": ["cerebras-api", "openrouter-api", "anthropic-api", "openai-api"],
+    "cerebras-api": ["groq-api", "openrouter-api", "anthropic-api", "openai-api"],
+    "google-ai-studio": ["groq-api", "cerebras-api", "openrouter-api", "anthropic-api"],
     "anthropic-api": ["groq-api", "openai-api"],
-    "openai-api":    ["groq-api", "anthropic-api"],
-    "ollama":        ["groq-api", "anthropic-api", "openai-api"],
-    "openrouter-api":["kimi-api", "groq-api", "anthropic-api", "openai-api"],
+    "openai-api": ["groq-api", "anthropic-api"],
+    "ollama": ["groq-api", "anthropic-api", "openai-api"],
+    "openrouter-api": ["kimi-api", "groq-api", "anthropic-api", "openai-api"],
 }
 
 _UNRECOVERABLE = {"context_limit_exceeded"}
@@ -48,16 +68,18 @@ _SKIP_ADAPTER = {"auth_error"}  # bad key on this adapter — skip it, still try
 #   str                      — single model for all attempts
 #   dict[str, str|list[str]] — per-primary override; list = cycle through on repeated attempts
 _DEFAULT_MODELS: dict[str, str | dict[str, str | list[str]]] = {
-    "groq-api":      "llama-3.3-70b-versatile",
+    "groq-api": "llama-3.3-70b-versatile",
+    "cerebras-api": "llama-3.3-70b",
+    "google-ai-studio": "gemini-2.0-flash",
     "anthropic-api": "claude-haiku-4-5-20251001",
-    "openai-api":    "gpt-4o-mini",
+    "openai-api": "gpt-4o-mini",
     "openrouter-api": {
-        "kimi-api":  ["moonshotai/kimi-k2", "openai/gpt-oss-120b:free"],
-        "kimi-cli":  ["moonshotai/kimi-k2", "openai/gpt-oss-120b:free"],
-        "default":   "openai/gpt-oss-120b:free",
+        "kimi-api": ["moonshotai/kimi-k2", "openai/gpt-oss-120b:free"],
+        "kimi-cli": ["moonshotai/kimi-k2", "openai/gpt-oss-120b:free"],
+        "default": "openai/gpt-oss-120b:free",
     },
-    "kimi-api":      "moonshot-v1-8k",
-    "ollama":        "llama3",
+    "kimi-api": "moonshot-v1-8k",
+    "ollama": "llama3",
 }
 
 # RPM-spike protection: if Retry-After ≤ this, wait and retry the SAME adapter.
@@ -66,6 +88,10 @@ _MAX_INLINE_WAIT_SECS = 35
 _MAX_SAME_ADAPTER_RETRIES = 2
 # Random jitter added before each cross-adapter fallback to spread concurrent calls.
 _JITTER_SECS = (0.5, 2.5)
+# Upper bound for the exponential backoff applied to a 429 that carries no usable
+# Retry-After header (Groq/Cerebras/Gemini commonly omit it). Keeps a free-tier RPM
+# burst queued on the same adapter instead of cascading every agent onto OpenRouter.
+_MAX_BACKOFF_SECS = 8
 
 
 def _extract_retry_after(exc: Exception) -> int | None:
@@ -104,9 +130,18 @@ async def run_with_fallback(
 
     # Prefer per-agent stored fallback chain (set by apply-runtime-profile command).
     # Each entry is {"runtime_kind": "...", "model": "..."} — we extract kinds for the chain.
-    _stored_chain: list[dict] = (getattr(agent, "tools_config", None) or {}).get("fallback_chain") or []
+    _stored_chain: list[dict] = (getattr(agent, "tools_config", None) or {}).get(
+        "fallback_chain"
+    ) or []
     if _stored_chain:
-        chain = [primary, *[e["runtime_kind"] for e in _stored_chain if isinstance(e, dict) and e.get("runtime_kind")]]
+        chain = [
+            primary,
+            *[
+                e["runtime_kind"]
+                for e in _stored_chain
+                if isinstance(e, dict) and e.get("runtime_kind")
+            ],
+        ]
     else:
         chain = [primary, *FALLBACK_CHAIN.get(primary, [])]
 
@@ -115,6 +150,7 @@ async def run_with_fallback(
     if db is not None:
         try:
             from app.services.app_setting import AppSettingService
+
             ai_config = await AppSettingService(db).get_ai_config()
         except Exception as exc:
             logger.warning("Could not load AI config from DB, falling back to env vars: %s", exc)
@@ -126,7 +162,11 @@ async def run_with_fallback(
     for attempt, kind in enumerate(chain):
         adapter = runtime_mod._ADAPTERS.get(kind)
         if adapter is None:
-            logger.debug("Fallback: unknown adapter '%s', skipping", kind)
+            logger.warning(
+                "Fallback: unknown/unregistered adapter '%s' in chain — skipping "
+                "(this silently shortens the fallback chain; check the stored runtime_kind)",
+                kind,
+            )
             continue
 
         agent_model = getattr(agent, "model", "") or ""
@@ -158,7 +198,13 @@ async def run_with_fallback(
                     model = default or agent_model
         max_tokens = getattr(agent, "max_tokens", None) or 2048
         raw_temp = getattr(agent, "temperature", None)
-        temperature = (raw_temp / 100.0) if isinstance(raw_temp, int) and not isinstance(raw_temp, bool) else (raw_temp if isinstance(raw_temp, float) else 0.7)
+        temperature = (
+            (raw_temp / 100.0)
+            if isinstance(raw_temp, int) and not isinstance(raw_temp, bool)
+            else (raw_temp if isinstance(raw_temp, float) else 0.7)
+        )
+
+        agent_role = (getattr(agent, "role", "") or "").strip()
 
         # Inject DB-stored credentials/URLs for adapters that need them.
         extra: dict = {}
@@ -167,10 +213,16 @@ async def run_with_fallback(
                 extra["api_key"] = ai_config.get("moonshot_api_key") or None
             elif kind == "groq-api":
                 extra["api_key"] = ai_config.get("groq_api_key") or None
+            elif kind == "cerebras-api":
+                extra["api_key"] = ai_config.get("cerebras_api_key") or None
+            elif kind == "google-ai-studio":
+                extra["api_key"] = ai_config.get("google_api_key") or None
             elif kind == "openrouter-api":
                 extra["api_key"] = ai_config.get("openrouter_api_key") or None
             elif kind == "ollama":
                 extra["base_url"] = ai_config.get("ollama_url") or None
+                if agent_role in _JSON_EMITTING_ROLES:
+                    extra["format"] = "json"
 
         # ── Inner retry loop: retry the same adapter on short 429s ──────────
         same_adapter_retries = 0
@@ -187,7 +239,9 @@ async def run_with_fallback(
                 if attempt > 0 or same_adapter_retries > 0:
                     logger.info(
                         "Fallback succeeded on adapter '%s' (primary was '%s', same-adapter retries: %d)",
-                        kind, primary, same_adapter_retries,
+                        kind,
+                        primary,
+                        same_adapter_retries,
                     )
                     meta["fallback_used"] = True
                     meta["fallback_from"] = primary
@@ -201,26 +255,54 @@ async def run_with_fallback(
                 logger.warning("Adapter '%s' failed (%s): %s", kind, info.error_type, exc)
 
                 if info.error_type in _UNRECOVERABLE:
-                    logger.warning("Unrecoverable error type '%s' — aborting fallback chain", info.error_type)
-                    primary_msg = f" ({primary_exc})" if primary_exc and primary_exc is not last_exc else ""
+                    logger.warning(
+                        "Unrecoverable error type '%s' — aborting fallback chain", info.error_type
+                    )
+                    primary_msg = (
+                        f" ({primary_exc})" if primary_exc and primary_exc is not last_exc else ""
+                    )
                     raise RuntimeError(
                         f"Agent runtime '{primary}' failed{primary_msg}. "
                         f"Unrecoverable error: {last_exc}"
                     ) from last_exc
 
                 if info.error_type in _SKIP_ADAPTER:
-                    logger.warning("Auth error on '%s' — skipping this adapter, trying next in chain", kind)
+                    logger.warning(
+                        "Auth error on '%s' — skipping this adapter, trying next in chain", kind
+                    )
                     break  # exit inner loop → next adapter
 
-                # Short 429: wait and retry the same adapter before giving up on it.
-                if info.error_type == "rate_limited" and same_adapter_retries < _MAX_SAME_ADAPTER_RETRIES:
+                # 429: wait and retry the same adapter before giving up on it.
+                # Honour a short Retry-After header when present; otherwise back off
+                # exponentially so a header-less RPM burst queues instead of cascading.
+                if (
+                    info.error_type == "rate_limited"
+                    and same_adapter_retries < _MAX_SAME_ADAPTER_RETRIES
+                ):
                     retry_after = _extract_retry_after(exc)
+                    jitter = random.uniform(*_JITTER_SECS)
                     if retry_after is not None and 0 < retry_after <= _MAX_INLINE_WAIT_SECS:
-                        jitter = random.uniform(*_JITTER_SECS)
                         wait = retry_after + jitter
                         logger.info(
                             "Adapter '%s' rate-limited (Retry-After: %ds) — waiting %.1fs then retrying same adapter (attempt %d/%d)",
-                            kind, retry_after, wait, same_adapter_retries + 1, _MAX_SAME_ADAPTER_RETRIES,
+                            kind,
+                            retry_after,
+                            wait,
+                            same_adapter_retries + 1,
+                            _MAX_SAME_ADAPTER_RETRIES,
+                        )
+                        await asyncio.sleep(wait)
+                        same_adapter_retries += 1
+                        continue  # retry same adapter
+                    if retry_after is None or retry_after > _MAX_INLINE_WAIT_SECS:
+                        backoff = min(2**same_adapter_retries, _MAX_BACKOFF_SECS)
+                        wait = backoff + jitter
+                        logger.info(
+                            "Adapter '%s' rate-limited (no usable Retry-After) — backing off %.1fs then retrying same adapter (attempt %d/%d)",
+                            kind,
+                            wait,
+                            same_adapter_retries + 1,
+                            _MAX_SAME_ADAPTER_RETRIES,
                         )
                         await asyncio.sleep(wait)
                         same_adapter_retries += 1
@@ -229,7 +311,9 @@ async def run_with_fallback(
                 # Moving to next adapter — add jitter to spread concurrent agent calls.
                 if attempt < len(chain) - 1:
                     jitter = random.uniform(*_JITTER_SECS)
-                    logger.debug("Jitter %.1fs before falling back from '%s' to next adapter", jitter, kind)
+                    logger.debug(
+                        "Jitter %.1fs before falling back from '%s' to next adapter", jitter, kind
+                    )
                     await asyncio.sleep(jitter)
                 break  # exit inner loop → next adapter
 

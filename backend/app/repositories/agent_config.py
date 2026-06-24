@@ -21,7 +21,9 @@ async def list_by_project(
         .where(AgentConfig.project_id == project_id)
         .order_by(AgentConfig.order_index.asc())
     )
-    count_query = select(func.count()).select_from(AgentConfig).where(AgentConfig.project_id == project_id)
+    count_query = (
+        select(func.count()).select_from(AgentConfig).where(AgentConfig.project_id == project_id)
+    )
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset(skip).limit(limit))
     return list(result.scalars().all()), total
@@ -53,7 +55,9 @@ async def create(
     return agent
 
 
-async def update(db: AsyncSession, *, db_agent: AgentConfig, update_data: dict[str, Any]) -> AgentConfig:
+async def update(
+    db: AsyncSession, *, db_agent: AgentConfig, update_data: dict[str, Any]
+) -> AgentConfig:
     for field, value in update_data.items():
         setattr(db_agent, field, value)
     db.add(db_agent)

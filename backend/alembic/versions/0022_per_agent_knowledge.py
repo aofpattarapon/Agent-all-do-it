@@ -45,7 +45,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint("fk_knowledge_documents_agent_config_id", "knowledge_documents", type_="foreignkey")
+    op.drop_constraint(
+        "fk_knowledge_documents_agent_config_id", "knowledge_documents", type_="foreignkey"
+    )
     op.drop_index("ix_knowledge_documents_agent_config_id", table_name="knowledge_documents")
     op.drop_column("knowledge_documents", "source_type")
     op.drop_column("knowledge_documents", "agent_config_id")

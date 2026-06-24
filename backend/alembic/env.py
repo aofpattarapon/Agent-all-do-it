@@ -1,9 +1,8 @@
-
 """Alembic migration environment."""
 # ruff: noqa: I001 - Imports structured for Jinja2 template conditionals
 
+import os
 from logging.config import fileConfig
-from pathlib import Path
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -12,7 +11,7 @@ from app.core.config import settings
 from app.db.base import Base
 
 # Import all models here to ensure they are registered with metadata
-from app.db.models import *  # noqa: F401, F403
+from app.db.models import *  # noqa: F403
 
 config = context.config
 
@@ -25,8 +24,13 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    """Get database URL from settings."""
-    return settings.DATABASE_URL_SYNC
+    """Get database URL.
+
+    Honors MIGRATION_TEST_DATABASE_URL when set so migration tests can point Alembic at an
+    isolated throwaway database instead of the developer/production DB. Unset in normal runs,
+    so app and operator migrations always use settings.DATABASE_URL_SYNC.
+    """
+    return os.getenv("MIGRATION_TEST_DATABASE_URL") or settings.DATABASE_URL_SYNC
 
 
 def run_migrations_offline() -> None:

@@ -1,4 +1,3 @@
-
 """Tests for security module."""
 
 from datetime import timedelta

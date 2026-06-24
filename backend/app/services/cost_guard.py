@@ -88,13 +88,18 @@ class CostGuard:
         if pct >= budget.hard_stop_at_pct:
             logger.warning(
                 "Project %s HARD STOP: daily budget $%.4f exceeded (spent $%.4f)",
-                project_id, budget.daily_budget_usd, daily_spent,
+                project_id,
+                budget.daily_budget_usd,
+                daily_spent,
             )
             return "hard_stop"
         if pct >= budget.alert_at_pct:
             logger.warning(
                 "Project %s budget alert: %.1f%% used ($%.4f / $%.2f)",
-                project_id, pct, daily_spent, budget.daily_budget_usd,
+                project_id,
+                pct,
+                daily_spent,
+                budget.daily_budget_usd,
             )
             return "alert"
         return "ok"

@@ -1,4 +1,3 @@
-
 """Logfire observability configuration."""
 
 from typing import Any

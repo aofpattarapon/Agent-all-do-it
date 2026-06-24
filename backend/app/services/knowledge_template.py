@@ -25,6 +25,7 @@ class KnowledgeTemplateService:
 
     async def list_categories(self) -> list[str]:
         from sqlalchemy import distinct, select
+
         from app.db.models.knowledge_template import KnowledgeTemplate
 
         result = await self.db.execute(
@@ -36,6 +37,7 @@ class KnowledgeTemplateService:
 
     async def list_subcategories(self, category: str | None = None) -> list[str]:
         from sqlalchemy import distinct, select
+
         from app.db.models.knowledge_template import KnowledgeTemplate
 
         query = select(distinct(KnowledgeTemplate.subcategory)).where(

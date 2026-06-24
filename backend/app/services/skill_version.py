@@ -14,7 +14,7 @@ from app.repositories import skill_version as skill_version_repo
 
 logger = logging.getLogger(__name__)
 
-_CANARY_PROMOTE_THRESHOLD = 0.05   # +5% winrate improvement triggers human review flag
+_CANARY_PROMOTE_THRESHOLD = 0.05  # +5% winrate improvement triggers human review flag
 _CANARY_MIN_SAMPLES = 50
 
 
@@ -29,7 +29,11 @@ class SkillVersionService:
         Falls back to the active version, then to the original fragment.
         """
         canary = await skill_version_repo.get_canary(self.db, skill_id)
-        if canary and canary.canary_percentage > 0 and random.random() < canary.canary_percentage / 100:
+        if (
+            canary
+            and canary.canary_percentage > 0
+            and random.random() < canary.canary_percentage / 100
+        ):
             return canary.prompt_fragment
 
         active = await skill_version_repo.get_active(self.db, skill_id)
@@ -70,7 +74,9 @@ class SkillVersionService:
         """
         version = await skill_version_repo.get_by_id(self.db, version_id)
         if version is None:
-            raise NotFoundError(message="Skill version not found", details={"version_id": str(version_id)})
+            raise NotFoundError(
+                message="Skill version not found", details={"version_id": str(version_id)}
+            )
         if version.status != "canary":
             raise BadRequestError(
                 message=f"Only canary versions can be approved (current status: {version.status})",
@@ -83,8 +89,12 @@ class SkillVersionService:
             # Archive older rollback_ready first to keep only one
             old_rollback = await skill_version_repo.get_rollback_ready(self.db, version.skill_id)
             if old_rollback:
-                await skill_version_repo.update(self.db, db_version=old_rollback, update_data={"status": "archived"})
-            await skill_version_repo.update(self.db, db_version=current_active, update_data={"status": "rollback_ready"})
+                await skill_version_repo.update(
+                    self.db, db_version=old_rollback, update_data={"status": "archived"}
+                )
+            await skill_version_repo.update(
+                self.db, db_version=current_active, update_data={"status": "rollback_ready"}
+            )
 
         # Promote canary → active
         return await skill_version_repo.update(
@@ -146,7 +156,9 @@ class SkillVersionService:
                 logger.info(
                     "SkillVersion: canary v%d for skill %s ready for promotion "
                     "(winrate +%.1f%% vs active) — AWAITING HUMAN APPROVAL",
-                    canary.version_number, skill_id, delta * 100,
+                    canary.version_number,
+                    skill_id,
+                    delta * 100,
                 )
             else:
                 # Not improving — auto-archive
@@ -154,7 +166,9 @@ class SkillVersionService:
                 logger.info(
                     "SkillVersion: auto-archiving canary v%d for skill %s "
                     "(delta %.1f%% < threshold)",
-                    canary.version_number, skill_id, delta * 100,
+                    canary.version_number,
+                    skill_id,
+                    delta * 100,
                 )
 
         await skill_version_repo.update(self.db, db_version=canary, update_data=update)

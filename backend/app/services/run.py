@@ -22,9 +22,7 @@ class RunService:
             raise NotFoundError(message="Run not found", details={"run_id": str(run_id)})
         return run
 
-    async def list(
-        self, project_id: UUID, skip: int = 0, limit: int = 50
-    ) -> tuple[list[Run], int]:
+    async def list(self, project_id: UUID, skip: int = 0, limit: int = 50) -> tuple[list[Run], int]:
         return await run_repo.list_runs_by_project(
             self.db, project_id=project_id, skip=skip, limit=limit
         )

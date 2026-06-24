@@ -1,4 +1,3 @@
-
 """ConversationShareService — sharing conversations between users (PostgreSQL async)."""
 
 import logging
@@ -61,7 +60,9 @@ class ConversationShareService:
         """
         conv = await conversation_repo.get_conversation_by_id(self.db, conversation_id)
         if not conv:
-            raise NotFoundError(message="Conversation not found", details={"conversation_id": str(conversation_id)})
+            raise NotFoundError(
+                message="Conversation not found", details={"conversation_id": str(conversation_id)}
+            )
         if conv.user_id != shared_by:
             raise AuthorizationError(message="Only the conversation owner can share it")
 

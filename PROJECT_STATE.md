@@ -25,6 +25,7 @@
 - [x] **Knowledge Base Catalog** — 12 curated templates, backend API, frontend import UI in Knowledge tab
 - [x] **Settings Sub-Menus** — expandable Settings sidebar with Profile, Account, Appearance, Console
 - [x] **Tutorial/Onboarding Page** — `/tutorial` with quick-start guide and pro tips
+- [x] **Trading Mode Config Menu** — project settings + `/admin/trading-mode` to sync `TRADING_MODE`/`EXCHANGE_MODE`, resolve `PAPER/demo` conflict, and propagate changes to all workers via Redis
 
 ## Active Tasks
 - None — all 5 requested features completed
@@ -63,6 +64,7 @@ docker compose exec app python cli/commands.py cmd seed-knowledge-templates --cl
 - `backend/app/commands/seed_knowledge_templates.py`
 - `backend/app/services/runtime/kimi_cli.py`
 - `backend/app/services/runtime/openai_api.py`
+- `backend/tests/api/test_trading_mode_settings.py`
 
 ## New Frontend Files
 - `frontend/src/hooks/use-knowledge-templates.ts`
@@ -70,6 +72,8 @@ docker compose exec app python cli/commands.py cmd seed-knowledge-templates --cl
 - `frontend/src/app/api/knowledge-templates/categories/route.ts`
 - `frontend/src/app/api/knowledge-templates/[[...id]]/route.ts`
 - `frontend/src/app/[locale]/(dashboard)/tutorial/page.tsx`
+- `frontend/src/app/[locale]/(dashboard)/admin/trading-mode/page.tsx`
+- `frontend/src/app/api/admin/settings/trading/route.ts`
 
 ## Modified Key Files
 - `frontend/src/app/[locale]/(dashboard)/projects/page.tsx` — layout width
@@ -78,6 +82,13 @@ docker compose exec app python cli/commands.py cmd seed-knowledge-templates --cl
 - `backend/app/services/runtime/__init__.py` — registered new adapters
 - `backend/alembic/env.py` — model imports
 - `docker-compose.yml` — added alembic volume mount
+- `backend/app/services/trading_mode.py` — Redis runtime overrides + source tracking
+- `backend/app/services/app_setting.py` — `trading_mode_config` helpers
+- `backend/app/repositories/app_setting.py` — optional description on upsert
+- `backend/app/api/routes/v1/app_settings.py` — `GET/PATCH /admin/settings/trading`
+- `backend/app/main.py` — sync DB trading mode to Redis on startup
+- `frontend/src/components/admin/admin-nav.tsx` — added Trading Mode nav item
+- `frontend/src/components/projects/settings-view.tsx` — integrated interactive Trading Mode selector into project settings (admin-only)
 
 ## Blockers
 - None

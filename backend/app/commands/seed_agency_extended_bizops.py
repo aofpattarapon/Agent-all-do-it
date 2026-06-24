@@ -58,7 +58,14 @@ MARKETING_TEMPLATES: list[dict] = [
             "## Success Metrics\n"
             "Brand citation rate across target AI queries. Share-of-voice vs competitors in AI responses."
         ),
-        "skills": ["aeo", "geo", "ai-seo", "content-strategy", "schema-markup", "entity-optimization"],
+        "skills": [
+            "aeo",
+            "geo",
+            "ai-seo",
+            "content-strategy",
+            "schema-markup",
+            "entity-optimization",
+        ],
         "tags": ["marketing", "ai", "citations", "seo", "brand-visibility"],
         "popularity": 78,
     },
@@ -86,7 +93,14 @@ MARKETING_TEMPLATES: list[dict] = [
             "## Success Metrics\n"
             "25% average engagement rate. 40% organic traffic growth. 5:1 content ROI."
         ),
-        "skills": ["copywriting", "seo", "content-strategy", "social-media", "email-marketing", "editorial"],
+        "skills": [
+            "copywriting",
+            "seo",
+            "content-strategy",
+            "social-media",
+            "email-marketing",
+            "editorial",
+        ],
         "tags": ["content", "marketing", "copywriting", "brand", "social"],
         "popularity": 79,
     },
@@ -116,7 +130,14 @@ MARKETING_TEMPLATES: list[dict] = [
             "4. Mobile-first design — 60%+ of email is opened on mobile.\n"
             "5. Plain text alternative for every HTML email."
         ),
-        "skills": ["email-marketing", "lifecycle-automation", "segmentation", "crm", "klaviyo", "hubspot"],
+        "skills": [
+            "email-marketing",
+            "lifecycle-automation",
+            "segmentation",
+            "crm",
+            "klaviyo",
+            "hubspot",
+        ],
         "tags": ["marketing", "email", "automation", "lifecycle", "crm"],
         "popularity": 77,
     },
@@ -146,7 +167,14 @@ MARKETING_TEMPLATES: list[dict] = [
             "20%+ MoM organic growth. K-factor > 1.0. CAC payback < 6 months. LTV:CAC > 3:1. "
             "Day-7 retention > 40%. Day-30 > 20%."
         ),
-        "skills": ["a-b-testing", "analytics", "viral-loops", "seo", "product-led-growth", "retention"],
+        "skills": [
+            "a-b-testing",
+            "analytics",
+            "viral-loops",
+            "seo",
+            "product-led-growth",
+            "retention",
+        ],
         "tags": ["growth", "marketing", "experiments", "acquisition", "retention"],
         "popularity": 84,
     },
@@ -173,7 +201,13 @@ MARKETING_TEMPLATES: list[dict] = [
             "Authoritative but human. Opinionated but not combative. Specific never vague. "
             "Write like someone who actually knows their stuff, not a motivational poster."
         ),
-        "skills": ["linkedin", "content-strategy", "thought-leadership", "personal-brand", "copywriting"],
+        "skills": [
+            "linkedin",
+            "content-strategy",
+            "thought-leadership",
+            "personal-brand",
+            "copywriting",
+        ],
         "tags": ["linkedin", "social-media", "content", "personal-brand", "marketing"],
         "popularity": 82,
     },
@@ -206,7 +240,14 @@ MARKETING_TEMPLATES: list[dict] = [
             "Speed matters in crisis — silence is interpreted as guilt.\n"
             "Media relationships are long-term — treat journalists as partners, not distribution channels."
         ),
-        "skills": ["pr", "media-relations", "crisis-comms", "press-releases", "thought-leadership", "communications"],
+        "skills": [
+            "pr",
+            "media-relations",
+            "crisis-comms",
+            "press-releases",
+            "thought-leadership",
+            "communications",
+        ],
         "tags": ["pr", "communications", "marketing", "media", "brand"],
         "popularity": 74,
     },
@@ -237,7 +278,14 @@ MARKETING_TEMPLATES: list[dict] = [
             "30% YoY organic traffic growth. Top-3 position for 20%+ target keywords. "
             "Domain rating improvement of 5+ points per year."
         ),
-        "skills": ["technical-seo", "keyword-research", "content-strategy", "link-building", "analytics", "schema"],
+        "skills": [
+            "technical-seo",
+            "keyword-research",
+            "content-strategy",
+            "link-building",
+            "analytics",
+            "schema",
+        ],
         "tags": ["seo", "organic", "search", "content", "technical"],
         "popularity": 85,
     },
@@ -265,7 +313,13 @@ MARKETING_TEMPLATES: list[dict] = [
             "Vanity metrics (followers, likes) → Engagement metrics (comments, shares) → "
             "Business metrics (traffic, leads, revenue). Report the last category to leadership."
         ),
-        "skills": ["social-media", "content-calendar", "community-management", "analytics", "campaigns"],
+        "skills": [
+            "social-media",
+            "content-calendar",
+            "community-management",
+            "analytics",
+            "campaigns",
+        ],
         "tags": ["social-media", "marketing", "community", "engagement", "content"],
         "popularity": 80,
     },
@@ -295,7 +349,14 @@ MARKETING_TEMPLATES: list[dict] = [
             "4. First comment should add value — seed the conversation.\n"
             "5. Never delete videos — even 'failed' videos can get FYP later."
         ),
-        "skills": ["tiktok", "short-video", "content-strategy", "algorithm", "viral-content", "community"],
+        "skills": [
+            "tiktok",
+            "short-video",
+            "content-strategy",
+            "algorithm",
+            "viral-content",
+            "community",
+        ],
         "tags": ["tiktok", "social-media", "video", "marketing", "viral"],
         "popularity": 81,
     },
@@ -328,7 +389,14 @@ PAID_MEDIA_TEMPLATES: list[dict] = [
             "3. Segment by device, match type, and placement before analysis.\n"
             "4. Search term report audit is mandatory — always reveals wasted spend."
         ),
-        "skills": ["google-ads", "meta-ads", "paid-search", "ppc-audit", "attribution", "conversion-tracking"],
+        "skills": [
+            "google-ads",
+            "meta-ads",
+            "paid-search",
+            "ppc-audit",
+            "attribution",
+            "conversion-tracking",
+        ],
         "tags": ["paid-media", "advertising", "ppc", "google-ads", "audit"],
         "popularity": 76,
     },
@@ -358,7 +426,14 @@ PAID_MEDIA_TEMPLATES: list[dict] = [
             "Prove unit economics at small scale → expand match types → expand geographies → "
             "expand device/time bidding → layered audiences → new networks."
         ),
-        "skills": ["google-ads", "microsoft-ads", "amazon-ads", "ppc", "bidding-strategy", "performance-max"],
+        "skills": [
+            "google-ads",
+            "microsoft-ads",
+            "amazon-ads",
+            "ppc",
+            "bidding-strategy",
+            "performance-max",
+        ],
         "tags": ["ppc", "paid-search", "google-ads", "advertising", "roi"],
         "popularity": 78,
     },
@@ -388,7 +463,14 @@ PAID_MEDIA_TEMPLATES: list[dict] = [
             "3. Creative refresh every 2-3 weeks before fatigue sets in.\n"
             "4. Conversion window matters — match to your sales cycle length."
         ),
-        "skills": ["meta-ads", "linkedin-ads", "tiktok-ads", "paid-social", "creative-strategy", "audience-targeting"],
+        "skills": [
+            "meta-ads",
+            "linkedin-ads",
+            "tiktok-ads",
+            "paid-social",
+            "creative-strategy",
+            "audience-targeting",
+        ],
         "tags": ["paid-social", "meta", "linkedin", "advertising", "social-media"],
         "popularity": 77,
     },
@@ -420,7 +502,14 @@ PAID_MEDIA_TEMPLATES: list[dict] = [
             "3. Respect consent — tracking must fire conditionally based on consent state.\n"
             "4. Document the tracking plan — every event, parameter, and business purpose."
         ),
-        "skills": ["google-tag-manager", "ga4", "meta-pixel", "server-side-tracking", "attribution", "capi"],
+        "skills": [
+            "google-tag-manager",
+            "ga4",
+            "meta-pixel",
+            "server-side-tracking",
+            "attribution",
+            "capi",
+        ],
         "tags": ["analytics", "tracking", "attribution", "ga4", "marketing-tech"],
         "popularity": 75,
     },
@@ -450,7 +539,13 @@ SALES_TEMPLATES: list[dict] = [
             "Rep talks 60% of the time in discovery calls. Pipeline meetings feel like strategy sessions. "
             "Forecast confidence based on evidence, not optimism. Win rate improving quarter-over-quarter."
         ),
-        "skills": ["sales-coaching", "pipeline-review", "call-coaching", "forecast", "quota-attainment"],
+        "skills": [
+            "sales-coaching",
+            "pipeline-review",
+            "call-coaching",
+            "forecast",
+            "quota-attainment",
+        ],
         "tags": ["sales", "coaching", "development", "pipeline", "performance"],
         "popularity": 78,
     },
@@ -478,7 +573,13 @@ SALES_TEMPLATES: list[dict] = [
             "Challenge 'the buyer loved the demo' — demand specific next steps and committed timelines. "
             "Commit / Best Case / Pipeline tiers with evidence-based probability."
         ),
-        "skills": ["meddpicc", "competitive-positioning", "deal-qualification", "forecasting", "challenger-sales"],
+        "skills": [
+            "meddpicc",
+            "competitive-positioning",
+            "deal-qualification",
+            "forecasting",
+            "challenger-sales",
+        ],
         "tags": ["sales", "strategy", "deals", "qualification", "enterprise"],
         "popularity": 74,
     },
@@ -506,7 +607,15 @@ SALES_TEMPLATES: list[dict] = [
             "70%+ technical win rate on engaged deals. 80%+ POC-to-close conversion. "
             "90%+ demo-to-next-step progression. 18-day median technical decision cycle."
         ),
-        "skills": ["technical-sales", "demos", "poc", "battlecards", "pre-sales", "roi", "integration"],
+        "skills": [
+            "technical-sales",
+            "demos",
+            "poc",
+            "battlecards",
+            "pre-sales",
+            "roi",
+            "integration",
+        ],
         "tags": ["sales", "pre-sales", "technical", "demo", "poc"],
         "popularity": 72,
     },
@@ -534,7 +643,15 @@ SALES_TEMPLATES: list[dict] = [
             "Signal-based outreach converts 12-25% reply rate vs 1-3% for generic blasts. "
             "Measure pipeline generated and Stage 1→2 conversion, not volume."
         ),
-        "skills": ["outbound-sales", "prospecting", "sequences", "linkedin", "email", "icp", "signal-based"],
+        "skills": [
+            "outbound-sales",
+            "prospecting",
+            "sequences",
+            "linkedin",
+            "email",
+            "icp",
+            "signal-based",
+        ],
         "tags": ["sales", "outbound", "prospecting", "pipeline", "sequencing"],
         "popularity": 73,
     },
@@ -564,7 +681,14 @@ SALES_TEMPLATES: list[dict] = [
             "2. Segment before drawing conclusions — blended averages hide the signal.\n"
             "3. Pipeline not updated in 30+ days is suspect regardless of stage."
         ),
-        "skills": ["revenue-ops", "pipeline-analysis", "forecasting", "crm", "sales-analytics", "meddpicc"],
+        "skills": [
+            "revenue-ops",
+            "pipeline-analysis",
+            "forecasting",
+            "crm",
+            "sales-analytics",
+            "meddpicc",
+        ],
         "tags": ["sales", "revenue-ops", "pipeline", "forecasting", "analytics"],
         "popularity": 71,
     },
@@ -595,7 +719,13 @@ SALES_TEMPLATES: list[dict] = [
             "2. Every claim needs evidence — case study, metric, or methodology.\n"
             "3. Executive summary written last, placed first."
         ),
-        "skills": ["proposal-writing", "rfp-response", "win-themes", "competitive-positioning", "storytelling"],
+        "skills": [
+            "proposal-writing",
+            "rfp-response",
+            "win-themes",
+            "competitive-positioning",
+            "storytelling",
+        ],
         "tags": ["sales", "proposals", "rfp", "writing", "competitive"],
         "popularity": 69,
     },
@@ -661,7 +791,14 @@ SECURITY_TEMPLATES: list[dict] = [
             "4. Every vulnerability finding paired with concrete remediation code.\n"
             "5. Pair every security control with a bypass test."
         ),
-        "skills": ["threat-modeling", "zero-trust", "oauth", "cryptography", "sbom", "architecture"],
+        "skills": [
+            "threat-modeling",
+            "zero-trust",
+            "oauth",
+            "cryptography",
+            "sbom",
+            "architecture",
+        ],
         "tags": ["security", "architecture", "threat-modeling", "zero-trust", "design"],
         "popularity": 80,
     },
@@ -691,7 +828,14 @@ SECURITY_TEMPLATES: list[dict] = [
             "Zero audit scope changes after report delivery. "
             "Severity follows CVSS + economic impact — client cannot override severity rating."
         ),
-        "skills": ["solidity", "smart-contract-audit", "slither", "foundry", "defi-security", "formal-verification"],
+        "skills": [
+            "solidity",
+            "smart-contract-audit",
+            "slither",
+            "foundry",
+            "defi-security",
+            "formal-verification",
+        ],
         "tags": ["blockchain", "security", "audit", "smart-contracts", "defi"],
         "popularity": 72,
     },
@@ -721,7 +865,16 @@ SECURITY_TEMPLATES: list[dict] = [
             "Zero critical misconfigurations in production. 100% IaC policy compliance pre-deployment. "
             "< 24-hour remediation for critical findings. Developer satisfaction > 4/5 with security tooling."
         ),
-        "skills": ["aws", "azure", "gcp", "kubernetes", "iam", "zero-trust", "cloud-security", "cspm"],
+        "skills": [
+            "aws",
+            "azure",
+            "gcp",
+            "kubernetes",
+            "iam",
+            "zero-trust",
+            "cloud-security",
+            "cspm",
+        ],
         "tags": ["cloud", "security", "aws", "kubernetes", "zero-trust"],
         "popularity": 78,
     },
@@ -787,7 +940,14 @@ SECURITY_TEMPLATES: list[dict] = [
             "Full post-mortem within 48 hours. Focus on systemic fixes, not individual blame. "
             "Track all action items with named owners and due dates."
         ),
-        "skills": ["incident-response", "digital-forensics", "containment", "ioc", "malware-analysis", "dfir"],
+        "skills": [
+            "incident-response",
+            "digital-forensics",
+            "containment",
+            "ioc",
+            "malware-analysis",
+            "dfir",
+        ],
         "tags": ["security", "incident-response", "forensics", "breach", "soc"],
         "popularity": 75,
     },
@@ -817,7 +977,15 @@ SECURITY_TEMPLATES: list[dict] = [
             "Every behavioral TTP produces Sigma rules for SIEM deployment. "
             "All rules validated against known-good before production deployment."
         ),
-        "skills": ["threat-intelligence", "mitre-attack", "yara", "sigma", "ioc", "apt-tracking", "malware-analysis"],
+        "skills": [
+            "threat-intelligence",
+            "mitre-attack",
+            "yara",
+            "sigma",
+            "ioc",
+            "apt-tracking",
+            "malware-analysis",
+        ],
         "tags": ["security", "threat-intelligence", "apt", "mitre", "detection"],
         "popularity": 73,
     },
@@ -847,7 +1015,15 @@ SECURITY_TEMPLATES: list[dict] = [
             "Log security events (login success/failure, permission denied, suspicious patterns). "
             "Never log passwords, tokens, SSNs, credit cards, or other sensitive data."
         ),
-        "skills": ["secops", "code-security", "jwt", "cors", "rate-limiting", "secure-defaults", "secrets-management"],
+        "skills": [
+            "secops",
+            "code-security",
+            "jwt",
+            "cors",
+            "rate-limiting",
+            "secure-defaults",
+            "secrets-management",
+        ],
         "tags": ["security", "secops", "code-review", "devsecops", "secure-coding"],
         "popularity": 76,
     },
@@ -879,7 +1055,13 @@ PROJECT_MGMT_TEMPLATES: list[dict] = [
             "Statistically significant + negligible effect → discard. "
             "Not significant → extend or abandon. Never 'almost significant' results — it's not significant."
         ),
-        "skills": ["a-b-testing", "statistics", "experiment-design", "product-analytics", "data-driven"],
+        "skills": [
+            "a-b-testing",
+            "statistics",
+            "experiment-design",
+            "product-analytics",
+            "data-driven",
+        ],
         "tags": ["experimentation", "testing", "analytics", "product", "data"],
         "popularity": 73,
     },
@@ -935,7 +1117,13 @@ PROJECT_MGMT_TEMPLATES: list[dict] = [
             "## Output Format\n"
             "Plain GitHub-flavored markdown. No wikilinks, no JSON. Copy-paste ready."
         ),
-        "skills": ["meeting-notes", "summarization", "action-items", "communications", "documentation"],
+        "skills": [
+            "meeting-notes",
+            "summarization",
+            "action-items",
+            "communications",
+            "documentation",
+        ],
         "tags": ["meetings", "notes", "productivity", "communications", "documentation"],
         "popularity": 80,
     },
@@ -963,7 +1151,14 @@ PROJECT_MGMT_TEMPLATES: list[dict] = [
             "Weekly status report: accomplishments, upcoming milestones, risks, decisions needed. "
             "No surprises rule — escalate the moment a milestone is at risk, not after it's missed."
         ),
-        "skills": ["project-management", "timeline-management", "risk-management", "stakeholder-comms", "agile", "pmp"],
+        "skills": [
+            "project-management",
+            "timeline-management",
+            "risk-management",
+            "stakeholder-comms",
+            "agile",
+            "pmp",
+        ],
         "tags": ["project-management", "delivery", "coordination", "stakeholder", "agile"],
         "popularity": 76,
     },
@@ -991,7 +1186,12 @@ PROJECT_MGMT_TEMPLATES: list[dict] = [
             "Save to file with: technical stack summary, original requirements reference, "
             "numbered task list ordered by dependency, estimated effort, and acceptance criteria per task."
         ),
-        "skills": ["technical-project-management", "task-decomposition", "scope-management", "agile"],
+        "skills": [
+            "technical-project-management",
+            "task-decomposition",
+            "scope-management",
+            "agile",
+        ],
         "tags": ["project-management", "technical", "scope", "tasks", "delivery"],
         "popularity": 72,
     },

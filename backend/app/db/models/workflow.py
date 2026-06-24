@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -69,6 +69,12 @@ class Schedule(Base, TimestampMixin):
     next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error_text: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
+    # Hot-path indexes: the schedule runner scans enabled/due schedules every 60s (H4).
+    __table_args__ = (
+        Index("ix_schedules_next_run_at", "next_run_at"),
+        Index("ix_schedules_enabled", "enabled"),
+    )
+
     workflow: Mapped["Workflow"] = relationship("Workflow", back_populates="schedules")
 
     def __repr__(self) -> str:
@@ -107,10 +113,29 @@ class Run(Base, TimestampMixin):
     paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     retry_after_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     pause_reason: Mapped[str] = mapped_column(String(64), default="", nullable=False)
-    resume_policy: Mapped[str] = mapped_column(String(32), default="auto", nullable=False)  # auto | manual_token_fix
+    resume_policy: Mapped[str] = mapped_column(
+        String(32), default="auto", nullable=False
+    )  # auto | manual_token_fix
     recovery_count: Mapped[int] = mapped_column(default=0, nullable=False)
     # Index of the step the run is currently paused/waiting at (for resume)
     current_step_index: Mapped[int] = mapped_column(default=0, nullable=False)
+
+    __table_args__ = (
+        # Hot-path indexes scanned every 60s by the overlap guard + orphan reaper (H4).
+        Index("ix_runs_status", "status"),
+        Index("ix_runs_workflow_status", "workflow_id", "status"),
+        # H5 backstop: at most one ACTIVE scheduled run per workflow, so concurrent scheduler
+        # ticks can never dispatch duplicate runs. Scoped to trigger='schedule' so manual and
+        # sub-workflow runs are unaffected.
+        Index(
+            "uq_runs_active_schedule_per_workflow",
+            "workflow_id",
+            unique=True,
+            postgresql_where=text(
+                "status IN ('queued', 'running', 'waiting_approval') AND trigger = 'schedule'"
+            ),
+        ),
+    )
 
     workflow: Mapped["Workflow | None"] = relationship("Workflow", back_populates="runs")
     steps: Mapped[list["RunStep"]] = relationship(
@@ -162,10 +187,17 @@ class RunMetric(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     run_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("runs.id", ondelete="CASCADE"), nullable=False, index=True, unique=True
+        UUID(as_uuid=True),
+        ForeignKey("runs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        unique=True,
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     review_cycles: Mapped[int] = mapped_column(default=0, nullable=False)
     model_switches: Mapped[int] = mapped_column(default=0, nullable=False)
@@ -188,7 +220,10 @@ class PromptRegistryEntry(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     run_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("runs.id", ondelete="SET NULL"), nullable=True, index=True
@@ -212,7 +247,9 @@ class TraceEvent(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     trace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
-    span_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, default=uuid.uuid4)
+    span_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), nullable=False, default=uuid.uuid4
+    )
     parent_span_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     project_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True

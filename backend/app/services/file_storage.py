@@ -17,10 +17,21 @@ from app.core.project_paths import (
 logger = logging.getLogger(__name__)
 
 ALLOWED_MIME_TYPES = {
-    "image/jpeg", "image/png", "image/gif", "image/webp",
-    "text/plain", "text/markdown", "text/csv", "text/html", "text/css",
-    "text/xml", "text/x-python", "text/javascript", "text/x-yaml",
-    "application/json", "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "text/plain",
+    "text/markdown",
+    "text/csv",
+    "text/html",
+    "text/css",
+    "text/xml",
+    "text/x-python",
+    "text/javascript",
+    "text/x-yaml",
+    "application/json",
+    "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/x-yaml",
 }

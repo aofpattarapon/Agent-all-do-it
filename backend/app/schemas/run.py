@@ -1,11 +1,43 @@
 """Run and RunStep schemas."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import Field
 
 from app.schemas.base import BaseSchema
+
+# ── Trade Outcome ─────────────────────────────────────────────────────────────
+
+
+class TradeOutcomeRead(BaseSchema):
+    """Derived, read-only classification of a run's trade result."""
+
+    status: str  # active | complete_trade | complete_reject | error | limit | unknown
+    label: str
+    reason: str
+    reason_code: str
+    evidence: dict[str, Any]
+
+
+class NormalizedStatusRead(BaseSchema):
+    """Workflow-aware normalized status — source of truth for UI grouping/badges."""
+
+    workflow_category: str  # trade | monitor | research | screener | unknown
+    status_group: str  # active | done | error
+    status_subtype: str
+    status_label: str
+    status_reason: str
+    decision_reason: str | None = None
+    error_category: str | None = None
+    is_active: bool
+    is_done: bool
+    is_error: bool
+    is_trade_workflow: bool
+    is_monitor_workflow: bool
+    is_research_workflow: bool
+    is_screener_workflow: bool
 
 
 # ── Run ───────────────────────────────────────────────────────────────────────
@@ -42,6 +74,18 @@ class RunRead(BaseSchema):
     finished_at: datetime | None
     created_at: datetime
     updated_at: datetime | None
+    trade_outcome: TradeOutcomeRead | None = None
+    normalized_status: NormalizedStatusRead | None = None
+    # Unified display status (additive, derived). One of:
+    # active | complete-trade | complete-reject | error | limit
+    display_status: str = "active"
+    display_status_label: str = "Active"
+    display_status_reason: str = ""
+    display_status_category: str = "in_progress"
+    is_terminal: bool = False
+    is_trade_executed: bool = False
+    is_error: bool = False
+    is_limit: bool = False
 
 
 class RunList(BaseSchema):

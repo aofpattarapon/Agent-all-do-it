@@ -59,12 +59,12 @@ export default function AdminSetupPage() {
     try {
       const data = await apiClient.get<{ items: Project[]; total: number }>("/projects");
       const found = data.items.find(
-        (p) => p.name === "Binance Testnet — BTCUSDT Pipeline"
+        (p) => p.name === "NEXMIND Crypto Trading Pipeline"
       );
       if (found) {
         setPipelineExists(true);
         setProjectId(found.id);
-        toast.success("NEXMIND pipeline already configured");
+        toast.success("NEXMIND pipeline project found");
         // Brief pause so the user sees the checkmark, then skip to Step 4
         setTimeout(() => setStep(4), 1200);
       } else {
@@ -170,9 +170,10 @@ export default function AdminSetupPage() {
     setLoading(true);
     setError(null);
     try {
-      await apiClient.patch(
-        `/projects/${projectId}/cost/budget?daily_budget_usd=${dailyBudget}&alert_at_pct=${alertAt}`
-      );
+      await apiClient.patch(`/projects/${projectId}/cost/budget`, {
+        daily_budget_usd: dailyBudget,
+        alert_at_pct: alertAt,
+      });
       toast.success("Budget applied");
       setStep(5);
     } catch (err) {
@@ -598,19 +599,24 @@ export default function AdminSetupPage() {
                 <ChevronLeft className="h-4 w-4" />
                 Back
               </PixelButton>
-              <PixelButton
-                variant="gold"
-                onClick={saveBudget}
-                disabled={loading}
-                className="justify-center"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Wallet className="h-4 w-4" />
-                )}
-                Apply Budget
-              </PixelButton>
+              <div className="flex gap-2">
+                <PixelButton variant="default" onClick={() => { setError(null); setStep(5); }} disabled={loading}>
+                  Skip
+                </PixelButton>
+                <PixelButton
+                  variant="gold"
+                  onClick={saveBudget}
+                  disabled={loading}
+                  className="justify-center"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wallet className="h-4 w-4" />
+                  )}
+                  Apply Budget
+                </PixelButton>
+              </div>
             </div>
           </div>
         </PixelFrame>
@@ -651,13 +657,24 @@ export default function AdminSetupPage() {
                 Your 12-agent NEXMIND pipeline is ready.
               </p>
             </div>
-            <PixelButton
-              variant="gold"
-              onClick={() => router.push("/")}
-              className="w-full justify-center"
-            >
-              Go to Dashboard
-            </PixelButton>
+            <div className="flex flex-col gap-2">
+              {projectId && (
+                <PixelButton
+                  variant="gold"
+                  onClick={() => router.push(`/projects/${projectId}#workflows`)}
+                  className="w-full justify-center"
+                >
+                  Open Project → Workflows
+                </PixelButton>
+              )}
+              <PixelButton
+                variant="default"
+                onClick={() => router.push("/")}
+                className="w-full justify-center"
+              >
+                Go to Dashboard
+              </PixelButton>
+            </div>
           </div>
         </PixelFrame>
       )}

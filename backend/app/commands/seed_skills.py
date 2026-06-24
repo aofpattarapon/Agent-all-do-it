@@ -6,7 +6,7 @@ import asyncio
 
 import click
 
-from app.commands import command, info, success, warning
+from app.commands import command, info, success
 from app.db.session import get_db_context
 from app.repositories import skill as repo
 
@@ -549,11 +549,15 @@ def seed_skills(clear: bool) -> None:
             if clear:
                 info("Clearing existing skills...")
                 from sqlalchemy import delete
+
                 from app.db.models.skill import Skill
+
                 await db.execute(delete(Skill))
                 await db.commit()
 
             result = await run_seed(db)
-            success(f"Created {result['skills_created']} skills, skipped {result['skills_skipped']} (already exist).")
+            success(
+                f"Created {result['skills_created']} skills, skipped {result['skills_skipped']} (already exist)."
+            )
 
     asyncio.run(_seed())

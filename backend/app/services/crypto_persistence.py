@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -10,10 +11,57 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.json_utils import extract_json_object
-from app.db.models.crypto_trading import AgentVote, MarketSnapshot, NewsEvent, TradeProposal
+from app.db.models.crypto_trading import (
+    AgentVote,
+    CryptoRawPayload,
+    MarketSnapshot,
+    NewsEvent,
+    TradeProposal,
+)
 from app.services.kill_switch import KillSwitch, KillSwitchConfig
 
 logger = logging.getLogger(__name__)
+
+
+class ProposalValidationError(Exception):
+    """Raised when compile_proposal output is structurally invalid (entry=0, missing fields, etc.)."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+def build_trade_journal_raw_facts(
+    *,
+    proposal: TradeProposal,
+    execution_payload: dict,
+    position_id: UUID | str | None,
+    journal_action: str,
+    entry_price: float,
+    size: float,
+) -> dict:
+    return {
+        "symbol": proposal.symbol,
+        "direction": proposal.direction,
+        "position_id": str(position_id) if position_id else None,
+        "journal_action": journal_action,
+        "entry_price": entry_price,
+        "size": size,
+        "proposal": {
+            "id": str(proposal.id),
+            "run_id": str(proposal.run_id),
+            "status": proposal.status,
+            "entry_plan": proposal.entry_plan or {},
+            "take_profit": proposal.take_profit or [],
+            "stop_loss": proposal.stop_loss,
+            "position_size_usdt": proposal.position_size_usdt,
+            "full_proposal_md": proposal.full_proposal_md,
+            "news_summary": proposal.news_summary,
+            "agent_vote_summary": proposal.agent_vote_summary or {},
+            "raw_payload": proposal.raw_payload or {},
+        },
+        "execution": execution_payload,
+    }
 
 
 class CryptoPersistenceService:
@@ -34,20 +82,55 @@ class CryptoPersistenceService:
         if payload is None:
             return
 
+        await self.store_raw_payload(
+            project_id=project_id,
+            run_id=run_id,
+            payload_kind=agent_role,
+            agent_role=agent_role,
+            step_key=agent_role,
+            payload=payload,
+        )
+
         if agent_role == "news_monitor":
             await self.save_news_events(project_id=project_id, run_id=run_id, payload=payload)
             return
         if agent_role == "source_reliability":
-            await self.update_news_reliability(project_id=project_id, run_id=run_id, payload=payload)
+            await self.update_news_reliability(
+                project_id=project_id, run_id=run_id, payload=payload
+            )
             return
         if agent_role == "market_regime":
             await self.save_market_snapshot(project_id=project_id, run_id=run_id, payload=payload)
             return
         if agent_role.startswith("hawk_") or agent_role == "sage":
-            await self.save_agent_vote(project_id=project_id, run_id=run_id, agent_role=agent_role, payload=payload)
+            await self.save_agent_vote(
+                project_id=project_id, run_id=run_id, agent_role=agent_role, payload=payload
+            )
             return
         if agent_role == "trade_proposal":
             await self.save_trade_proposal(project_id=project_id, run_id=run_id, payload=payload)
+
+    async def store_raw_payload(
+        self,
+        *,
+        project_id: UUID,
+        run_id: UUID,
+        payload_kind: str,
+        payload: dict,
+        agent_role: str | None = None,
+        step_key: str | None = None,
+    ) -> CryptoRawPayload:
+        record = CryptoRawPayload(
+            project_id=project_id,
+            run_id=run_id,
+            payload_kind=payload_kind[:50],
+            agent_role=agent_role[:50] if agent_role else None,
+            step_key=step_key[:100] if step_key else None,
+            payload_json=payload,
+        )
+        self.db.add(record)
+        await self.db.flush()
+        return record
 
     async def save_news_events(self, *, project_id: UUID, run_id: UUID, payload: dict) -> None:
         items = payload.get("news_items")
@@ -67,7 +150,9 @@ class CryptoPersistenceService:
             if not news_id or not headline or not source:
                 continue
 
-            existing = await self._latest_news_event(project_id=project_id, run_id=run_id, news_id=news_id)
+            existing = await self._latest_news_event(
+                project_id=project_id, run_id=run_id, news_id=news_id
+            )
             values = {
                 "headline": headline,
                 "source": source,
@@ -86,7 +171,9 @@ class CryptoPersistenceService:
                         run_id=run_id,
                         news_id=news_id,
                         reliability_score=self._as_int(item.get("reliability_score")),
-                        reliability_status=self._optional_str(item.get("reliability_status"), max_len=30),
+                        reliability_status=self._optional_str(
+                            item.get("reliability_status"), max_len=30
+                        ),
                         used_for_trade=False,
                         **values,
                     )
@@ -94,14 +181,19 @@ class CryptoPersistenceService:
             else:
                 for field, value in values.items():
                     setattr(existing, field, value)
-                existing.reliability_score = self._as_int(item.get("reliability_score")) or existing.reliability_score
+                existing.reliability_score = (
+                    self._as_int(item.get("reliability_score")) or existing.reliability_score
+                )
                 existing.reliability_status = (
-                    self._optional_str(item.get("reliability_status"), max_len=30) or existing.reliability_status
+                    self._optional_str(item.get("reliability_status"), max_len=30)
+                    or existing.reliability_status
                 )
                 self.db.add(existing)
         await self.db.flush()
 
-    async def update_news_reliability(self, *, project_id: UUID, run_id: UUID, payload: dict) -> None:
+    async def update_news_reliability(
+        self, *, project_id: UUID, run_id: UUID, payload: dict
+    ) -> None:
         items = payload.get("items")
         if not isinstance(items, list):
             return
@@ -111,7 +203,9 @@ class CryptoPersistenceService:
             news_id = str(item.get("news_id") or "").strip()
             if not news_id:
                 continue
-            existing = await self._latest_news_event(project_id=project_id, run_id=run_id, news_id=news_id)
+            existing = await self._latest_news_event(
+                project_id=project_id, run_id=run_id, news_id=news_id
+            )
             if existing is None:
                 headline = str(item.get("headline") or "").strip()
                 if not headline:
@@ -131,7 +225,9 @@ class CryptoPersistenceService:
                 )
                 self.db.add(existing)
             existing.reliability_score = self._as_int(item.get("reliability_score"))
-            existing.reliability_status = self._optional_str(item.get("reliability_status"), max_len=30)
+            existing.reliability_status = self._optional_str(
+                item.get("reliability_status"), max_len=30
+            )
             existing.risk_flags = self._string_list(item.get("risk_flags"))
             self.db.add(existing)
         await self.db.flush()
@@ -167,7 +263,9 @@ class CryptoPersistenceService:
         agent_role: str,
         payload: dict,
     ) -> None:
-        existing = await self._latest_agent_vote(project_id=project_id, run_id=run_id, agent_role=agent_role)
+        existing = await self._latest_agent_vote(
+            project_id=project_id, run_id=run_id, agent_role=agent_role
+        )
         vote_value = payload.get("vote")
         if agent_role == "sage":
             vote_value = payload.get("sage_decision")
@@ -188,17 +286,56 @@ class CryptoPersistenceService:
             self.db.add(existing)
         await self.db.flush()
 
-    async def save_trade_proposal(self, *, project_id: UUID, run_id: UUID, payload: dict) -> TradeProposal | None:
-        if payload.get("sage_approved") is not True:
-            return None
+    @staticmethod
+    def _is_sage_approved(payload: dict) -> bool:
+        """Return True only when SAGE approval is explicitly the boolean ``True``.
+
+        Accepts the flag at the top level (``payload["sage_approved"]``) OR nested
+        under ``payload["agent_vote_summary"]["sage_approved"]`` — some models emit
+        the approval flag only inside the vote summary (observed in the W13 Auto run).
+        Strict boolean ``True`` is required at either location; missing values and
+        falsy/string values remain fail-closed (no persistence).
+        """
+        if payload.get("sage_approved") is True:
+            return True
+        vote_summary = payload.get("agent_vote_summary")
+        return isinstance(vote_summary, dict) and vote_summary.get("sage_approved") is True
+
+    async def save_trade_proposal(
+        self, *, project_id: UUID, run_id: UUID, payload: dict
+    ) -> TradeProposal | None:
+        if not self._is_sage_approved(payload):
+            # Fail-closed: do not persist a proposal SAGE did not approve. Surface the
+            # reason (instead of a silent ``return None``) so the run step records it via
+            # run_executor's ProposalValidationError → meta["proposal_validation_error"].
+            raise ProposalValidationError(
+                "SAGE_NOT_APPROVED: sage_approved is not True at top level or under "
+                f"agent_vote_summary — proposal not persisted (run_id={run_id})"
+            )
 
         symbol = str(payload.get("symbol") or "").strip()
         direction = str(payload.get("direction") or "").strip().upper()
         entry_plan = payload.get("entry_plan")
         take_profit = payload.get("take_profit")
         stop_loss = self._as_float(payload.get("stop_loss"))
-        if not symbol or direction not in {"LONG", "SHORT"} or not isinstance(entry_plan, dict):
-            return None
+        notional_usdt = self._as_float(
+            payload.get("notional_usdt") or payload.get("position_size_usdt")
+        )
+
+        if not symbol:
+            raise ProposalValidationError(f"PROPOSAL_INVALID: symbol is missing (run_id={run_id})")
+        if direction not in {"LONG", "SHORT"}:
+            raise ProposalValidationError(
+                f"PROPOSAL_INVALID: direction={direction!r} not LONG/SHORT (run_id={run_id})"
+            )
+        if not isinstance(entry_plan, dict):
+            raise ProposalValidationError(
+                f"PROPOSAL_INVALID: entry_plan is not a dict — got {type(entry_plan).__name__} (run_id={run_id})"
+            )
+        if not payload.get("side") and direction not in {"LONG", "SHORT"}:
+            raise ProposalValidationError(
+                f"PROPOSAL_INVALID: side missing and direction={direction!r} (run_id={run_id})"
+            )
 
         entry_price = self._entry_price(entry_plan)
         normalized_take_profit = self._normalize_take_profit_items(
@@ -208,8 +345,36 @@ class CryptoPersistenceService:
             direction=direction,
         )
         tp_levels = self._take_profit_levels(normalized_take_profit)
-        if entry_price <= 0 or stop_loss is None:
-            return None
+        if entry_price <= 0:
+            raise ProposalValidationError(
+                f"DATA_FAILURE: entry_price={entry_price} <= 0 — compile_proposal had no real market data "
+                f"(symbol={symbol}, direction={direction}, run_id={run_id})"
+            )
+        if stop_loss is None:
+            raise ProposalValidationError(
+                f"DATA_FAILURE: stop_loss is None — compile_proposal output incomplete "
+                f"(symbol={symbol}, direction={direction}, entry_price={entry_price}, run_id={run_id})"
+            )
+        if not tp_levels:
+            raise ProposalValidationError(
+                f"DATA_FAILURE: take_profit levels are empty "
+                f"(symbol={symbol}, direction={direction}, run_id={run_id})"
+            )
+        if not notional_usdt or notional_usdt <= 0:
+            raise ProposalValidationError(
+                f"PROPOSAL_INVALID: notional_usdt/position_size_usdt is missing or zero "
+                f"(symbol={symbol}, direction={direction}, run_id={run_id})"
+            )
+
+        _market_type = os.getenv("MARKET_TYPE", "futures").lower()
+        if _market_type == "futures":
+            _min_notional = float(os.getenv("MIN_FUTURES_NOTIONAL_USDT", "50.0"))
+            if notional_usdt < _min_notional:
+                raise ProposalValidationError(
+                    f"PROPOSAL_NOTIONAL_BELOW_EXCHANGE_MINIMUM: position_size_usdt {notional_usdt} < "
+                    f"minNotional {_min_notional} for futures market "
+                    f"(symbol={symbol}, direction={direction}, run_id={run_id})"
+                )
 
         market_snapshot = await self._latest_market_snapshot(project_id=project_id, run_id=run_id)
         market_regime = market_snapshot.market_regime if market_snapshot is not None else "NEUTRAL"
@@ -237,13 +402,32 @@ class CryptoPersistenceService:
             entry_price=entry_price,
             market_regime=market_regime,
         )
-        if not ks_result.passed:
-            logger.info("Skipping trade proposal persistence; kill switch blocked proposal for %s", symbol)
-            return None
+        ks_blocked = not ks_result.passed
+        block_reason = ""
+        if ks_blocked:
+            # W28E persist-then-promote: do NOT silently drop a valid, SAGE-approved proposal just
+            # because the kill switch is armed. Persist it in an explicit, non-executable
+            # ``BLOCKED_KILL_SWITCH`` state so the proposal is traceable and can be safely promoted
+            # later ONLY if an explicit warmup approval/resume re-validates it (the kill switch
+            # clears or a valid single-use risk_ack exists). Execution stays fail-closed:
+            # ``_run_exchange_execute`` requires ``status == "APPROVED"`` and
+            # ``prepare_execution_plan`` re-runs the kill switch before any order, so a row left in
+            # this state can never reach the exchange.
+            block_reason = "KILL_SWITCH_BLOCKED: " + (
+                "; ".join(ks_result.blocked_reasons) or "blocked"
+            )
+            logger.info(
+                "Persisting kill-switch-blocked proposal as BLOCKED_KILL_SWITCH (non-executable) "
+                "for %s: %s",
+                symbol,
+                block_reason,
+            )
 
         existing = await self._latest_trade_proposal(project_id=project_id, run_id=run_id)
         hawk_vote_count = await self._count_hawk_votes(project_id=project_id, run_id=run_id)
-        expires_at = datetime.now(UTC) + timedelta(minutes=KillSwitchConfig().proposal_expiry_minutes)
+        expires_at = datetime.now(UTC) + timedelta(
+            minutes=KillSwitchConfig().proposal_expiry_minutes
+        )
         news_events = await self._news_events_for_run(project_id=project_id, run_id=run_id)
 
         values = {
@@ -260,20 +444,33 @@ class CryptoPersistenceService:
             "total_score": self._as_float(payload.get("total_score")),
             "hawk_votes": hawk_vote_count,
             "sage_approved": True,
-            "kill_switch_passed": True,
+            "kill_switch_passed": ks_result.passed,
             "kill_switch_details": {
                 "warnings": ks_result.warnings,
                 "checks_run": ks_result.checks_run,
+                "blocked_reasons": ks_result.blocked_reasons,
                 "adjusted_position_size_usdt": ks_result.adjusted_position_size_usdt,
                 "proposal_normalized": True,
             },
-            "agent_vote_summary": payload.get("agent_vote_summary") if isinstance(payload.get("agent_vote_summary"), dict) else {},
+            "agent_vote_summary": payload.get("agent_vote_summary")
+            if isinstance(payload.get("agent_vote_summary"), dict)
+            else {},
             "news_summary": self._optional_str(payload.get("news_summary")),
-            "status": "PENDING_APPROVAL",
+            # Blocked proposals are persisted in a distinct, non-executable status so they are
+            # never picked up by execute_trade (APPROVED) or auto-execute (PENDING_APPROVAL); they
+            # can only become executable via an explicit, re-validated warmup promotion.
+            "status": "BLOCKED_KILL_SWITCH" if ks_blocked else "PENDING_APPROVAL",
+            "rejection_reason": block_reason or None,
             "expires_at": expires_at,
             "full_proposal_md": self._optional_str(payload.get("full_proposal_md")),
+            "raw_payload": payload,
         }
-        if values["max_loss_usdt"] is None and values["position_size_usdt"] and stop_loss and entry_price > 0:
+        if (
+            values["max_loss_usdt"] is None
+            and values["position_size_usdt"]
+            and stop_loss
+            and entry_price > 0
+        ):
             sl_pct = abs(entry_price - stop_loss) / entry_price
             values["max_loss_usdt"] = round(values["position_size_usdt"] * sl_pct, 4)
 
@@ -297,7 +494,9 @@ class CryptoPersistenceService:
         await self.db.flush()
         return proposal
 
-    async def _latest_news_event(self, *, project_id: UUID, run_id: UUID, news_id: str) -> NewsEvent | None:
+    async def _latest_news_event(
+        self, *, project_id: UUID, run_id: UUID, news_id: str
+    ) -> NewsEvent | None:
         result = await self.db.execute(
             select(NewsEvent)
             .where(
@@ -310,7 +509,9 @@ class CryptoPersistenceService:
         )
         return result.scalar_one_or_none()
 
-    async def _latest_market_snapshot(self, *, project_id: UUID, run_id: UUID) -> MarketSnapshot | None:
+    async def _latest_market_snapshot(
+        self, *, project_id: UUID, run_id: UUID
+    ) -> MarketSnapshot | None:
         result = await self.db.execute(
             select(MarketSnapshot)
             .where(MarketSnapshot.project_id == project_id, MarketSnapshot.run_id == run_id)
@@ -319,7 +520,9 @@ class CryptoPersistenceService:
         )
         return result.scalar_one_or_none()
 
-    async def _latest_agent_vote(self, *, project_id: UUID, run_id: UUID, agent_role: str) -> AgentVote | None:
+    async def _latest_agent_vote(
+        self, *, project_id: UUID, run_id: UUID, agent_role: str
+    ) -> AgentVote | None:
         result = await self.db.execute(
             select(AgentVote)
             .where(
@@ -332,7 +535,9 @@ class CryptoPersistenceService:
         )
         return result.scalar_one_or_none()
 
-    async def _latest_trade_proposal(self, *, project_id: UUID, run_id: UUID) -> TradeProposal | None:
+    async def _latest_trade_proposal(
+        self, *, project_id: UUID, run_id: UUID
+    ) -> TradeProposal | None:
         result = await self.db.execute(
             select(TradeProposal)
             .where(TradeProposal.project_id == project_id, TradeProposal.run_id == run_id)
@@ -451,7 +656,9 @@ class CryptoPersistenceService:
         if not isinstance(take_profit, list):
             return []
         normalized: list[dict] = []
-        risk_distance = abs(entry_price - stop_loss) if stop_loss is not None and entry_price > 0 else 0.0
+        risk_distance = (
+            abs(entry_price - stop_loss) if stop_loss is not None and entry_price > 0 else 0.0
+        )
         for item in take_profit:
             if not isinstance(item, dict):
                 continue
@@ -500,15 +707,18 @@ class CryptoPersistenceService:
         return round(reward_distance / risk_distance, 4)
 
     @staticmethod
-    def _max_loss_usdt(*, entry_price: float, stop_loss: float | None, position_size_usdt: float) -> float | None:
+    def _max_loss_usdt(
+        *, entry_price: float, stop_loss: float | None, position_size_usdt: float
+    ) -> float | None:
         if stop_loss is None or entry_price <= 0 or position_size_usdt <= 0:
             return None
         sl_pct = abs(entry_price - stop_loss) / entry_price
         return round(position_size_usdt * sl_pct, 4)
 
     async def get_project_winrate(self, project_id: UUID) -> float:
-        """Returns win rate as a percentage (0–100). Returns 0.0 if no closed trades."""
+        """Returns win rate as a percentage (0-100). Returns 0.0 if no closed trades."""
         from app.db.models.crypto_trading import TradeJournal
+
         result = await self.db.execute(
             select(TradeJournal).where(
                 TradeJournal.project_id == project_id,
@@ -520,3 +730,35 @@ class CryptoPersistenceService:
             return 0.0
         wins = sum(1 for t in trades if t.result == "WIN")
         return round((wins / len(trades)) * 100, 1)
+
+    async def get_closed_trade_count(self, project_id: UUID) -> int:
+        """Returns number of closed trades (WIN + LOSS + BREAK_EVEN) for the project."""
+        from sqlalchemy import func
+
+        from app.db.models.crypto_trading import TradeJournal
+
+        result = await self.db.execute(
+            select(func.count())
+            .select_from(TradeJournal)
+            .where(
+                TradeJournal.project_id == project_id,
+                TradeJournal.result.in_(["WIN", "LOSS", "BREAK_EVEN"]),
+            )
+        )
+        count = result.scalar_one_or_none()
+        return int(count or 0)
+
+    async def has_open_position(self, project_id: UUID, symbol: str) -> bool:
+        """Returns True if there is already an OPEN position for this project/symbol."""
+        from app.db.models.crypto_trading import Position
+
+        result = await self.db.execute(
+            select(Position)
+            .where(
+                Position.project_id == project_id,
+                Position.symbol == symbol.upper(),
+                Position.status == "OPEN",
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none() is not None

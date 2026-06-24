@@ -1,0 +1,317 @@
+id,project_id,position_id,symbol,direction,entry_price,exit_price,size,realized_pnl,realized_pnl_pct,holding_time_minutes,result,original_thesis,what_happened,mistakes,what_worked,improvement,post_review_md,decision_log,news_used,agent_votes,created_at,updated_at,raw_facts
+9031c1bc-ff85-47cf-a4c7-457db6558991,288bc95a-b4da-46e7-bdfa-b5630233f586,c237af3c-2a1b-44d1-a655-46ae70e020fc,SOLUSDT,SHORT,67.61,70.17,0.592,-0.5546,-1.3856,764,LOSS,"# SOLUSDT Short Trade Proposal (Paper)
+- **Entry**: 67.61 USDT (zone 67.55‑67.67) based on the highest‑confidence counter HAWK.
+- **Stop Loss**: 68.50 USDT (invalidation level).
+- **Take Profits**:
+  - TP1: 65.83 USDT (RR 2.0, 50% of position)
+  - TP2: 64.94 USDT (RR 3.0, 30% of position)
+  - TP3: 64.05 USDT (RR 4.0, 20% of position)
+- **Risk**: Max loss ≈ 0.53 USDT on a 40 USDT position (≈ 1.3% of position).
+- **Rationale**: HAWK votes are bearish (structure & counter) with moderate confidence (total score ≈ 65). Market sentiment is in extreme fear, funding rate is negative, and RSI on 4h is neutral, supporting a short bias.
+- **Time Horizon**: Targets are reachable within the next 24 hours (short‑term).
+- **Notes**: Watch for rapid shifts in long/short ratio and any news that could lift sentiment.","Position closed via UNKNOWN_EXCHANGE_FLAT at 70.17 (result=LOSS, realized_pnl_pct=-1.3856). Detected by Position Monitor run 994322f3-a9f9-4850-b364-836671523d56.",SL enforcement failed; over‑reliance on the counter HAWK without confirming broader trend direction.,The entry was placed precisely within the defined zone and risk sizing matched the plan.,"Future trades should verify bearish bias with multiple time‑frame signals and ensure stop‑loss orders are reliably executed, even when exchange anomalies occur.
+[hawk_counter] Add a longer‑term momentum filter and require confirmation from trend HAWK before issuing a bearish counter signal.","{
+  ""agent"": ""crypto_post_trade_review"",
+  ""reviewed_at"": ""2026-06-15T00:00:00Z"",
+  ""run_id"": ""994322f3-a9f9-4850-b364-836671523d56"",
+  ""symbol"": ""SOLUSDT"",
+  ""direction"": ""SHORT"",
+  ""result"": ""LOSS"",
+  ""realized_pnl_pct"": -1.3856,
+  ""thesis_assessment"": ""INCORRECT"",
+  ""thesis_rationale"": ""The bearish setup predicted a price decline, but the market moved higher, invalidating the core premise of the trade."",
+  ""agent_accuracy"": {
+    ""hawk_trend_accuracy"": ""INACCURATE"",
+    ""hawk_structure_accuracy"": ""INACCURATE"",
+    ""hawk_counter_accuracy"": ""INACCURATE"",
+    ""most_accurate_hawk"": ""none"",
+    ""least_accurate_hawk"": ""hawk_counter""
+  },
+  ""entry_quality"": ""IDEAL"",
+  ""sl_quality"": ""INVALIDATION_NOT_RESPECTED"",
+  ""market_regime_accuracy"": ""REGIME_MISMATCH"",
+  ""what_worked"": ""The entry was placed precisely within the defined zone and risk sizing matched the plan."",
+  ""what_failed"": ""The stop‑loss was never triggered due to an exchange‑flat closure, and the counter HAWK's bearish bias proved wrong."",
+  ""mistakes"": ""SL enforcement failed; over‑reliance on the counter HAWK without confirming broader trend direction."",
+  ""prompt_improvement_suggestions"": [
+    {
+      ""agent"": ""hawk_counter"",
+      ""current_weakness"": ""Overestimated short pressure based on short‑term metrics alone."",
+      ""suggested_change"": ""Add a longer‑term momentum filter and require confirmation from trend HAWK before issuing a bearish counter signal.""
+    }
+  ],
+  ""kill_switch_feedback"": null,
+  ""overall_process_grade"": ""C"",
+  ""process_grade_rationale"": ""Entry and risk parameters were solid, but the stop‑loss was not respected and the hawk assessment was off, leading to a loss."",
+  ""learning_summary"": ""Future trades should verify bearish bias with multiple time‑frame signals and ensure stop‑loss orders are reliably executed, even when exchange anomalies occur.""
+}","[{""action"": ""auto_executed"", ""trigger"": ""winrate_gate"", ""timestamp"": ""2026-06-14T13:34:55.444167+00:00"", ""entry_price"": 67.61}, {""action"": ""position_closed"", ""result"": ""LOSS"", ""run_id"": ""994322f3-a9f9-4850-b364-836671523d56"", ""timestamp"": ""2026-06-15T02:15:37.294254+00:00"", ""exit_price"": 70.17, ""close_reason"": ""UNKNOWN_EXCHANGE_FLAT"", ""realized_pnl_pct"": -1.3856}]","[""Sentiment remains in extreme fear, supporting downside pressure on SOL. Funding rate is slightly negative, indicating slight incentive for short positions.""]","{""main_risk"": ""Counter HAWK flags bearish pressure could reverse if long‑short ratio shifts."", ""sage_notes"": ""Maintain tight risk; monitor funding rate and fear/greed index."", ""main_bull_case"": ""Price near VWAP and short‑term RSI suggests limited upside."", ""consensus_strength"": ""MODERATE"", ""majority_direction"": ""SHORT""}",2026-06-14 13:30:55.982837+00,2026-06-15 02:15:38.663298+00,"{""size"": 0.592, ""symbol"": ""SOLUSDT"", ""proposal"": {""id"": ""70674760-249c-4456-a51d-8a22b21e8d60"", ""run_id"": ""b8ec3eb0-4f35-4585-b219-1b4d4871e845"", ""status"": ""APPROVED"", ""stop_loss"": 68.5, ""entry_plan"": {""primary_entry"": 67.61, ""entry_zone_low"": 67.55, ""entry_rationale"": ""Entry zone derived from the HAWK with highest confidence (counter HAWK) around current price."", ""entry_zone_high"": 67.67}, ""raw_payload"": {""agent"": ""crypto_trade_proposal"", ""symbol"": ""SOLUSDT"", ""direction"": ""SHORT"", ""stop_loss"": 68.5, ""entry_plan"": {""primary_entry"": 67.61, ""entry_zone_low"": 67.55, ""entry_rationale"": ""Entry zone derived from the HAWK with highest confidence (counter HAWK) around current price."", ""entry_zone_high"": 67.67}, ""hawk_votes"": {""hawk_trend"": ""NEUTRAL (60)"", ""hawk_counter"": ""BEARISH (70)"", ""hawk_structure"": ""BEARISH (65)""}, ""compiled_at"": ""2026-06-14T13:45:00Z"", ""market_type"": ""spot"", ""risk_reward"": 2.0, ""take_profit"": [{""rr_ratio"": 2.0, ""size_pct"": 50, ""tp_level"": 65.83}, {""rr_ratio"": 3.0, ""size_pct"": 30, ""tp_level"": 64.94}, {""rr_ratio"": 4.0, ""size_pct"": 20, ""tp_level"": 64.05}], ""total_score"": 64.75, ""news_summary"": ""Sentiment remains in extreme fear, supporting downside pressure on SOL. Funding rate is slightly negative, indicating slight incentive for short positions."", ""time_horizon"": ""SHORT_TERM"", ""max_loss_usdt"": 0.527, ""sage_approved"": true, ""strategy_type"": ""MEAN_REVERSION"", ""market_context"": {""regime"": ""UNKNOWN"", ""key_news"": [""Extreme fear sentiment persists"", ""Funding rate remains slightly negative""], ""fear_greed"": 18}, ""approval_status"": ""PENDING_APPROVAL"", ""full_proposal_md"": ""# SOLUSDT Short Trade Proposal (Paper)\n- **Entry**: 67.61 USDT (zone 67.55‑67.67) based on the highest‑confidence counter HAWK.\n- **Stop Loss**: 68.50 USDT (invalidation level).\n- **Take Profits**:\n  - TP1: 65.83 USDT (RR 2.0, 50% of position)\n  - TP2: 64.94 USDT (RR 3.0, 30% of position)\n  - TP3: 64.05 USDT (RR 4.0, 20% of position)\n- **Risk**: Max loss ≈ 0.53 USDT on a 40 USDT position (≈ 1.3% of position).\n- **Rationale**: HAWK votes are bearish (structure & counter) with moderate confidence (total score ≈ 65). Market sentiment is in extreme fear, funding rate is negative, and RSI on 4h is neutral, supporting a short bias.\n- **Time Horizon**: Targets are reachable within the next 24 hours (short‑term).\n- **Notes**: Watch for rapid shifts in long/short ratio and any news that could lift sentiment.\n"", ""approval_required"": true, ""agent_vote_summary"": {""main_risk"": ""Counter HAWK flags bearish pressure could reverse if long‑short ratio shifts."", ""sage_notes"": ""Maintain tight risk; monitor funding rate and fear/greed index."", ""main_bull_case"": ""Price near VWAP and short‑term RSI suggests limited upside."", ""consensus_strength"": ""MODERATE"", ""majority_direction"": ""SHORT""}, ""invalidation_level"": 68.5, ""kill_switch_passed"": null, ""position_size_usdt"": 40.0}, ""take_profit"": [{""rr_ratio"": 2.0, ""size_pct"": 50, ""tp_level"": 65.83}, {""rr_ratio"": 3.0, ""size_pct"": 30, ""tp_level"": 64.94}, {""rr_ratio"": 4.0, ""size_pct"": 20, ""tp_level"": 64.05}], ""news_summary"": ""Sentiment remains in extreme fear, supporting downside pressure on SOL. Funding rate is slightly negative, indicating slight incentive for short positions."", ""full_proposal_md"": ""# SOLUSDT Short Trade Proposal (Paper)\n- **Entry**: 67.61 USDT (zone 67.55‑67.67) based on the highest‑confidence counter HAWK.\n- **Stop Loss**: 68.50 USDT (invalidation level).\n- **Take Profits**:\n  - TP1: 65.83 USDT (RR 2.0, 50% of position)\n  - TP2: 64.94 USDT (RR 3.0, 30% of position)\n  - TP3: 64.05 USDT (RR 4.0, 20% of position)\n- **Risk**: Max loss ≈ 0.53 USDT on a 40 USDT position (≈ 1.3% of position).\n- **Rationale**: HAWK votes are bearish (structure & counter) with moderate confidence (total score ≈ 65). Market sentiment is in extreme fear, funding rate is negative, and RSI on 4h is neutral, supporting a short bias.\n- **Time Horizon**: Targets are reachable within the next 24 hours (short‑term).\n- **Notes**: Watch for rapid shifts in long/short ratio and any news that could lift sentiment."", ""agent_vote_summary"": {""main_risk"": ""Counter HAWK flags bearish pressure could reverse if long‑short ratio shifts."", ""sage_notes"": ""Maintain tight risk; monitor funding rate and fear/greed index."", ""main_bull_case"": ""Price near VWAP and short‑term RSI suggests limited upside."", ""consensus_strength"": ""MODERATE"", ""majority_direction"": ""SHORT""}, ""position_size_usdt"": 40.0}, ""direction"": ""SHORT"", ""execution"": {""mode"": ""DEMO_FUTURES"", ""side"": ""SELL"", ""size"": 0.592, ""symbol"": ""SOLUSDT"", ""exchange"": ""binance_demo_futures"", ""order_id"": ""2206856053"", ""market_type"": ""futures"", ""sl_order_id"": ""1000000105930196"", ""tp_order_ids"": [""2206856130"", ""2206856161"", ""2206856218""], ""executed_price"": 67.61, ""execution_status"": ""SUCCESS""}, ""entry_price"": 67.61, ""position_id"": ""c237af3c-2a1b-44d1-a655-46ae70e020fc"", ""journal_action"": ""auto_executed""}"
+333b765b-4e03-4aa9-8bb2-ecf94aa58db8,288bc95a-b4da-46e7-bdfa-b5630233f586,f778464c-25cb-4851-b44b-5700a9cda399,BTCUSDT,SHORT,63206.9,63779.1,0.001,-0.2403,-0.3802,76,LOSS,"A SHORT trade on BTCUSDT is proposed based on bearish consensus from HAWK agents. Entry at current price (63421.0) with stop-loss at 63757.2. Take-profit levels at 62748.6 (RR 2.0), 62412.4 (RR 3.0), and 62076.2 (RR 4.0). Position size is 50.0 USDT, with max loss of 0.265 USDT. Market sentiment is extremely fearful (fear/greed index 23). Strategy type is trend continuation, with time horizon of short-term. Requires human approval.","Position closed via SL at 63779.1 (result=LOSS, realized_pnl_pct=-0.3802). Detected by Position Monitor run d62713a4-9e68-4074-8d53-4a52580b7b18.",Entry price discrepancy between thesis and execution; HAWK agents failed to accurately predict trend continuation; SAGE did not flag potential reversal risks.,"The stop-loss was executed as planned, limiting the loss to within the predefined max loss. The position size was appropriately controlled.","The trade failed because the HAWK agents misjudged the trend continuation setup, and the entry was executed at a price lower than the thesis, leading to premature stop-loss. Future prompts must enforce stricter entry price adherence and improve trend reversal detection.
+[hawk_trend] Add explicit prompts for identifying early signs of trend reversal, such as VWAP breakouts or volume spikes
+[sage] Prompt SAGE to always include risk notes when consensus strength is below 'HIGH'","{
+  ""agent"": ""crypto_post_trade_review"",
+  ""reviewed_at"": ""2023-10-05T14:30:00Z"",
+  ""run_id"": ""d62713a4-9e68-4074-8d53-4a52580b7b18"",
+  ""symbol"": ""BTCUSDT"",
+  ""direction"": ""SHORT"",
+  ""result"": ""LOSS"",
+  ""realized_pnl_pct"": -0.3802,
+  ""thesis_assessment"": ""INCORRECT"",
+  ""thesis_rationale"": ""The original thesis assumed a bearish trend continuation below VWAP, but the price broke above the stop-loss, indicating a failed bearish setup. The trade lost because the market moved contrary to the predicted direction."",
+  ""agent_accuracy"": {
+    ""hawk_trend_accuracy"": ""INACCURATE"",
+    ""hawk_structure_accuracy"": ""INACCURATE"",
+    ""hawk_counter_accuracy"": ""INACCURATE"",
+    ""most_accurate_hawk"": ""none"",
+    ""least_accurate_hawk"": ""hawk_trend""
+  },
+  ""entry_quality"": ""LATE"",
+  ""sl_quality"": ""WELL_PLACED"",
+  ""market_regime_accuracy"": ""REGIME_MISMATCH"",
+  ""what_worked"": ""The stop-loss was executed as planned, limiting the loss to within the predefined max loss. The position size was appropriately controlled."",
+  ""what_failed"": ""The HAWK agents' consensus was only 'MODERATE' but the trade proceeded as if it had strong support. The entry price (63206.9) was lower than the thesis entry (63421.0), leading to premature stop-loss activation. SAGE provided no risk notes about potential trend reversals."",
+  ""mistakes"": ""Entry price discrepancy between thesis and execution; HAWK agents failed to accurately predict trend continuation; SAGE did not flag potential reversal risks."",
+  ""prompt_improvement_suggestions"": [
+    {
+      ""agent"": ""hawk_trend"",
+      ""current_weakness"": ""Failed to detect potential reversal in a bearish trend setup"",
+      ""suggested_change"": ""Add explicit prompts for identifying early signs of trend reversal, such as VWAP breakouts or volume spikes""
+    },
+    {
+      ""agent"": ""sage"",
+      ""current_weakness"": ""No risk notes provided despite moderate consensus strength"",
+      ""suggested_change"": ""Prompt SAGE to always include risk notes when consensus strength is below 'HIGH'""
+    }
+  ],
+  ""kill_switch_feedback"": ""null"",
+  ""overall_process_grade"": ""C"",
+  ""process_grade_rationale"": ""Risk management was sound, but the thesis was fundamentally incorrect due to flawed agent analysis and entry execution."",
+  ""learning_summary"": ""The trade failed because the HAWK agents misjudged the trend continuation setup, and the entry was executed at a price lower than the thesis, leading to premature stop-loss. Future prompts must enforce stricter entry price adherence and improve trend reversal detection.""
+}","[{""action"": ""auto_executed"", ""trigger"": ""winrate_gate"", ""timestamp"": ""2026-06-20T03:57:23.133868+00:00"", ""entry_price"": 63206.9}, {""action"": ""position_closed"", ""result"": ""LOSS"", ""run_id"": ""d62713a4-9e68-4074-8d53-4a52580b7b18"", ""timestamp"": ""2026-06-20T05:10:46.852532+00:00"", ""exit_price"": 63779.1, ""close_reason"": ""SL"", ""realized_pnl_pct"": -0.3802}]","[""Extreme fear in market sentiment with fear/greed index at 23. No specific news events provided.""]","{""main_risk"": ""Potential reversal if price breaks above 63757.2"", ""sage_notes"": ""No specific risk notes provided"", ""main_bull_case"": ""Bearish trend and structure aligned with current price below VWAP"", ""consensus_strength"": ""MODERATE"", ""majority_direction"": ""SHORT""}",2026-06-20 03:54:05.646805+00,2026-06-20 05:10:47.866125+00,"{""size"": 0.001, ""symbol"": ""BTCUSDT"", ""proposal"": {""id"": ""e5d44742-a447-4df9-9a30-f007794e1d61"", ""run_id"": ""90b0c80a-2289-464d-a20d-c760f0acb2ec"", ""status"": ""APPROVED"", ""stop_loss"": 63757.2, ""entry_plan"": {""primary_entry"": 63421.0, ""entry_zone_low"": 63421.0, ""entry_rationale"": ""Current price is below VWAP and aligned with bearish structure"", ""entry_zone_high"": 63421.0}, ""raw_payload"": {""agent"": ""crypto_trade_proposal"", ""symbol"": ""BTCUSDT"", ""direction"": ""SHORT"", ""stop_loss"": 63757.2, ""entry_plan"": {""primary_entry"": 63421.0, ""entry_zone_low"": 63421.0, ""entry_rationale"": ""Current price is below VWAP and aligned with bearish structure"", ""entry_zone_high"": 63421.0}, ""hawk_votes"": {""hawk_trend"": ""BEARISH (65)"", ""hawk_counter"": ""BEARISH (50)"", ""hawk_structure"": ""BEARISH (68)""}, ""compiled_at"": ""2026-06-20T03:55:32Z"", ""market_type"": ""futures"", ""risk_reward"": 2.0, ""take_profit"": [{""rr_ratio"": 2.0, ""size_pct"": 50, ""tp_level"": 62748.6}, {""rr_ratio"": 3.0, ""size_pct"": 30, ""tp_level"": 62412.4}, {""rr_ratio"": 4.0, ""size_pct"": 20, ""tp_level"": 62076.2}], ""total_score"": 61.55, ""news_summary"": ""Extreme fear in market sentiment with fear/greed index at 23. No specific news events provided."", ""time_horizon"": ""SHORT_TERM"", ""max_loss_usdt"": 0.265, ""sage_approved"": true, ""strategy_type"": ""TREND_CONTINUATION"", ""market_context"": {""regime"": ""Bullish"", ""key_news"": [], ""fear_greed"": 23}, ""approval_status"": ""PENDING_APPROVAL"", ""full_proposal_md"": ""A SHORT trade on BTCUSDT is proposed based on bearish consensus from HAWK agents. Entry at current price (63421.0) with stop-loss at 63757.2. Take-profit levels at 62748.6 (RR 2.0), 62412.4 (RR 3.0), and 62076.2 (RR 4.0). Position size is 50.0 USDT, with max loss of 0.265 USDT. Market sentiment is extremely fearful (fear/greed index 23). Strategy type is trend continuation, with time horizon of short-term. Requires human approval."", ""approval_required"": true, ""agent_vote_summary"": {""main_risk"": ""Potential reversal if price breaks above 63757.2"", ""sage_notes"": ""No specific risk notes provided"", ""main_bull_case"": ""Bearish trend and structure aligned with current price below VWAP"", ""consensus_strength"": ""MODERATE"", ""majority_direction"": ""SHORT""}, ""invalidation_level"": 63757.2, ""kill_switch_passed"": null, ""position_size_usdt"": 50.0}, ""take_profit"": [{""rr_ratio"": 2.0, ""size_pct"": 50, ""tp_level"": 62748.6}, {""rr_ratio"": 3.0, ""size_pct"": 30, ""tp_level"": 62412.4}, {""rr_ratio"": 4.0, ""size_pct"": 20, ""tp_level"": 62076.2}], ""news_summary"": ""Extreme fear in market sentiment with fear/greed index at 23. No specific news events provided."", ""full_proposal_md"": ""A SHORT trade on BTCUSDT is proposed based on bearish consensus from HAWK agents. Entry at current price (63421.0) with stop-loss at 63757.2. Take-profit levels at 62748.6 (RR 2.0), 62412.4 (RR 3.0), and 62076.2 (RR 4.0). Position size is 50.0 USDT, with max loss of 0.265 USDT. Market sentiment is extremely fearful (fear/greed index 23). Strategy type is trend continuation, with time horizon of short-term. Requires human approval."", ""agent_vote_summary"": {""main_risk"": ""Potential reversal if price breaks above 63757.2"", ""sage_notes"": ""No specific risk notes provided"", ""main_bull_case"": ""Bearish trend and structure aligned with current price below VWAP"", ""consensus_strength"": ""MODERATE"", ""majority_direction"": ""SHORT""}, ""position_size_usdt"": 50.0}, ""direction"": ""SHORT"", ""execution"": {""mode"": ""DEMO_FUTURES"", ""side"": ""SELL"", ""size"": 0.001, ""symbol"": ""BTCUSDT"", ""exchange"": ""binance_demo_futures"", ""order_id"": ""15581151317"", ""market_type"": ""futures"", ""sl_order_id"": ""1000000111617795"", ""tp_order_ids"": [""1000000111617797"", ""1000000111617798"", ""1000000111617800""], ""executed_price"": 63206.9, ""execution_status"": ""SUCCESS"", ""fill_price_source"": ""order_query""}, ""entry_price"": 63206.9, ""position_id"": ""f778464c-25cb-4851-b44b-5700a9cda399"", ""journal_action"": ""auto_executed""}"
+7e461717-ea14-43d3-8cff-7461213583b4,288bc95a-b4da-46e7-bdfa-b5630233f586,3180e0f7-b30e-48ff-9dfd-f794a5e9709b,ETHUSDT,SHORT,1662.44,1718.74,0.024,-0.10752,-0.2695,614,LOSS,"# ETHUSDT Short Trade Proposal (Paper Mode)
+**Direction:** SHORT | **Strategy:** Mean Reversion | **Time Horizon:** SHORT_TERM
+
+**Market Context**
+- Regime: Bearish
+- Fear & Greed Index: 18 (Extreme Fear)
+- Key news: Extreme fear sentiment; neutral funding rates.
+
+**Entry**
+- Primary entry at **$1,662.44** (current price), identified by the highest‑confidence Structure HAWK.
+- Entry zone: $1,662.44 – $1,662.44.
+
+**Stop‑Loss & Invalidation**
+- Stop‑loss set at **$1,680.00** (most conservative invalidation level).
+- Risk per trade: $0.42 (≈0.01% of entry price on a $40 position).
+
+**Take‑Profit Targets**
+| TP Level | RR | Position % |
+|----------|----|------------|
+| $1,627.32 | 2.0 | 50 |
+| $1,609.76 | 3.0 | 30 |
+| $1,592.20 | 4.0 | 20 |
+
+**Risk/Reward**
+- Minimum RR = 2.0 (TP1), meeting kill‑switch requirement.
+
+**Scores & Votes**
+- Weighted confidence score: **60**.
+- All three HAWKs vote BEARISH (Trend 55, Structure 65, Counter 60).
+- Sage approved with notes to watch for a short‑squeeze risk.
+
+**Position Sizing**
+- Paper portfolio assumed $1,000; position size set to $40 (4%).
+
+*Monitor funding rates and sentiment for any rapid shift.*","Position closed via UNKNOWN_EXCHANGE_FLAT at 1718.74 (result=LOSS, realized_pnl_pct=-0.2695). Detected by Position Monitor run 994322f3-a9f9-4850-b364-836671523d56.","SL set at $1,680 was breached early; the trade continued despite the counter‑HAWK's squeeze warning, leading to a larger loss.","The consensus of the three HAWKs and Sage's approval provided a clear, unified signal, and position sizing adhered to risk limits.","A unified bullish signal does not guarantee success; respecting counter‑HAWK risk alerts and setting stops with sufficient buffer are critical, especially in volatile mean‑reversion setups.
+[hawk_counter] When the counter‑HAWK flags squeeze risk, automatically widen the stop‑loss by a predefined buffer (e.g., +2% beyond the warning level).
+[sage] Add a rule for Sage to downgrade confidence or reject trades when any HAWK issues a high‑risk warning.","{
+  ""agent"": ""crypto_post_trade_review"",
+  ""reviewed_at"": ""2026-06-15T00:00:00Z"",
+  ""run_id"": ""994322f3-a9f9-4850-b364-836671523d56"",
+  ""symbol"": ""ETHUSDT"",
+  ""direction"": ""SHORT"",
+  ""result"": ""LOSS"",
+  ""realized_pnl_pct"": -0.2695,
+  ""thesis_assessment"": ""INCORRECT"",
+  ""thesis_rationale"": ""The mean‑reversion short thesis assumed a bearish regime and oversold conditions, but price rallied sharply instead, invalidating the core premise."",
+  ""agent_accuracy"": {
+    ""hawk_trend_accuracy"": ""INACCURATE"",
+    ""hawk_structure_accuracy"": ""INACCURATE"",
+    ""hawk_counter_accuracy"": ""ACCURATE"",
+    ""most_accurate_hawk"": ""hawk_counter"",
+    ""least_accurate_hawk"": ""hawk_structure""
+  },
+  ""entry_quality"": ""IDEAL"",
+  ""sl_quality"": ""TOO_TIGHT"",
+  ""market_regime_accuracy"": ""REGIME_MISMATCH"",
+  ""what_worked"": ""The consensus of the three HAWKs and Sage's approval provided a clear, unified signal, and position sizing adhered to risk limits."",
+  ""what_failed"": ""Stop‑loss was placed too close to entry, and the counter‑HAWK warning about a short‑squeeze was not given sufficient weight in risk management."",
+  ""mistakes"": ""SL set at $1,680 was breached early; the trade continued despite the counter‑HAWK's squeeze warning, leading to a larger loss."",
+  ""prompt_improvement_suggestions"": [
+    {
+      ""agent"": ""hawk_counter"",
+      ""current_weakness"": ""Warning about short‑squeeze was noted but not reflected in stop placement."",
+      ""suggested_change"": ""When the counter‑HAWK flags squeeze risk, automatically widen the stop‑loss by a predefined buffer (e.g., +2% beyond the warning level).""
+    },
+    {
+      ""agent"": ""sage"",
+      ""current_weakness"": ""Sage approved the trade without adjusting risk parameters based on the counter warning."",
+      ""suggested_change"": ""Add a rule for Sage to downgrade confidence or reject trades when any HAWK issues a high‑risk warning.""
+    }
+  ],
+  ""kill_switch_feedback"": null,
+  ""overall_process_grade"": ""C"",
+  ""process_grade_rationale"": ""Signal generation and sizing were solid, but risk controls (SL placement and heed to counter warnings) were inadequate."",
+  ""learning_summary"": ""A unified bullish signal does not guarantee success; respecting counter‑HAWK risk alerts and setting stops with sufficient buffer are critical, especially in volatile mean‑reversion setups.""
+}","[{""action"": ""auto_executed"", ""trigger"": ""winrate_gate"", ""timestamp"": ""2026-06-14T16:04:17.346094+00:00"", ""entry_price"": 1662.44}, {""action"": ""position_closed"", ""result"": ""LOSS"", ""run_id"": ""994322f3-a9f9-4850-b364-836671523d56"", ""timestamp"": ""2026-06-15T02:15:38.183904+00:00"", ""exit_price"": 1718.74, ""close_reason"": ""UNKNOWN_EXCHANGE_FLAT"", ""realized_pnl_pct"": -0.2695}]","[""Crypto market sentiment is in extreme fear, reflected by a low fear/greed index. Funding rates are near zero, reducing upside bias. These factors support a bearish short bias on ETHUSDT.""]","{""main_risk"": ""Counter HAWK warns of potential short squeeze if buying pressure returns."", ""sage_notes"": ""Maintain tight risk; monitor funding rates for reversal signs."", ""main_bull_case"": ""Price is below key EMAs and RSI shows oversold conditions, suggesting further downside."", ""consensus_strength"": ""STRONG"", ""majority_direction"": ""SHORT""}",2026-06-14 16:00:39.902719+00,2026-06-15 02:15:38.663298+00,"{""size"": 0.024, ""symbol"": ""ETHUSDT"", ""proposal"": {""id"": ""25775ba6-0d9b-4db0-94af-e3b1ea04a84a"", ""run_id"": ""0b0df504-93b8-465e-8ed5-f1fed3fd340d"", ""status"": ""APPROVED"", ""stop_loss"": 1680.0, ""entry_plan"": {""primary_entry"": 1662.44, ""entry_zone_low"": 1662.44, ""entry_rationale"": ""All three HAWK agents voted BEARISH with the highest confidence from the structure HAWK; the current price sits at the identified bearish entry zone."", ""entry_zone_high"": 1662.44}, ""raw_payload"": {""agent"": ""crypto_trade_proposal"", ""symbol"": ""ETHUSDT"", ""direction"": ""SHORT"", ""stop_loss"": 1680.0, ""entry_plan"": {""primary_entry"": 1662.44, ""entry_zone_low"": 1662.44, ""entry_rationale"": ""All three HAWK agents voted BEARISH with the highest confidence from the structure HAWK; the current price sits at the identified bearish entry zone."", ""entry_zone_high"": 1662.44}, ""hawk_votes"": {""hawk_trend"": ""BEARISH (55)"", ""hawk_counter"": ""BEARISH (60)"", ""hawk_structure"": ""BEARISH (65)""}, ""compiled_at"": ""2026-06-14T16:30:00Z"", ""market_type"": ""spot"", ""risk_reward"": 2.0, ""take_profit"": [{""rr_ratio"": 2.0, ""size_pct"": 50, ""tp_level"": 1627.32}, {""rr_ratio"": 3.0, ""size_pct"": 30, ""tp_level"": 1609.76}, {""rr_ratio"": 4.0, ""size_pct"": 20, ""tp_level"": 1592.2}], ""total_score"": 60.0, ""news_summary"": ""Crypto market sentiment is in extreme fear, reflected by a low fear/greed index. Funding rates are near zero, reducing upside bias. These factors support a bearish short bias on ETHUSDT."", ""time_horizon"": ""SHORT_TERM"", ""max_loss_usdt"": 0.42, ""sage_approved"": true, ""strategy_type"": ""MEAN_REVERSION"", ""market_context"": {""regime"": ""BEARISH"", ""key_news"": [""Extreme fear sentiment in crypto markets"", ""Funding rates near zero indicate low upside pressure""], ""fear_greed"": 18}, ""approval_status"": ""PENDING_APPROVAL"", ""full_proposal_md"": ""# ETHUSDT Short Trade Proposal (Paper Mode)\n**Direction:** SHORT | **Strategy:** Mean Reversion | **Time Horizon:** SHORT_TERM\n\n**Market Context**\n- Regime: Bearish\n- Fear & Greed Index: 18 (Extreme Fear)\n- Key news: Extreme fear sentiment; neutral funding rates.\n\n**Entry**\n- Primary entry at **$1,662.44** (current price), identified by the highest‑confidence Structure HAWK.\n- Entry zone: $1,662.44 – $1,662.44.\n\n**Stop‑Loss & Invalidation**\n- Stop‑loss set at **$1,680.00** (most conservative invalidation level).\n- Risk per trade: $0.42 (≈0.01% of entry price on a $40 position).\n\n**Take‑Profit Targets**\n| TP Level | RR | Position % |\n|----------|----|------------|\n| $1,627.32 | 2.0 | 50 |\n| $1,609.76 | 3.0 | 30 |\n| $1,592.20 | 4.0 | 20 |\n\n**Risk/Reward**\n- Minimum RR = 2.0 (TP1), meeting kill‑switch requirement.\n\n**Scores & Votes**\n- Weighted confidence score: **60**.\n- All three HAWKs vote BEARISH (Trend 55, Structure 65, Counter 60).\n- Sage approved with notes to watch for a short‑squeeze risk.\n\n**Position Sizing**\n- Paper portfolio assumed $1,000; position size set to $40 (4%).\n\n*Monitor funding rates and sentiment for any rapid shift.*"", ""approval_required"": true, ""agent_vote_summary"": {""main_risk"": ""Counter HAWK warns of potential short squeeze if buying pressure returns."", ""sage_notes"": ""Maintain tight risk; monitor funding rates for reversal signs."", ""main_bull_case"": ""Price is below key EMAs and RSI shows oversold conditions, suggesting further downside."", ""consensus_strength"": ""STRONG"", ""majority_direction"": ""SHORT""}, ""invalidation_level"": 1680.0, ""kill_switch_passed"": null, ""position_size_usdt"": 40.0}, ""take_profit"": [{""rr_ratio"": 2.0, ""size_pct"": 50, ""tp_level"": 1627.32}, {""rr_ratio"": 3.0, ""size_pct"": 30, ""tp_level"": 1609.76}, {""rr_ratio"": 4.0, ""size_pct"": 20, ""tp_level"": 1592.2}], ""news_summary"": ""Crypto market sentiment is in extreme fear, reflected by a low fear/greed index. Funding rates are near zero, reducing upside bias. These factors support a bearish short bias on ETHUSDT."", ""full_proposal_md"": ""# ETHUSDT Short Trade Proposal (Paper Mode)\n**Direction:** SHORT | **Strategy:** Mean Reversion | **Time Horizon:** SHORT_TERM\n\n**Market Context**\n- Regime: Bearish\n- Fear & Greed Index: 18 (Extreme Fear)\n- Key news: Extreme fear sentiment; neutral funding rates.\n\n**Entry**\n- Primary entry at **$1,662.44** (current price), identified by the highest‑confidence Structure HAWK.\n- Entry zone: $1,662.44 – $1,662.44.\n\n**Stop‑Loss & Invalidation**\n- Stop‑loss set at **$1,680.00** (most conservative invalidation level).\n- Risk per trade: $0.42 (≈0.01% of entry price on a $40 position).\n\n**Take‑Profit Targets**\n| TP Level | RR | Position % |\n|----------|----|------------|\n| $1,627.32 | 2.0 | 50 |\n| $1,609.76 | 3.0 | 30 |\n| $1,592.20 | 4.0 | 20 |\n\n**Risk/Reward**\n- Minimum RR = 2.0 (TP1), meeting kill‑switch requirement.\n\n**Scores & Votes**\n- Weighted confidence score: **60**.\n- All three HAWKs vote BEARISH (Trend 55, Structure 65, Counter 60).\n- Sage approved with notes to watch for a short‑squeeze risk.\n\n**Position Sizing**\n- Paper portfolio assumed $1,000; position size set to $40 (4%).\n\n*Monitor funding rates and sentiment for any rapid shift.*"", ""agent_vote_summary"": {""main_risk"": ""Counter HAWK warns of potential short squeeze if buying pressure returns."", ""sage_notes"": ""Maintain tight risk; monitor funding rates for reversal signs."", ""main_bull_case"": ""Price is below key EMAs and RSI shows oversold conditions, suggesting further downside."", ""consensus_strength"": ""STRONG"", ""majority_direction"": ""SHORT""}, ""position_size_usdt"": 40.0}, ""direction"": ""SHORT"", ""execution"": {""mode"": ""DEMO_FUTURES"", ""side"": ""SELL"", ""size"": 0.024, ""symbol"": ""ETHUSDT"", ""exchange"": ""binance_demo_futures"", ""order_id"": ""9753057980"", ""market_type"": ""futures"", ""sl_order_id"": ""1000000106058880"", ""tp_order_ids"": [""9753058168"", ""9753058286"", ""9753058395""], ""executed_price"": 1662.44, ""execution_status"": ""SUCCESS""}, ""entry_price"": 1662.44, ""position_id"": ""3180e0f7-b30e-48ff-9dfd-f794a5e9709b"", ""journal_action"": ""auto_executed""}"
+dacb6ff9-82b5-4f7a-b598-b4e375ae84a4,288bc95a-b4da-46e7-bdfa-b5630233f586,30e3f8e2-9612-4d5c-ad2d-fc3e7b35f63c,BTCUSDT,LONG,65500,65317.7,0.001,-0.1823,-0.2783,7,LOSS,"# BTCUSDT LONG Trade Proposal
+**Direction:** LONG (Trend continuation)
+**Entry:** 65,500 (zone 65,400‑65,600 from Trend HAWK, highest confidence 78%)
+**Stop Loss:** 64,155.88 (lowest invalidation level across HAWKs)
+**Take Profits:**
+- TP1: 68,188.23 (RR 2.0, 50% size)
+- TP2: 69,532.35 (RR 3.0, 30% size)
+- TP3: 70,876.46 (RR 4.0, 20% size)
+**Position Size:** $40.00 (paper portfolio)
+**Max Potential Loss:** $0.82 (≈2% of entry)
+**Score:** 71.05 (weighted confidence)
+**Time Horizon:** Short‑term (targets reachable within 24 h)
+**Rationale:** Trend HAWK identifies a bullish structure despite mixed EMA alignment, while the lowest invalidation level provides a tight stop. Counter‑HAWK warns of crowded longs, defining the primary risk.
+---
+*No guaranteed win rate is claimed.*","Position closed via UNKNOWN_EXCHANGE_FLAT at 65317.7 (result=LOSS, realized_pnl_pct=-0.2783). Detected by Position Monitor run 3aabfd69-1168-4883-ba1f-93294a4ef33c.",Over‑reliance on Trend‑HAWK despite mixed EMA signals; entry executed before confirming strength of the uptrend.,"The Counter‑HAWK correctly flagged crowded longs, and the stop‑loss level was far enough to avoid a premature stop, limiting the loss to the predefined maximum.","Future trades should treat a bullish trend signal as conditional, requiring additional confirmation, especially when EMA alignment is mixed. Tightening entry criteria and respecting counter‑trend warnings can improve win probability.
+[hawk_trend] Add a rule to downgrade confidence when higher‑timeframe EMA alignment is neutral or bearish.
+[entry_logic] Require a secondary trigger (e.g., a bullish candle close or volume spike) before entering within the zone.","{
+  ""agent"": ""crypto_post_trade_review"",
+  ""reviewed_at"": ""2026-06-15T12:34:56Z"",
+  ""run_id"": ""3aabfd69-1168-4883-ba1f-93294a4ef33c"",
+  ""symbol"": ""BTCUSDT"",
+  ""direction"": ""LONG"",
+  ""result"": ""LOSS"",
+  ""realized_pnl_pct"": -0.2783,
+  ""thesis_assessment"": ""INCORRECT"",
+  ""thesis_rationale"": ""The trade was predicated on a bullish continuation that never materialised; price moved lower immediately after entry, invalidating the uptrend premise."",
+  ""agent_accuracy"": {
+    ""hawk_trend_accuracy"": ""INACCURATE"",
+    ""hawk_structure_accuracy"": ""NEUTRAL"",
+    ""hawk_counter_accuracy"": ""ACCURATE"",
+    ""most_accurate_hawk"": ""hawk_counter"",
+    ""least_accurate_hawk"": ""hawk_trend""
+  },
+  ""entry_quality"": ""EARLY"",
+  ""sl_quality"": ""TOO_WIDE"",
+  ""market_regime_accuracy"": ""REGIME_MISMATCH"",
+  ""what_worked"": ""The Counter‑HAWK correctly flagged crowded longs, and the stop‑loss level was far enough to avoid a premature stop, limiting the loss to the predefined maximum."",
+  ""what_failed"": ""The Trend‑HAWK over‑estimated bullish momentum, leading to an entry just as the market reversed; entry timing and reliance on the trend signal were poor."",
+  ""mistakes"": ""Over‑reliance on Trend‑HAWK despite mixed EMA signals; entry executed before confirming strength of the uptrend."",
+  ""prompt_improvement_suggestions"": [
+    {
+      ""agent"": ""hawk_trend"",
+      ""current_weakness"": ""Failed to weight mixed EMA alignment, resulting in over‑confident bullish bias."",
+      ""suggested_change"": ""Add a rule to downgrade confidence when higher‑timeframe EMA alignment is neutral or bearish.""
+    },
+    {
+      ""agent"": ""entry_logic"",
+      ""current_weakness"": ""No confirmation filter beyond zone entry."",
+      ""suggested_change"": ""Require a secondary trigger (e.g., a bullish candle close or volume spike) before entering within the zone.""
+    }
+  ],
+  ""kill_switch_feedback"": null,
+  ""overall_process_grade"": ""C"",
+  ""process_grade_rationale"": ""Process identified risk and protected loss, but core trend signal was wrong and entry timing was poor."",
+  ""learning_summary"": ""Future trades should treat a bullish trend signal as conditional, requiring additional confirmation, especially when EMA alignment is mixed. Tightening entry criteria and respecting counter‑trend warnings can improve win probability.""
+}","[{""action"": ""auto_executed"", ""trigger"": ""winrate_gate"", ""timestamp"": ""2026-06-15T02:27:03.242914+00:00"", ""entry_price"": 65500.0}, {""action"": ""position_closed"", ""result"": ""LOSS"", ""run_id"": ""3aabfd69-1168-4883-ba1f-93294a4ef33c"", ""timestamp"": ""2026-06-15T02:30:46.612178+00:00"", ""exit_price"": 65317.7, ""close_reason"": ""UNKNOWN_EXCHANGE_FLAT"", ""realized_pnl_pct"": -0.2783}]",[],"{""main_risk"": ""Crowded long positions may trigger a rapid unwind."", ""sage_notes"": """", ""main_bull_case"": ""Trend HAWK sees bullish uptrend with higher highs and higher lows."", ""consensus_strength"": ""MODERATE"", ""majority_direction"": ""BEARISH""}",2026-06-15 02:23:40.832922+00,2026-06-15 02:30:46.691102+00,"{""size"": 0.001, ""symbol"": ""BTCUSDT"", ""proposal"": {""id"": ""07ee68c8-df2b-43a4-b508-43fab2901470"", ""run_id"": ""856ff727-ab48-41bc-983b-aa84a0afba1e"", ""status"": ""APPROVED"", ""stop_loss"": 64155.88472141, ""entry_plan"": {""primary_entry"": 65500.0, ""entry_zone_low"": 65400.0, ""entry_rationale"": ""Primary entry taken from HAWK Trend (highest confidence) entry zone 65400-65600."", ""entry_zone_high"": 65600.0}, ""raw_payload"": {""agent"": ""crypto_trade_proposal"", ""symbol"": ""BTCUSDT"", ""direction"": ""LONG"", ""stop_loss"": 64155.88472141, ""entry_plan"": {""primary_entry"": 65500.0, ""entry_zone_low"": 65400.0, ""entry_rationale"": ""Primary entry taken from HAWK Trend (highest confidence) entry zone 65400-65600."", ""entry_zone_high"": 65600.0}, ""hawk_votes"": {""hawk_trend"": ""BULLISH (78)"", ""hawk_counter"": ""BEARISH (70)"", ""hawk_structure"": ""BEARISH (65)""}, ""compiled_at"": ""2026-06-15T12:00:00Z"", ""market_type"": ""spot"", ""risk_reward"": 2.0, ""take_profit"": [{""rr_ratio"": 2.0, ""size_pct"": 50, ""tp_level"": 68188.2306}, {""rr_ratio"": 3.0, ""size_pct"": 30, ""tp_level"": 69532.3459}, {""rr_ratio"": 4.0, ""size_pct"": 20, ""tp_level"": 70876.4612}], ""total_score"": 71.05, ""news_summary"": """", ""time_horizon"": ""SHORT_TERM"", ""max_loss_usdt"": 0.8212, ""sage_approved"": true, ""strategy_type"": ""TREND_CONTINUATION"", ""market_context"": {""regime"": null, ""key_news"": [], ""fear_greed"": 20}, ""approval_status"": ""PENDING_APPROVAL"", ""full_proposal_md"": ""# BTCUSDT LONG Trade Proposal\n**Direction:** LONG (Trend continuation)\n**Entry:** 65,500 (zone 65,400‑65,600 from Trend HAWK, highest confidence 78%)\n**Stop Loss:** 64,155.88 (lowest invalidation level across HAWKs)\n**Take Profits:**\n- TP1: 68,188.23 (RR 2.0, 50% size)\n- TP2: 69,532.35 (RR 3.0, 30% size)\n- TP3: 70,876.46 (RR 4.0, 20% size)\n**Position Size:** $40.00 (paper portfolio)\n**Max Potential Loss:** $0.82 (≈2% of entry)\n**Score:** 71.05 (weighted confidence)\n**Time Horizon:** Short‑term (targets reachable within 24 h)\n**Rationale:** Trend HAWK identifies a bullish structure despite mixed EMA alignment, while the lowest invalidation level provides a tight stop. Counter‑HAWK warns of crowded longs, defining the primary risk.\n---\n*No guaranteed win rate is claimed.*"", ""approval_required"": true, ""agent_vote_summary"": {""main_risk"": ""Crowded long positions may trigger a rapid unwind."", ""sage_notes"": """", ""main_bull_case"": ""Trend HAWK sees bullish uptrend with higher highs and higher lows."", ""consensus_strength"": ""MODERATE"", ""majority_direction"": ""BEARISH""}, ""invalidation_level"": 64155.88472141, ""kill_switch_passed"": null, ""position_size_usdt"": 40.0}, ""take_profit"": [{""rr_ratio"": 2.0, ""size_pct"": 50, ""tp_level"": 68188.2306}, {""rr_ratio"": 3.0, ""size_pct"": 30, ""tp_level"": 69532.3458}, {""rr_ratio"": 4.0, ""size_pct"": 20, ""tp_level"": 70876.4611}], ""news_summary"": null, ""full_proposal_md"": ""# BTCUSDT LONG Trade Proposal\n**Direction:** LONG (Trend continuation)\n**Entry:** 65,500 (zone 65,400‑65,600 from Trend HAWK, highest confidence 78%)\n**Stop Loss:** 64,155.88 (lowest invalidation level across HAWKs)\n**Take Profits:**\n- TP1: 68,188.23 (RR 2.0, 50% size)\n- TP2: 69,532.35 (RR 3.0, 30% size)\n- TP3: 70,876.46 (RR 4.0, 20% size)\n**Position Size:** $40.00 (paper portfolio)\n**Max Potential Loss:** $0.82 (≈2% of entry)\n**Score:** 71.05 (weighted confidence)\n**Time Horizon:** Short‑term (targets reachable within 24 h)\n**Rationale:** Trend HAWK identifies a bullish structure despite mixed EMA alignment, while the lowest invalidation level provides a tight stop. Counter‑HAWK warns of crowded longs, defining the primary risk.\n---\n*No guaranteed win rate is claimed.*"", ""agent_vote_summary"": {""main_risk"": ""Crowded long positions may trigger a rapid unwind."", ""sage_notes"": """", ""main_bull_case"": ""Trend HAWK sees bullish uptrend with higher highs and higher lows."", ""consensus_strength"": ""MODERATE"", ""majority_direction"": ""BEARISH""}, ""position_size_usdt"": 40.0}, ""direction"": ""LONG"", ""execution"": {""mode"": ""PAPER"", ""note"": ""Simulated paper trade — no real order placed."", ""side"": ""BUY"", ""size"": 0.001, ""symbol"": ""BTCUSDT"", ""exchange"": ""paper_trade"", ""order_id"": ""PAPER-7FB3891F"", ""sl_order_id"": ""PAPER-SL-E1651E69"", ""tp_order_ids"": [""PAPER-TP1-BF248C"", ""PAPER-TP2-45BD5E"", ""PAPER-TP3-485C6A""], ""executed_price"": 65500.0, ""execution_status"": ""SUCCESS""}, ""entry_price"": 65500.0, ""position_id"": ""30e3f8e2-9612-4d5c-ad2d-fc3e7b35f63c"", ""journal_action"": ""auto_executed""}"
+4772b1b7-aeb6-4de3-9ae3-85e40a961ca5,288bc95a-b4da-46e7-bdfa-b5630233f586,834d0425-1ace-47bd-bb2c-0f2cc6e2937d,BTCUSDT,SHORT,62423.9,63084,0.001,-0.5019,-0.8031,317,LOSS,"### SHORT Trade Proposal: BTCUSDT
+**Strategy Type**: Trend Continuation
+**Time Horizon**: Short Term (24h)
+**Market Context**: Bearish regime with extreme fear (Fear & Greed Index 14/100). Negative funding rates and crowded long positioning reinforce bearish bias.
+
+**Entry Plan**: Primary entry at 62,423.9 (current price), with a bearish zone between 62,237.2 and 62,423.9. Rationale: Price is below EMA20/EMA50 with bearish MACD and RSI < 50, confirming downward momentum. VWAP and key resistance levels indicate bearish structure.
+
+**Risk Management**: Stop-loss at 63,088.0 (lowest invalidation level from hawk_structure). Take-profit levels at 61,095.7 (RR 2.0), 60,431.6 (RR 3.0), and 59,767.5 (RR 4.0). Position size: 50.0 USDT (futures minimum). Max loss: ~0.53 USDT.
+
+**Hawk Consensus**: All three HAWKs (trend, structure, counter) agree on bearish bias with 78%, 78%, and 65% confidence respectively. Sage approved the proposal.
+
+**Key Risks**: Price may temporarily rebound above 63,088.0 (stop-loss level) due to short-term volatility or unexpected bullish catalysts. Oversold RSI (34.84) could trigger a short-term bounce.","Position closed via SL at 63084.0 (result=LOSS, realized_pnl_pct=-0.8031). Detected by Position Monitor run 22c9c972-35a0-40bf-8b97-20d198f112b2.","Stop-loss placement did not account for oversold RSI (34.84) and short-term volatility, violating the principle of placing SLs at meaningful levels rather than arbitrary price points.",Strong HAWK consensus (78% trend/structure accuracy) and entry in the defined bearish zone. Risk management included clear RR targets.,"Even with accurate trend/structure analysis, rigid SL placement without volatility consideration can destroy trades. Future prompts must emphasize dynamic SL management and RSI-based bounce risk assessment.
+[hawk_structure] Incorporate volatility metrics (ATR) into SL placement calculations
+[hawk_counter] Add explicit RSI-based bounce risk warnings for trades below 35","{
+  ""agent"": ""crypto_post_trade_review"",
+  ""reviewed_at"": ""2023-10-05T14:30:00Z"",
+  ""run_id"": ""22c9c972-35a0-40bf-8b97-20d198f112b2"",
+  ""symbol"": ""BTCUSDT"",
+  ""direction"": ""SHORT"",
+  ""result"": ""LOSS"",
+  ""realized_pnl_pct"": -0.8031,
+  ""thesis_assessment"": ""PARTIALLY_CORRECT"",
+  ""thesis_rationale"": ""The setup included valid bearish indicators (price below EMAs, bearish MACD, RSI < 50). However, the trade failed due to immediate volatility contradicting the thesis, suggesting the bearish bias did not materialize as expected."",
+  ""agent_accuracy"": {
+    ""hawk_trend_accuracy"": ""ACCURATE"",
+    ""hawk_structure_accuracy"": ""ACCURATE"",
+    ""hawk_counter_accuracy"": ""INACCURATE"",
+    ""most_accurate_hawk"": ""hawk_structure"",
+    ""least_accurate_hawk"": ""hawk_counter""
+  },
+  ""entry_quality"": ""IDEAL"",
+  ""sl_quality"": ""TOO_TIGHT"",
+  ""market_regime_accuracy"": ""REGIME_MISMATCH"",
+  ""what_worked"": ""Strong HAWK consensus (78% trend/structure accuracy) and entry in the defined bearish zone. Risk management included clear RR targets."",
+  ""what_failed"": ""Stop-loss at 63,088.0 was too tight for the volatility environment, leading to premature exit. Hawk_counter's lower confidence (65%) failed to flag short-term bounce risk."",
+  ""mistakes"": ""Stop-loss placement did not account for oversold RSI (34.84) and short-term volatility, violating the principle of placing SLs at meaningful levels rather than arbitrary price points."",
+  ""prompt_improvement_suggestions"": [
+    {
+      ""agent"": ""hawk_structure"",
+      ""current_weakness"": ""Failed to account for volatility in defining invalidation levels"",
+      ""suggested_change"": ""Incorporate volatility metrics (ATR) into SL placement calculations""
+    },
+    {
+      ""agent"": ""hawk_counter"",
+      ""current_weakness"": ""Underestimated short-term bounce risk from oversold RSI"",
+      ""suggested_change"": ""Add explicit RSI-based bounce risk warnings for trades below 35""
+    }
+  ],
+  ""kill_switch_feedback"": ""Kill switch was well calibrated to trigger on SL, but SL placement itself was flawed."",
+  ""overall_process_grade"": ""C"",
+  ""process_grade_rationale"": ""Strong analysis but poor execution due to inadequate risk management. Thesis had valid components but failed to adapt to market dynamics."",
+  ""learning_summary"": ""Even with accurate trend/structure analysis, rigid SL placement without volatility consideration can destroy trades. Future prompts must emphasize dynamic SL management and RSI-based bounce risk assessment.""
+}","[{""action"": ""exchange_execute_step"", ""exchange"": ""binance_demo_futures"", ""order_id"": ""15442649264"", ""timestamp"": ""2026-06-19T10:53:14.038354+00:00"", ""entry_price"": 62423.9}, {""action"": ""position_closed"", ""result"": ""LOSS"", ""run_id"": ""22c9c972-35a0-40bf-8b97-20d198f112b2"", ""timestamp"": ""2026-06-19T16:10:18.358807+00:00"", ""exit_price"": 63084.0, ""close_reason"": ""SL"", ""realized_pnl_pct"": -0.8031}]","[""The Fear & Greed Index is at extreme fear (14/100), indicating heightened bearish sentiment. Negative funding rates (-7.37e-06) and crowded long positioning (long/short ratio 1.9061) further support bearish bias.""]","{""main_risk"": ""Price below EMAs with bearish MACD and RSI at 34.84 (oversold but not extreme)"", ""sage_notes"": ""No specific risk notes provided"", ""main_bull_case"": ""Price below EMA20/EMA50 with bearish MACD and RSI < 50 confirm downward momentum"", ""consensus_strength"": ""STRONG"", ""majority_direction"": ""BEARISH""}",2026-06-19 10:53:12.398065+00,2026-06-19 16:10:18.914251+00,"{""size"": 0.001, ""symbol"": ""BTCUSDT"", ""proposal"": {""id"": ""3c73437a-a522-452a-8203-d8a13eb78706"", ""run_id"": ""e2cdbda5-0b54-4165-9ef3-16b7313b64ee"", ""status"": ""APPROVED"", ""stop_loss"": 63088.0, ""entry_plan"": {""primary_entry"": 62423.9, ""entry_zone_low"": 62237.2, ""entry_rationale"": ""Price is below EMA20/EMA50 with bearish MACD and RSI < 50, confirming downward momentum. VWAP and key resistance levels indicate bearish structure."", ""entry_zone_high"": 62423.9}, ""raw_payload"": {""agent"": ""crypto_trade_proposal"", ""symbol"": ""BTCUSDT"", ""direction"": ""SHORT"", ""stop_loss"": 63088.0, ""entry_plan"": {""primary_entry"": 62423.9, ""entry_zone_low"": 62237.2, ""entry_rationale"": ""Price is below EMA20/EMA50 with bearish MACD and RSI < 50, confirming downward momentum. VWAP and key resistance levels indicate bearish structure."", ""entry_zone_high"": 62423.9}, ""hawk_votes"": {""hawk_trend"": ""BEARISH (78)"", ""hawk_counter"": ""BEARISH (65)"", ""hawk_structure"": ""BEARISH (78)""}, ""compiled_at"": ""2026-06-19T10:39:07.052042+00:00"", ""risk_reward"": 4.0, ""take_profit"": [{""rr_ratio"": 2.0, ""size_pct"": 50, ""tp_level"": 61095.7}, {""rr_ratio"": 3.0, ""size_pct"": 30, ""tp_level"": 60431.6}, {""rr_ratio"": 4.0, ""size_pct"": 20, ""tp_level"": 59767.5}], ""total_score"": 74.1, ""news_summary"": ""The Fear & Greed Index is at extreme fear (14/100), indicating heightened bearish sentiment. Negative funding rates (-7.37e-06) and crowded long positioning (long/short ratio 1.9061) further support bearish bias."", ""time_horizon"": ""SHORT_TERM"", ""max_loss_usdt"": 0.532, ""sage_approved"": true, ""strategy_type"": ""TREND_CONTINUATION"", ""market_context"": {""regime"": ""BEARISH"", ""key_news"": [""Extreme Fear in Fear & Greed Index (14/100)""], ""fear_greed"": 14}, ""approval_status"": ""PENDING_APPROVAL"", ""full_proposal_md"": ""### SHORT Trade Proposal: BTCUSDT\n**Strategy Type**: Trend Continuation\n**Time Horizon**: Short Term (24h)\n**Market Context**: Bearish regime with extreme fear (Fear & Greed Index 14/100). Negative funding rates and crowded long positioning reinforce bearish bias.\n\n**Entry Plan**: Primary entry at 62,423.9 (current price), with a bearish zone between 62,237.2 and 62,423.9. Rationale: Price is below EMA20/EMA50 with bearish MACD and RSI < 50, confirming downward momentum. VWAP and key resistance levels indicate bearish structure.\n\n**Risk Management**: Stop-loss at 63,088.0 (lowest invalidation level from hawk_structure). Take-profit levels at 61,095.7 (RR 2.0), 60,431.6 (RR 3.0), and 59,767.5 (RR 4.0). Position size: 50.0 USDT (futures minimum). Max loss: ~0.53 USDT.\n\n**Hawk Consensus**: All three HAWKs (trend, structure, counter) agree on bearish bias with 78%, 78%, and 65% confidence respectively. Sage approved the proposal.\n\n**Key Risks**: Price may temporarily rebound above 63,088.0 (stop-loss level) due to short-term volatility or unexpected bullish catalysts. Oversold RSI (34.84) could trigger a short-term bounce."", ""agent_vote_summary"": {""main_risk"": ""Price below EMAs with bearish MACD and RSI at 34.84 (oversold but not extreme)"", ""sage_notes"": ""No specific risk notes provided"", ""main_bull_case"": ""Price below EMA20/EMA50 with bearish MACD and RSI < 50 confirm downward momentum"", ""consensus_strength"": ""STRONG"", ""majority_direction"": ""BEARISH""}, ""invalidation_level"": 62232.1, ""kill_switch_passed"": null, ""position_size_usdt"": 50.0}, ""take_profit"": [{""rr_ratio"": 2.0, ""size_pct"": 50, ""tp_level"": 61095.7}, {""rr_ratio"": 3.0, ""size_pct"": 30, ""tp_level"": 60431.6}, {""rr_ratio"": 4.0, ""size_pct"": 20, ""tp_level"": 59767.5}], ""news_summary"": ""The Fear & Greed Index is at extreme fear (14/100), indicating heightened bearish sentiment. Negative funding rates (-7.37e-06) and crowded long positioning (long/short ratio 1.9061) further support bearish bias."", ""full_proposal_md"": ""### SHORT Trade Proposal: BTCUSDT\n**Strategy Type**: Trend Continuation\n**Time Horizon**: Short Term (24h)\n**Market Context**: Bearish regime with extreme fear (Fear & Greed Index 14/100). Negative funding rates and crowded long positioning reinforce bearish bias.\n\n**Entry Plan**: Primary entry at 62,423.9 (current price), with a bearish zone between 62,237.2 and 62,423.9. Rationale: Price is below EMA20/EMA50 with bearish MACD and RSI < 50, confirming downward momentum. VWAP and key resistance levels indicate bearish structure.\n\n**Risk Management**: Stop-loss at 63,088.0 (lowest invalidation level from hawk_structure). Take-profit levels at 61,095.7 (RR 2.0), 60,431.6 (RR 3.0), and 59,767.5 (RR 4.0). Position size: 50.0 USDT (futures minimum). Max loss: ~0.53 USDT.\n\n**Hawk Consensus**: All three HAWKs (trend, structure, counter) agree on bearish bias with 78%, 78%, and 65% confidence respectively. Sage approved the proposal.\n\n**Key Risks**: Price may temporarily rebound above 63,088.0 (stop-loss level) due to short-term volatility or unexpected bullish catalysts. Oversold RSI (34.84) could trigger a short-term bounce."", ""agent_vote_summary"": {""main_risk"": ""Price below EMAs with bearish MACD and RSI at 34.84 (oversold but not extreme)"", ""sage_notes"": ""No specific risk notes provided"", ""main_bull_case"": ""Price below EMA20/EMA50 with bearish MACD and RSI < 50 confirm downward momentum"", ""consensus_strength"": ""STRONG"", ""majority_direction"": ""BEARISH""}, ""position_size_usdt"": 50.0}, ""direction"": ""SHORT"", ""execution"": {""mode"": ""DEMO_FUTURES"", ""side"": ""SELL"", ""size"": 0.0, ""symbol"": ""BTCUSDT"", ""exchange"": ""binance_demo_futures"", ""order_id"": ""15442649264"", ""market_type"": ""futures"", ""sl_order_id"": ""1000000110964771"", ""tp_order_ids"": [""1000000110964773"", ""1000000110964777"", ""1000000110964783""], ""executed_price"": 0.0, ""execution_status"": ""SUCCESS""}, ""entry_price"": 62423.9, ""position_id"": ""834d0425-1ace-47bd-bb2c-0f2cc6e2937d"", ""journal_action"": ""exchange_execute_step""}"
+10d1e2fc-f877-4329-abc8-39e419b61e3f,288bc95a-b4da-46e7-bdfa-b5630233f586,5f7b7a85-7c5e-46d3-a045-99b951febe11,SOLUSDT,LONG,73.64,71.33,0.11,-0.165,-2.0369,3700,LOSS,Controlled DEMO validation of Algo SL/TP fix (Phase 2C-A).,"Position closed via UNKNOWN_EXCHANGE_FLAT at 71.33 (result=LOSS, realized_pnl_pct=-2.0369). Detected by Position Monitor run 87bfaa25-7266-475b-a586-2ac51801cb06.",Failure to account for exchange-specific flat closure scenarios in the thesis; absence of agent input during a demo validation trade.,"The trade executed the intended SL/TP mechanism as designed, and the position was closed via the demo validation process.","External exchange events can invalidate even well-structured demo validations. Future prompts must explicitly address non-market risk factors and ensure agent participation in all validation trades.
+[hawk_structure] Add explicit prompt to evaluate exchange-specific closure risks in demo validations
+[sage] Require agent votes for all demo trades, even if labeled 'controlled'","{
+  ""agent"": ""crypto_post_trade_review"",
+  ""reviewed_at"": ""2023-10-05T14:30:00Z"",
+  ""run_id"": ""87bfaa25-7266-475b-a586-2ac51801cb06"",
+  ""symbol"": ""SOLUSDT"",
+  ""direction"": ""LONG"",
+  ""result"": ""LOSS"",
+  ""realized_pnl_pct"": -2.0369,
+  ""thesis_assessment"": ""PARTIALLY_CORRECT"",
+  ""thesis_rationale"": ""The thesis aimed to validate an Algo SL/TP fix in a controlled demo, which was technically executed. However, the loss was not due to a flawed setup but an external exchange event (UNKNOWN_EXCHANGE_FLAT), which the thesis did not anticipate."",
+  ""agent_accuracy"": {
+    ""hawk_trend_accuracy"": ""NEUTRAL"",
+    ""hawk_structure_accuracy"": ""NEUTRAL"",
+    ""hawk_counter_accuracy"": ""NEUTRAL"",
+    ""most_accurate_hawk"": ""none"",
+    ""least_accurate_hawk"": ""none""
+  },
+  ""entry_quality"": ""ACCEPTABLE"",
+  ""sl_quality"": ""INVALIDATION_NOT_RESPECTED"",
+  ""market_regime_accuracy"": ""REGIME_MISMATCH"",
+  ""what_worked"": ""The trade executed the intended SL/TP mechanism as designed, and the position was closed via the demo validation process."",
+  ""what_failed"": ""The trade was negatively impacted by an unhandled exchange-specific event (UNKNOWN_EXCHANGE_FLAT), which was not accounted for in the thesis or risk parameters. Agent votes were not recorded, indicating a process gap in demo validation."",
+  ""mistakes"": ""Failure to account for exchange-specific flat closure scenarios in the thesis; absence of agent input during a demo validation trade."",
+  ""prompt_improvement_suggestions"": [
+    {
+      ""agent"": ""hawk_structure"",
+      ""current_weakness"": ""Did not flag exchange-specific risk factors in demo trades"",
+      ""suggested_change"": ""Add explicit prompt to evaluate exchange-specific closure risks in demo validations""
+    },
+    {
+      ""agent"": ""sage"",
+      ""current_weakness"": ""Did not enforce agent voting in controlled demo scenarios"",
+      ""suggested_change"": ""Require agent votes for all demo trades, even if labeled 'controlled'""
+    }
+  ],
+  ""kill_switch_feedback"": ""null"",
+  ""overall_process_grade"": ""C"",
+  ""process_grade_rationale"": ""The process executed the technical validation goal but failed to account for external exchange risks and lacked agent oversight in a demo scenario."",
+  ""learning_summary"": ""External exchange events can invalidate even well-structured demo validations. Future prompts must explicitly address non-market risk factors and ensure agent participation in all validation trades.""
+}","[{""action"": ""executed"", ""exchange"": ""binance_demo_futures"", ""order_id"": ""2221315371"", ""timestamp"": ""2026-06-15T14:26:35.219522+00:00"", ""entry_price"": 73.64}, {""action"": ""position_closed"", ""result"": ""LOSS"", ""run_id"": ""87bfaa25-7266-475b-a586-2ac51801cb06"", ""timestamp"": ""2026-06-18T04:07:22.636404+00:00"", ""exit_price"": 71.33, ""close_reason"": ""UNKNOWN_EXCHANGE_FLAT"", ""realized_pnl_pct"": -2.0369}]",[],{},2026-06-15 14:26:32.667622+00,2026-06-18 04:07:23.136108+00,"{""size"": 0.11, ""symbol"": ""SOLUSDT"", ""proposal"": {""id"": ""37baefa5-12db-4f32-9647-b2e0b500e30a"", ""run_id"": ""c280290d-effa-44a3-8ed5-96a657c80532"", ""status"": ""EXECUTED"", ""stop_loss"": 72.0, ""entry_plan"": {""primary_entry"": 73.58}, ""raw_payload"": {}, ""take_profit"": [{""price"": 77.0}], ""news_summary"": null, ""full_proposal_md"": ""Controlled DEMO validation of Algo SL/TP fix (Phase 2C-A)."", ""agent_vote_summary"": {}, ""position_size_usdt"": 8.0}, ""direction"": ""LONG"", ""execution"": {""mode"": ""DEMO"", ""side"": ""BUY"", ""type"": ""MARKET"", ""price"": ""0.0000"", ""cumQty"": ""0.00"", ""status"": ""NEW"", ""symbol"": ""SOLUSDT"", ""orderId"": 2221315371, ""origQty"": ""0.11"", ""exchange"": ""binance_demo_futures"", ""order_id"": ""2221315371"", ""origType"": ""MARKET"", ""stopPrice"": ""0.0000"", ""priceMatch"": ""NONE"", ""reduceOnly"": false, ""updateTime"": 1781533595143, ""executedQty"": ""0.00"", ""sl_order_id"": ""1000000107149780"", ""timeInForce"": ""GTC"", ""workingType"": ""CONTRACT_PRICE"", ""goodTillDate"": 0, ""positionSide"": ""BOTH"", ""priceProtect"": false, ""tp_order_ids"": [""1000000107149786""], ""clientOrderId"": ""pda-37baefa512db4f329647b2e0b500e30a"", ""closePosition"": false, ""execution_status"": ""SUCCESS"", ""selfTradePreventionMode"": ""EXPIRE_MAKER""}, ""entry_price"": 73.64, ""position_id"": ""5f7b7a85-7c5e-46d3-a045-99b951febe11"", ""journal_action"": ""executed""}"
+a922ca5f-1d44-4404-ad10-adc3690e4dcf,288bc95a-b4da-46e7-bdfa-b5630233f586,02e5bf12-5148-4054-aec6-4876b59db9fc,BTCUSDT,SHORT,63015,63045.70512681,0.0008,-0.11128,-0.2207,7,LOSS,"Phase 6.14.W8-run-E controlled DEMO futures validation (W6 algo-aware cleanup). SHORT BTCUSDT, minimum notional.","Position closed via UNKNOWN_EXCHANGE_FLAT at 63045.70512681 (result=LOSS, realized_pnl_pct=-0.2207). Detected by Position Monitor run 2736bf28-850a-4cd1-ae45-72e7cd26f722.",,,,,"[{""action"": ""executed"", ""exchange"": ""binance_demo_futures"", ""order_id"": ""15497087534"", ""timestamp"": ""2026-06-19T18:54:25.344465+00:00"", ""entry_price"": 63015.0}, {""action"": ""position_closed"", ""result"": ""LOSS"", ""run_id"": ""2736bf28-850a-4cd1-ae45-72e7cd26f722"", ""timestamp"": ""2026-06-19T19:02:00.318400+00:00"", ""exit_price"": 63045.70512681, ""close_reason"": ""UNKNOWN_EXCHANGE_FLAT"", ""realized_pnl_pct"": -0.2207}]",[],"{""note"": ""controlled_test_no_agents""}",2026-06-19 18:54:22.561201+00,2026-06-19 19:01:58.917141+00,"{""size"": 0.0008, ""symbol"": ""BTCUSDT"", ""proposal"": {""id"": ""0825f079-ecfd-4a49-9282-31b837fee534"", ""run_id"": ""23297ed6-0ff7-4702-b267-2463dcd2638b"", ""status"": ""EXECUTED"", ""stop_loss"": 63258.6, ""entry_plan"": {""type"": ""market"", ""primary_entry"": 63038.0}, ""raw_payload"": {""phase"": ""6.14.W8-run-E"", ""purpose"": ""w6_cleanup_validation"", ""controlled_test"": true}, ""take_profit"": [62565.2, 62281.5, 61966.4], ""news_summary"": null, ""full_proposal_md"": ""Phase 6.14.W8-run-E controlled DEMO futures validation (W6 algo-aware cleanup). SHORT BTCUSDT, minimum notional."", ""agent_vote_summary"": {""note"": ""controlled_test_no_agents""}, ""position_size_usdt"": 53.0}, ""direction"": ""SHORT"", ""execution"": {""mode"": ""DEMO"", ""side"": ""SELL"", ""type"": ""MARKET"", ""price"": ""0.00"", ""cumQty"": ""0.0000"", ""status"": ""NEW"", ""symbol"": ""BTCUSDT"", ""orderId"": 15497087534, ""origQty"": ""0.0008"", ""exchange"": ""binance_demo_futures"", ""order_id"": ""15497087534"", ""origType"": ""MARKET"", ""stopPrice"": ""0.00"", ""priceMatch"": ""NONE"", ""reduceOnly"": false, ""updateTime"": 1781895264877, ""executedQty"": ""0.0000"", ""sl_order_id"": ""1000000111286657"", ""timeInForce"": ""GTC"", ""workingType"": ""CONTRACT_PRICE"", ""goodTillDate"": 0, ""positionSide"": ""BOTH"", ""priceProtect"": false, ""tp_order_ids"": [""1000000111286659"", ""1000000111286660"", ""1000000111286661""], ""clientOrderId"": ""pda-0825f079ecfd4a49928231b837fee534"", ""closePosition"": false, ""execution_status"": ""SUCCESS"", ""selfTradePreventionMode"": ""EXPIRE_MAKER""}, ""entry_price"": 63015.0, ""position_id"": ""02e5bf12-5148-4054-aec6-4876b59db9fc"", ""journal_action"": ""executed""}"

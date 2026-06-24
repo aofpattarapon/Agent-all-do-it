@@ -1,6 +1,7 @@
 """OpenAI API runtime adapter."""
 
 from app.core.config import settings
+from app.services.runtime._utils import API_CALL_TIMEOUT_SECONDS
 
 
 async def run_agent(
@@ -20,7 +21,10 @@ async def run_agent(
     if not settings.OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY is not configured (401 unauthorized)")
 
-    client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    client = openai.AsyncOpenAI(
+        api_key=settings.OPENAI_API_KEY,
+        max_retries=0,  # run_with_fallback owns retry/backoff — no hidden SDK retries
+    )
     resolved_model = model or "gpt-4o"
 
     messages = []
@@ -33,6 +37,7 @@ async def run_agent(
         max_tokens=max_tokens,
         temperature=temperature,
         messages=messages,
+        timeout=API_CALL_TIMEOUT_SECONDS,
     )
     text = response.choices[0].message.content if response.choices else ""
     tokens = None

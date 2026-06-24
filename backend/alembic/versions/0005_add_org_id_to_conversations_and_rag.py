@@ -1,4 +1,3 @@
-
 """add organization_id to conversations — skipped (enable_teams=false or no SQL DB)
 
 Revision ID: 0005_org_tenant_isolation

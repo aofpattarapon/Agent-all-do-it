@@ -21,14 +21,10 @@ class ProjectMember(Base, TimestampMixin):
 
     __tablename__ = "project_members"
     __table_args__ = (
-        UniqueConstraint(
-            "project_id", "user_id", name="project_members_project_id_user_id_key"
-        ),
+        UniqueConstraint("project_id", "user_id", name="project_members_project_id_user_id_key"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="CASCADE"),
@@ -42,9 +38,7 @@ class ProjectMember(Base, TimestampMixin):
         index=True,
     )
     # One of app.core.rbac.ProjectRole values (excluding "owner", which is implicit).
-    project_role: Mapped[str] = mapped_column(
-        String(50), default="viewer", nullable=False
-    )
+    project_role: Mapped[str] = mapped_column(String(50), default="viewer", nullable=False)
 
     def __repr__(self) -> str:
         return (

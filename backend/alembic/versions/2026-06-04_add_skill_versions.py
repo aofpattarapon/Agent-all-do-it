@@ -36,7 +36,9 @@ def upgrade() -> None:
         sa.Column("sample_size", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("approved_by", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("notes", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.UniqueConstraint("skill_id", "version_number", name="uq_skill_versions_skill_version"),
     )

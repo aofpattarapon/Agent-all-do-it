@@ -23,7 +23,9 @@ class AgentChatService:
     ) -> AgentChatResponse:
         agent = await agent_config_repo.get_by_id(self.db, agent_config_id)
         if not agent or agent.project_id != project_id:
-            raise NotFoundError(message="Agent not found", details={"agent_id": str(agent_config_id)})
+            raise NotFoundError(
+                message="Agent not found", details={"agent_id": str(agent_config_id)}
+            )
 
         # Build system prompt from agent config + knowledge
         system_parts = [agent.system_prompt or f"You are {agent.name}, a {agent.role}."]

@@ -18,9 +18,7 @@ class AgentTemplate(Base, TimestampMixin):
 
     __tablename__ = "agent_templates"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # Catalog source: "agency" | "500-ai" | "custom"
     source: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     # Unique key within the source (e.g. "frontend-developer", "health-insights-agent")

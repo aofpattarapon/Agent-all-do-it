@@ -1,4 +1,3 @@
-
 """File upload service (PostgreSQL async).
 
 Contains business logic for file validation, content parsing, and chat file

@@ -77,7 +77,7 @@ async def run_query(
     except QueryIsolationError as exc:
         logger.warning("db_query blocked by isolation guard (project=%s): %s", pid, exc)
         return {"ok": False, "error": f"Query blocked by isolation guard: {exc}"}
-    except Exception as exc:  # noqa: BLE001 - never raise from a tool
+    except Exception as exc:
         logger.warning("run_query failed: %s", exc)
         return {"ok": False, "error": str(exc)}
 

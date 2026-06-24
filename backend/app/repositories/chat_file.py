@@ -1,4 +1,3 @@
-
 """Chat file repository (PostgreSQL async).
 
 Contains database operations for ChatFile entities.
@@ -34,9 +33,7 @@ async def link_to_message(db: AsyncSession, *, message_id: UUID, file_ids: Itera
     ids = list(file_ids)
     if not ids:
         return
-    await db.execute(
-        sql_update(ChatFile).where(ChatFile.id.in_(ids)).values(message_id=message_id)
-    )
+    await db.execute(sql_update(ChatFile).where(ChatFile.id.in_(ids)).values(message_id=message_id))
     await db.flush()
 
 

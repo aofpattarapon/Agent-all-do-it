@@ -1,0 +1,9 @@
+sed -n '1,260p' backend/app/agents/tools/exchange_tool.py
+sed -n '1500,1995p' backend/app/services/run_executor.py
+sed -n '1,260p' backend/app/api/routes/v1/trading.py
+sed -n '1,360p' backend/app/crypto/services/execution_service.py
+sed -n '260,760p' backend/app/agents/tools/exchange_tool.py
+sed -n '1,260p' backend/app/services/kill_switch.py
+rg -n "place_order\\(|ExecutionService|KillSwitch|TRADING_MODE|EXCHANGE_MODE|MARKET_TYPE|LIVE_TRADING_ENABLED" backend/app backend/tests frontend/src
+python3 -m py_compile backend/app/services/execution_preflight.py backend/app/agents/tools/exchange_tool.py backend/app/services/run_executor.py backend/app/api/routes/v1/trading.py backend/app/crypto/services/execution_service.py backend/tests/test_execution_preflight.py backend/tests/unit/test_execution_service.py
+backend/.venv/bin/pytest -q backend/tests/test_handoff_contracts.py backend/tests/test_crypto_raw_payloads.py backend/tests/test_execution_preflight.py backend/tests/unit/test_execution_service.py

@@ -1,6 +1,7 @@
 """Anthropic API runtime adapter."""
 
 from app.core.config import settings
+from app.services.runtime._utils import API_CALL_TIMEOUT_SECONDS
 
 
 async def run_agent(
@@ -21,7 +22,10 @@ async def run_agent(
         # Raised (not caught) so the executor's LLMErrorClassifier can map it to auth_error.
         raise RuntimeError("ANTHROPIC_API_KEY is not configured (401 unauthorized)")
 
-    client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+    client = anthropic.AsyncAnthropic(
+        api_key=settings.ANTHROPIC_API_KEY,
+        max_retries=0,  # run_with_fallback owns retry/backoff — no hidden SDK retries
+    )
     resolved_model = model or "claude-haiku-4-5-20251001"
 
     response = await client.messages.create(
@@ -30,6 +34,7 @@ async def run_agent(
         temperature=temperature,
         system=system_prompt or "You are a helpful assistant.",
         messages=[{"role": "user", "content": prompt}],
+        timeout=API_CALL_TIMEOUT_SECONDS,
     )
     text = response.content[0].text if response.content else ""
     tokens = None

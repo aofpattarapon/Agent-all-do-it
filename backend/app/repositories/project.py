@@ -13,7 +13,9 @@ async def get_by_id(db: AsyncSession, project_id: UUID) -> Project | None:
     return await db.get(Project, project_id)
 
 
-async def get_by_user_and_id(db: AsyncSession, *, user_id: UUID, project_id: UUID) -> Project | None:
+async def get_by_user_and_id(
+    db: AsyncSession, *, user_id: UUID, project_id: UUID
+) -> Project | None:
     result = await db.execute(
         select(Project).where(Project.id == project_id, Project.user_id == user_id)
     )

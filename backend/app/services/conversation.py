@@ -1,4 +1,3 @@
-
 """Conversation service (PostgreSQL async).
 
 Contains business logic for conversation, message, and tool call operations.
@@ -78,7 +77,9 @@ class ConversationService:
             conv_messages_map: dict[str, list[Message | MessageRead]] = {}
 
             for conv in items:
-                messages, _ = await self.list_messages(conv.id, skip=0, limit=self.MESSAGE_EXPORT_LIMIT, include_tool_calls=True)
+                messages, _ = await self.list_messages(
+                    conv.id, skip=0, limit=self.MESSAGE_EXPORT_LIMIT, include_tool_calls=True
+                )
                 conv_messages_map[str(conv.id)] = messages
                 all_message_ids.extend([m.id for m in messages if m.id])
             # Fetch ratings for this chunk of messages
@@ -90,45 +91,60 @@ class ConversationService:
                 msg_id = str(rating.message_id)
                 if msg_id not in message_ratings_map:
                     message_ratings_map[msg_id] = []
-                message_ratings_map[msg_id].append({
-                    "id": str(rating.id),
-                    "user_id": str(rating.user_id),
-                    "user_email": getattr(user, "email", None),
-                    "user_name": user.full_name if user else None,
-                    "rating": rating.rating,
-                    "comment": rating.comment,
-                    "created_at": rating.created_at.isoformat() if rating.created_at else None,
-                    "updated_at": rating.updated_at.isoformat() if rating.updated_at else None,
-                })
+                message_ratings_map[msg_id].append(
+                    {
+                        "id": str(rating.id),
+                        "user_id": str(rating.user_id),
+                        "user_email": getattr(user, "email", None),
+                        "user_name": user.full_name if user else None,
+                        "rating": rating.rating,
+                        "comment": rating.comment,
+                        "created_at": rating.created_at.isoformat() if rating.created_at else None,
+                        "updated_at": rating.updated_at.isoformat() if rating.updated_at else None,
+                    }
+                )
 
             # Build export data for this chunk
             for conv in items:
                 messages = conv_messages_map.get(str(conv.id), [])
-                export_data.append({
-                    "id": str(conv.id),
-                    "user_id": str(conv.user_id) if conv.user_id else None,
-                    "project_id": str(conv.project_id) if conv.project_id else None,
-                    "title": conv.title,
-                    "created_at": conv.created_at.isoformat() if conv.created_at else None,
-                    "updated_at": conv.updated_at.isoformat() if conv.updated_at else None,
-                    "is_archived": conv.is_archived,
-                    "messages": [{
-                        "id": str(m.id),
-                        "role": m.role,
-                        "content": m.content,
-                        "created_at": m.created_at.isoformat() if m.created_at else None,
-                        "model_name": m.model_name,
-                        "tokens_used": m.tokens_used,
-                        "tool_calls": [{
-                            "tool_name": tc.tool_name,
-                            "args": tc.args if isinstance(tc.args, dict) else json.loads(tc.args) if isinstance(tc.args, str) and tc.args.strip() else {},
-                            "result": tc.result,
-                            "status": tc.status
-                        }
-                            for tc in (m.tool_calls or [])] if hasattr(m, "tool_calls") and m.tool_calls else [],
-                        "ratings": message_ratings_map.get(str(m.id), []),
-                    } for m in messages],
-                })
+                export_data.append(
+                    {
+                        "id": str(conv.id),
+                        "user_id": str(conv.user_id) if conv.user_id else None,
+                        "project_id": str(conv.project_id) if conv.project_id else None,
+                        "title": conv.title,
+                        "created_at": conv.created_at.isoformat() if conv.created_at else None,
+                        "updated_at": conv.updated_at.isoformat() if conv.updated_at else None,
+                        "is_archived": conv.is_archived,
+                        "messages": [
+                            {
+                                "id": str(m.id),
+                                "role": m.role,
+                                "content": m.content,
+                                "created_at": m.created_at.isoformat() if m.created_at else None,
+                                "model_name": m.model_name,
+                                "tokens_used": m.tokens_used,
+                                "tool_calls": [
+                                    {
+                                        "tool_name": tc.tool_name,
+                                        "args": tc.args
+                                        if isinstance(tc.args, dict)
+                                        else json.loads(tc.args)
+                                        if isinstance(tc.args, str) and tc.args.strip()
+                                        else {},
+                                        "result": tc.result,
+                                        "status": tc.status,
+                                    }
+                                    for tc in (m.tool_calls or [])
+                                ]
+                                if hasattr(m, "tool_calls") and m.tool_calls
+                                else [],
+                                "ratings": message_ratings_map.get(str(m.id), []),
+                            }
+                            for m in messages
+                        ],
+                    }
+                )
 
             # Advance cursor for keyset pagination
             last_created_at = items[-1].created_at
@@ -188,9 +204,7 @@ class ConversationService:
                             )
             else:
                 # Not the owner — check if user has a share granting access
-                share = await conversation_share_repo.get_share(
-                    self.db, conversation_id, user_id
-                )
+                share = await conversation_share_repo.get_share(self.db, conversation_id, user_id)
                 if not share:
                     raise NotFoundError(
                         message="Conversation not found",
@@ -238,6 +252,7 @@ class ConversationService:
             include_archived=include_archived,
         )
         return items, total
+
     async def list_conversations_admin(
         self,
         *,
@@ -262,7 +277,10 @@ class ConversationService:
 
         items = []
         for conv, msg_count in rows:
-            conv_dict = {**ConversationRead.model_validate(conv).model_dump(), "message_count": msg_count}
+            conv_dict = {
+                **ConversationRead.model_validate(conv).model_dump(),
+                "message_count": msg_count,
+            }
             items.append(ConversationWithLatestMessage.model_validate(conv_dict))
 
         return items, total
@@ -336,8 +354,13 @@ class ConversationService:
             user_id=user_id,
         )
         update_data = data.model_dump(exclude_unset=True)
-        if "active_knowledge_base_ids" in update_data and update_data["active_knowledge_base_ids"] is not None:
-            update_data["active_knowledge_base_ids"] = [str(kb_id) for kb_id in update_data["active_knowledge_base_ids"]]
+        if (
+            "active_knowledge_base_ids" in update_data
+            and update_data["active_knowledge_base_ids"] is not None
+        ):
+            update_data["active_knowledge_base_ids"] = [
+                str(kb_id) for kb_id in update_data["active_knowledge_base_ids"]
+            ]
         return await conversation_repo.update_conversation(
             self.db, db_conversation=conversation, update_data=update_data
         )
@@ -357,9 +380,7 @@ class ConversationService:
             conversation_id,
             user_id=user_id,
         )
-        conversation = await conversation_repo.archive_conversation(
-            self.db, conversation_id
-        )
+        conversation = await conversation_repo.archive_conversation(self.db, conversation_id)
         if not conversation:
             raise NotFoundError(
                 message="Conversation not found",
@@ -562,7 +583,6 @@ class ConversationService:
             completed_at=data.completed_at or datetime.now(UTC),
             success=data.success,
         )
-
 
     async def link_files_to_message(self, message_id: UUID, file_ids: list[str]) -> None:
         """Link uploaded chat files to a message."""

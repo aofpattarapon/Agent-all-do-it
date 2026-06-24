@@ -69,9 +69,7 @@ def upgrade() -> None:
     )
 
     op.create_index("secrets_project_id_idx", "secrets", ["project_id"], unique=False)
-    op.create_index(
-        "integrations_project_id_idx", "integrations", ["project_id"], unique=False
-    )
+    op.create_index("integrations_project_id_idx", "integrations", ["project_id"], unique=False)
 
 
 def downgrade() -> None:

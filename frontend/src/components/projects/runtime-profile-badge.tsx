@@ -16,6 +16,22 @@ const PROFILE_STYLES: Record<string, { label: string; classes: string }> = {
     label: "TEST",
     classes: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 hover:bg-yellow-500/30",
   },
+  "test-2": {
+    label: "TEST-2",
+    classes: "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30",
+  },
+  "test-minimal-paid": {
+    label: "TEST-MINIMAL-PAID",
+    classes: "bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30",
+  },
+  "test-jam": {
+    label: "TEST-JAM",
+    classes: "bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/30",
+  },
+  "test-local-free-24x7-safe": {
+    label: "TEST-LOCAL-FREE-24X7-SAFE",
+    classes: "bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30",
+  },
   production: {
     label: "PRODUCTION",
     classes: "bg-green-500/20 text-green-300 border border-green-500/40 hover:bg-green-500/30",
@@ -51,7 +67,14 @@ export function RuntimeProfileBadge({ projectId }: { projectId: string }) {
 
   const active = data?.profile ?? null;
   const style = active ? (PROFILE_STYLES[active] ?? DEFAULT_STYLE) : DEFAULT_STYLE;
-  const profiles = data?.valid_profiles ?? ["test", "production"];
+  const profiles = data?.valid_profiles ?? [
+    "test",
+    "test-2",
+    "test-minimal-paid",
+    "test-jam",
+    "test-local-free-24x7-safe",
+    "production",
+  ];
 
   return (
     <div className="relative">
@@ -84,11 +107,21 @@ export function RuntimeProfileBadge({ projectId }: { projectId: string }) {
                   }`}
                 >
                   <span
-                    className={`inline-block h-1.5 w-1.5 rounded-full ${
-                      p === "production" ? "bg-green-400" : "bg-yellow-400"
+                  className={`inline-block h-1.5 w-1.5 rounded-full ${
+                      p === "production"
+                        ? "bg-green-400"
+                        : p === "test-2"
+                          ? "bg-cyan-400"
+                          : p === "test-minimal-paid"
+                          ? "bg-purple-400"
+                          : p === "test-jam"
+                            ? "bg-orange-400"
+                            : p === "test-local-free-24x7-safe"
+                              ? "bg-sky-400"
+                              : "bg-yellow-400"
                     }`}
                   />
-                  {p.toUpperCase()}
+                  {s.label}
                   {isCurrent && <span className="ml-auto text-zinc-500">✓</span>}
                 </button>
               );

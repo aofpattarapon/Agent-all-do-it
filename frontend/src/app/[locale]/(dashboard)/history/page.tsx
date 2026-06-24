@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { Download } from "lucide-react";
 import { useConsoleData, type EnrichedRun, sortByRecency } from "@/components/console/use-console-data";
 import { PixelFrame, SectionLabel } from "@/components/pixel-ui";
+import { StatusBadge } from "@/components/run-status/StatusBadge";
+import { displayStatusOf, type DisplayStatus } from "@/lib/run-status";
 
 function duration(run: EnrichedRun): string {
   if (!run.started_at || !run.finished_at) return "—";
@@ -15,17 +17,24 @@ function duration(run: EnrichedRun): string {
   return `${Math.floor(secs / 60)}m ${secs % 60}s`;
 }
 
-const STATUS_OPTIONS = ["all", "completed", "failed", "running", "queued", "pending"];
+const STATUS_OPTIONS: { key: DisplayStatus | "all"; label: string }[] = [
+  { key: "all", label: "All Status" },
+  { key: "active", label: "Active" },
+  { key: "complete-trade", label: "Trade" },
+  { key: "complete-reject", label: "Rejected" },
+  { key: "limit", label: "Limit" },
+  { key: "error", label: "Error" },
+];
 
 export default function HistoryPage() {
   const { projects, allRuns } = useConsoleData();
   const [projectFilter, setProjectFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<DisplayStatus | "all">("all");
 
   const rows = useMemo(() => {
     let runs = allRuns;
     if (projectFilter !== "all") runs = runs.filter((r) => r.projectId === projectFilter);
-    if (statusFilter !== "all") runs = runs.filter((r) => r.status === statusFilter);
+    if (statusFilter !== "all") runs = runs.filter((r) => displayStatusOf(r) === statusFilter);
     return sortByRecency(runs);
   }, [allRuns, projectFilter, statusFilter]);
 
@@ -50,10 +59,14 @@ export default function HistoryPage() {
                 </option>
               ))}
             </select>
-            <select className="pix-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select
+              className="pix-select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as DisplayStatus | "all")}
+            >
               {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s === "all" ? "All Status" : s}
+                <option key={s.key} value={s.key}>
+                  {s.label}
                 </option>
               ))}
             </select>
@@ -87,11 +100,11 @@ export default function HistoryPage() {
                       <td>{run.projectName}</td>
                       <td>{run.workflow_name ?? run.trigger ?? "manual"}</td>
                       <td>
-                        <span className={"pix-pill pix-" + run.status}>{run.status}</span>
+                        <StatusBadge run={run} />
                       </td>
                       <td>{duration(run)}</td>
                       <td>
-                        {run.status === "completed" ? (
+                        {displayStatusOf(run) !== "active" && displayStatusOf(run) !== "error" ? (
                           <a
                             className="pix-link"
                             href={`/api/projects/${run.projectId}/runs/${run.id}/download?format=markdown`}

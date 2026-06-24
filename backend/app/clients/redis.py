@@ -1,4 +1,3 @@
-
 """Redis client wrapper.
 
 Provides a class-based Redis client for connection management and operations.
